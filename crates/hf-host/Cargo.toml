@@ -1,0 +1,21 @@
+[package]
+name = "hf-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+hf-application = { path = "../hf-application" }
+hf-domain = { path = "../hf-domain" }
+hf-storage = { path = "../hf-storage" }
+hf-backends = { path = "../hf-backends" }
+hf-platform = { path = "../hf-platform" }
+hf-interfaces = { path = "../hf-interfaces" }
+
+[[bin]]
+name = "harflow-engine-scaffold"
+path = "src/main.rs"
