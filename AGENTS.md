@@ -9,3 +9,5 @@ hf-domain owns pure values; hf-application owns ports/use cases; hf-storage, hf-
 ## Test ownership
 
 When unit tests are needed, the primary delegates them to the dedicated test_writer (gpt-6-luna, medium effort). That worker owns tests/ and coordinates production interfaces with the implementer. Preserve concurrent edits. Delegated workers do not restart the surrounding review workflow.
+
+Migration work: see [docs/migration-plan.md](docs/migration-plan.md).
