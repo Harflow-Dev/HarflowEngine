@@ -24,6 +24,8 @@ Return the session receipt at the specified lead-repository path, including all 
 
 For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 
+The [v2 coverage ledger](../../HarflowDesign/v2/docs/migration-coverage.md) is an optional workspace coordination reference, not a build dependency. S10-Gxx bounded gap sub-sessions follow scope approval and obtain exact design approval before dependent work; unresolved required states block only their dependent feature. Independent work continues. The approved mock does not establish runtime capability or authority. Existing S01 evidence and S02 status remain as recorded in their receipts.
+
 ## Sessions
 
 ### S03 — Freeze, parity and scope decisions
@@ -31,7 +33,7 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowMCP. Co-owned: HarflowMac, HarflowDesign, HarflowEngine, HarflowWeb.
 - Prerequisite receipts: S02.
 - Checklist coverage: B0-MC-02 (final contribution), B0-MA-04 (final contribution), B0-DS-01 (final contribution), C0-DS-04 (partial), B0-EN-01 (final contribution), B0-WE-01 (partial).
-- Scope and acceptance: Obtain owner decisions on freeze, parity, scope, representative datasets and performance budgets; inventory design approvals, engine scaffold and deferred Web; record accepted baselines and unknowns.
+- Scope and acceptance: Record Keep, Simplify, Deliberately remove and Undecided decisions in the v2 coverage ledger; obtain decisions on freeze, representative datasets and performance budgets, preserving unresolved scope and approved removals.
 - Output: lead receipt `docs/migration-receipts/S03.md`, with the evidence and identities required by the dispatch protocol.
 
 ### S25 — Engine architecture decisions
@@ -167,7 +169,7 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowEngine. Co-owned: HarflowMCP.
 - Prerequisite receipts: S40.
 - Checklist coverage: R0-EN-08 (final contribution), R0-EN-09 (final contribution), R0-EN-10 (final contribution), R0-EN-11 (final contribution), R0-EN-12 (final contribution), R0-EN-13 (final contribution), R0-EN-14 (final contribution), R0-MC-01 (final contribution).
-- Scope and acceptance: Pass Python-equivalent conformance and all listed fault families on macOS with external oracles; adjudicate discrepancies and accept R0 without claiming other platforms.
+- Scope and acceptance: Pass retained engine wire and semantic conformance and listed fault families on macOS with external oracles; frontend removals do not delete APIs. Adjudicate discrepancies without claiming other platforms.
 - Output: lead receipt `docs/migration-receipts/S41.md`, with the evidence and identities required by the dispatch protocol.
 
 ### S42 — Rust adapter and responder IPC
@@ -175,7 +177,7 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowDesktop. Co-owned: HarflowClient, HarflowEngine.
 - Prerequisite receipts: S41.
 - Checklist coverage: I0-DE-01 (partial), I0-DE-04 (final contribution), R0-CL-01 (final contribution).
-- Scope and acceptance: Select Rust on isolated state, reuse client and contract tests, and verify authenticated responder and secure credentials across real IPC.
+- Scope and acceptance: Select Rust on isolated state, reuse the accepted v2 feature scope and client/contract tests, and verify authenticated responder and secure credentials across real IPC.
 - Output: lead receipt `docs/migration-receipts/S42.md`, with the evidence and identities required by the dispatch protocol.
 
 ### S43 — Offline managed engines
@@ -191,7 +193,7 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowDesktop. Co-owned: HarflowClient, HarflowDesign, HarflowEngine.
 - Prerequisite receipts: S44.
 - Checklist coverage: I0-DE-01 (final contribution), I0-DE-03 (partial), I0-CL-01 (final contribution), I0-DS-01 (final contribution), I0-EN-01 (final contribution).
-- Scope and acceptance: Re-run full Rust-backed macOS acceptance, production pixels, accessibility, performance, clean-user install and upgrade; verify no hidden Python or private store coupling.
+- Scope and acceptance: Re-run accepted v2 scope against Rust with production pixels, accessibility, performance, clean-user install and upgrade; verify no hidden Python or private store coupling.
 - Output: lead receipt `docs/migration-receipts/S45.md`, with the evidence and identities required by the dispatch protocol.
 
 ### S46 — Cutover rehearsal
@@ -239,7 +241,7 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowDesktop. Co-owned: HarflowDesign, HarflowEngine, HarflowClient.
 - Prerequisite receipts: S45 (accepted macOS integration).
 - Checklist coverage: I0-DS-02 (partial), I0-DE-03 (partial).
-- Scope and acceptance: After integrated macOS acceptance, approve Linux design and independently qualify Linux x86_64 engine, backend and Desktop with native evidence before claiming support.
+- Scope and acceptance: After macOS acceptance, adapt approved v2 for Linux and independently qualify Linux x86_64 engine, backend and Desktop with native evidence before claiming support.
 - Output: lead receipt `docs/migration-receipts/X01.md`, with the evidence and identities required by the dispatch protocol.
 
 ### X02 — Windows qualification
@@ -247,5 +249,5 @@ For optional work replace `Sxx` with `X01`, `X02` or `X03`.
 - Status: planned. Lead: HarflowDesktop. Co-owned: HarflowDesign, HarflowEngine, HarflowClient.
 - Prerequisite receipts: S45 (accepted macOS integration) and X01 (Linux qualification).
 - Checklist coverage: I0-DS-02 (final contribution), I0-DE-03 (final contribution).
-- Scope and acceptance: After integrated macOS acceptance, approve Windows design and independently qualify Windows x86_64 engine, backend and Desktop with native evidence; does not block owner cutover.
+- Scope and acceptance: After macOS acceptance, adapt approved v2 for Windows and independently qualify Windows x86_64 engine, backend and Desktop with native evidence; does not block owner cutover.
 - Output: lead receipt `docs/migration-receipts/X02.md`, with the evidence and identities required by the dispatch protocol.
