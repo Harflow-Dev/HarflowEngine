@@ -21,7 +21,7 @@ impl Store {
         connection::timeout(&guard, deadline)?;
         Ok(guard)
     }
-    fn check_bounds(&self, rows: usize, bytes: usize) -> Result<()> {
+    pub(crate) fn check_bounds(&self, rows: usize, bytes: usize) -> Result<()> {
         if rows > self.limits.max_rows || bytes > self.limits.max_bytes {
             Err(Error::LimitExceeded)
         } else {

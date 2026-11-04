@@ -8,6 +8,14 @@ mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
 mod operations;
+mod task_fixture;
+mod task_page;
+mod task_query;
+mod task_read;
+pub use task_fixture::TaskFixture;
+pub use task_read::TaskReadSession;
+#[cfg(test)]
+mod task_query_tests;
 #[cfg(test)]
 mod tests;
 mod wal;
@@ -30,6 +38,9 @@ pub enum Error {
     LimitExceeded,
     CommitOutcomeUnknown,
     NeedsCheckpoint,
+    TaskReadUnavailable,
+    InvalidTaskQuery,
+    StaleTaskCursor,
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

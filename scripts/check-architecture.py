@@ -10,7 +10,7 @@ EDGES = {
     "hf-storage": ["hf-application", "hf-domain", "rusqlite"],
     "hf-backends": ["hf-application", "hf-domain"],
     "hf-platform": ["hf-application", "hf-domain"],
-    "hf-interfaces": ["hf-application", "hf-domain"],
+    "hf-interfaces": ["hf-application", "hf-domain", "serde_json"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
 }
@@ -34,6 +34,17 @@ def validate(metadata, root):
                 or dependency.get("rename") is not None
             ):
                 raise ValueError("rusqlite requires exact reviewed version and bundled-only features")
+        for dependency in package["dependencies"]:
+            if dependency["name"] == "serde_json" and (
+                package["name"] != "hf-interfaces"
+                or dependency.get("req") != "=1.0.154"
+                or dependency.get("uses_default_features") is not False
+                or dependency.get("features") != ["std"]
+                or dependency.get("optional") is not False
+                or dependency.get("target") is not None
+                or dependency.get("rename") is not None
+            ):
+                raise ValueError("serde_json requires interfaces-only exact reviewed version and std-only features")
         manifest_path = Path(package["manifest_path"])
         if package["name"] == "hf-domain":
             expected = (manifest_path.parent / "src/lib.rs").resolve()

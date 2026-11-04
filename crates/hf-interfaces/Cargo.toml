@@ -11,3 +11,4 @@ workspace = true
 [dependencies]
 hf-application = { path = "../hf-application" }
 hf-domain = { path = "../hf-domain" }
+serde_json = { version = "=1.0.154", default-features = false, features = ["std"] }
