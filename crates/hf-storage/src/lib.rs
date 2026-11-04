@@ -4,6 +4,13 @@
 //! Paths must be cooperatively managed. Metadata checks reject observed replacement
 //! and symlinks; they do not provide atomic nofollow protection against hostile races.
 mod binding;
+mod event_checks;
+mod event_fixture;
+mod event_read;
+mod event_render;
+mod event_scan;
+pub use event_fixture::EventFixture;
+pub use event_read::EventReadSession;
 mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
@@ -41,6 +48,9 @@ pub enum Error {
     TaskReadUnavailable,
     InvalidTaskQuery,
     StaleTaskCursor,
+    EventReadUnavailable,
+    InvalidEventQuery,
+    ExpiredEventCursor,
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

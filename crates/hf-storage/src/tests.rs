@@ -17,6 +17,9 @@ use std::{
 
 static STAGE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
 
+mod event_seek_tests;
+mod event_snapshot_tests;
+
 struct StageChild(Child);
 impl Drop for StageChild {
     fn drop(&mut self) {

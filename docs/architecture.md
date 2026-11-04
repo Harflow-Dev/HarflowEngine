@@ -17,3 +17,7 @@ Inline modules gated by the exact #[cfg(test)] attribute are exempt from source 
 Internal task-read values, ports, fixture queries and consumer-only mappings are
 described in [task reads](task-reads.md). They add no supported host command or
 production caller/lifecycle verification.
+
+Internal stored event paging and consumer-only mappings are described in
+[event reads](event-reads.md). They retain fixture authority and observation
+boundaries; no public host operation or watcher is implemented.

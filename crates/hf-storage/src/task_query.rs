@@ -109,7 +109,7 @@ fn ids_query(
     }
     Ok(result)
 }
-fn lookup(
+pub(crate) fn lookup(
     db: &Connection,
     scope: &AuthorizedScope,
     id: &TaskId,

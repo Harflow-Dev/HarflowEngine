@@ -89,7 +89,7 @@ impl Document {
         self.raw.get("error").map(ErrorView)
     }
 }
-fn envelope(raw: &Value, expected: VersionLine) -> Result<(), DecodeError> {
+pub(crate) fn envelope(raw: &Value, expected: VersionLine) -> Result<(), DecodeError> {
     if !raw.is_object()
         || raw.get("product").and_then(Value::as_str) != Some("harflow")
         || raw.get("format").and_then(Value::as_str) != Some("harflow.ctl")
@@ -107,7 +107,7 @@ fn envelope(raw: &Value, expected: VersionLine) -> Result<(), DecodeError> {
     }
     Ok(())
 }
-fn release(text: &str) -> Option<(u32, u32)> {
+pub(crate) fn release(text: &str) -> Option<(u32, u32)> {
     if text.len() > 256 || !text.is_ascii() {
         return None;
     }
