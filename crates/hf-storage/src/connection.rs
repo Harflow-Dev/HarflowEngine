@@ -1,5 +1,5 @@
 use crate::{APPLICATION_ID, Error, Identity, Result, SCHEMA_VERSION};
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::Connection;
 use std::{
     fs::File,
     io::Read,
@@ -46,13 +46,6 @@ pub(crate) fn qualify_page(header: &[u8]) -> Result<()> {
     }
     Ok(())
 }
-pub(crate) fn read_identity(path: &Path, deadline: Instant) -> Result<Identity> {
-    let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    timeout(&connection, deadline)?;
-    let identity = identity(&connection, deadline)?;
-    check_deadline(deadline)?;
-    Ok(identity)
-}
 pub(crate) fn identity(connection: &Connection, deadline: Instant) -> Result<Identity> {
     timeout(connection, deadline)?;
     let application: u32 =
@@ -82,6 +75,20 @@ pub(crate) fn identity(connection: &Connection, deadline: Instant) -> Result<Ide
         schema_version: version,
     })
 }
+pub(crate) fn suppress_checkpoints(connection: &Connection) -> Result<()> {
+    use rusqlite::config::DbConfig;
+    let option = DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE;
+    connection.set_db_config(option, true)?;
+    if !connection.db_config(option)? {
+        return Err(Error::Incompatible);
+    }
+    connection.pragma_update(None, "wal_autocheckpoint", 0)?;
+    let value: u32 = connection.pragma_query_value(None, "wal_autocheckpoint", |row| row.get(0))?;
+    if value != 0 {
+        return Err(Error::Incompatible);
+    }
+    Ok(())
+}
 pub(crate) fn configure(connection: &Connection, deadline: Instant) -> Result<()> {
     timeout(connection, deadline)?;
     let mode: String = connection.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
@@ -110,7 +117,13 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
         .map_err(|_| Error::CommitOutcomeUnknown)?;
     // Publish the fixed schema in the main file before allowing header qualification.
     timeout(connection, deadline)?;
-    connection.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")?;
+    let (busy, log, done): (u32, i64, i64) =
+        connection.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
+    if busy != 0 || log != done {
+        return Err(Error::Busy);
+    }
     Ok(())
 }
 

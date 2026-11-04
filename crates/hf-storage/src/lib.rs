@@ -4,7 +4,9 @@
 //! Paths must be cooperatively managed. Metadata checks reject observed replacement
 //! and symlinks; they do not provide atomic nofollow protection against hostile races.
 mod binding;
+mod checkpoint;
 mod connection;
+pub use checkpoint::Checkpoint;
 mod operations;
 #[cfg(test)]
 mod tests;
@@ -89,56 +91,52 @@ impl Store {
         deadline: Instant,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
-        Binding::validate_parent(root.as_ref())?;
-        std::fs::create_dir(root.as_ref()).map_err(|error| {
+        let root = root.as_ref();
+        Binding::validate_parent(root)?;
+        std::fs::create_dir(root).map_err(|error| {
             if error.kind() == std::io::ErrorKind::AlreadyExists {
                 Error::InvalidRoot
             } else {
                 error.into()
             }
         })?;
-        let claim = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(root.as_ref().join("store.lock"))?;
+        let claim = create_lock(root, "store.lock")?;
         connection::claim(&claim, false)?;
-        let binding = Binding::capture(root.as_ref(), false)?;
+        let io = create_lock(root, "io.lock")?;
+        connection::claim(&io, false)?;
+        let binding = Binding::capture(root, false)?;
         let mut connection = Connection::open(binding.database())?;
+        connection::suppress_checkpoints(&connection)?;
         binding.check_root()?;
         connection::configure(&connection, deadline)?;
         connection::initialize(&mut connection, deadline)?;
-        let binding = Binding::capture(root.as_ref(), true)?;
         let identity = connection::identity(&connection, deadline)?;
-        Ok(Self {
-            connection: Mutex::new(connection),
-            binding,
-            identity,
-            limits,
-            _claim: claim,
-        })
+        connection::check_deadline(deadline)?;
+        wal::publish(root, &identity)?;
+        drop(connection);
+        drop(io);
+        drop(claim);
+        Self::open(root, limits, deadline)
     }
     pub fn open(root: impl AsRef<Path>, limits: Limits, deadline: Instant) -> Result<Self> {
+        let root = std::path::absolute(root.as_ref())?;
+        let parent = root.parent().ok_or(Error::InvalidRoot)?;
+        Self::open_with_scratch(&root, limits, deadline, parent)
+    }
+    /// Internal permission to rebuild WAL-index/recover valid crash WAL after isolated qualification.
+    pub fn open_with_scratch(
+        root: impl AsRef<Path>,
+        limits: Limits,
+        deadline: Instant,
+        scratch_parent: impl AsRef<Path>,
+    ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         let binding = Binding::capture(root.as_ref(), true)?;
         let claim = std::fs::File::open(root.as_ref().join("store.lock"))?;
-        connection::claim(&claim, false)?;
-        binding.check()?;
-        connection::qualify_header(&binding.database())?;
-        wal::qualify(&binding.database())?;
-        let identity = connection::read_identity(&binding.database(), deadline)?;
-        binding.check()?;
-        let connection = Connection::open_with_flags(
-            binding.database(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
-        )?;
-        binding.check()?;
-        let observed = connection::identity(&connection, deadline)?;
-        if observed != identity {
-            return Err(Error::Replaced);
-        }
-        connection::configure(&connection, deadline)?;
-        binding.check()?;
+        connection::claim(&claim, true)?;
+        let _io = binding.io()?;
+        let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
+        let connection = open_source(&binding, &identity, deadline)?;
         Ok(Self {
             connection: Mutex::new(connection),
             binding,
@@ -151,12 +149,47 @@ impl Store {
         &self.identity
     }
 }
-/// Missing roots create nothing. Qualification reads main-file identity/version first.
-/// Nonempty WAL refuses with NeedsCheckpoint before SQLite is opened. Initial
-/// open/probe require cooperative quiescence; detached multiprocess readiness is
-/// not qualified. Already open handles support normal SQLite WAL transactions.
+fn create_lock(root: &Path, name: &str) -> Result<std::fs::File> {
+    Ok(std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(root.join(name))?)
+}
+fn open_source(binding: &Binding, identity: &Identity, deadline: Instant) -> Result<Connection> {
+    binding.check()?;
+    #[cfg(test)]
+    crate::tests::stage("before_source_open");
+    connection::check_deadline(deadline)?;
+    let connection = Connection::open_with_flags(
+        binding.database(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
+    )?;
+    connection::suppress_checkpoints(&connection)?;
+    #[cfg(test)]
+    crate::tests::stage("after_source_open");
+    if connection::identity(&connection, deadline)? != *identity {
+        return Err(Error::Replaced);
+    }
+    connection::configure(&connection, deadline)?;
+    binding.check()?;
+    Ok(connection)
+}
+/// Missing roots create nothing; existing roots are qualified using only a private copy.
 pub fn probe(root: impl AsRef<Path>) -> Result<Option<Identity>> {
-    let deadline = Instant::now() + std::time::Duration::from_secs(1);
+    let root = std::path::absolute(root.as_ref())?;
+    probe_with_scratch(
+        &root,
+        Instant::now() + std::time::Duration::from_secs(1),
+        root.parent().ok_or(Error::InvalidRoot)?,
+    )
+}
+pub fn probe_with_scratch(
+    root: impl AsRef<Path>,
+    deadline: Instant,
+    scratch_parent: impl AsRef<Path>,
+) -> Result<Option<Identity>> {
+    connection::check_deadline(deadline)?;
     Binding::validate_probe_path(root.as_ref())?;
     if !root.as_ref().try_exists()? {
         return Ok(None);
@@ -164,10 +197,8 @@ pub fn probe(root: impl AsRef<Path>) -> Result<Option<Identity>> {
     let binding = Binding::capture(root.as_ref(), true)?;
     let claim = std::fs::File::open(root.as_ref().join("store.lock"))?;
     connection::claim(&claim, true)?;
-    binding.check()?;
-    connection::qualify_header(&binding.database())?;
-    wal::qualify(&binding.database())?;
-    let identity = connection::read_identity(&binding.database(), deadline)?;
+    let _io = binding.io()?;
+    let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
     binding.check()?;
     Ok(Some(identity))
 }

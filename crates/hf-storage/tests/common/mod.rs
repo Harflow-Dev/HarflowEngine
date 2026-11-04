@@ -1,4 +1,5 @@
 #![cfg(unix)]
+#![allow(dead_code)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -44,4 +45,27 @@ pub fn deadline() -> Instant {
 
 pub fn default_limits() -> hf_storage::Limits {
     hf_storage::Limits::default()
+}
+
+pub fn snapshot_tree(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    let mut entries = Vec::new();
+    snapshot_into(root, &mut entries);
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    entries
+}
+
+fn snapshot_into(root: &Path, entries: &mut Vec<(PathBuf, Vec<u8>)>) {
+    for entry in fs::read_dir(root).unwrap() {
+        let path = entry.unwrap().path();
+        let metadata = fs::symlink_metadata(&path).unwrap();
+        let bytes = if metadata.file_type().is_dir() {
+            Vec::new()
+        } else {
+            fs::read(&path).unwrap()
+        };
+        entries.push((path.clone(), bytes));
+        if metadata.file_type().is_dir() {
+            snapshot_into(&path, entries);
+        }
+    }
 }

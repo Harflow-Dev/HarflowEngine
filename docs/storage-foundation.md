@@ -1,55 +1,59 @@
 # Internal fixture storage foundation
 
-R02-A implements no public engine operation. The host remains the unsupported
+R02-A/R02-A2 implement no public engine operation. The host remains the unsupported
 scaffold; no client may select this as a compatible engine. See the
-[R02-A receipt](migration-receipts/R02-A.md) and [R01 design](decisions/R01-architecture.md).
+[R02-A receipt](migration-receipts/R02-A.md),
+[R02-A2 receipt](migration-receipts/R02-A2.md),
+[current cooperative protocol](storage-protocol.md) and
+[R01 design](decisions/R01-architecture.md).
 
-`hf-storage` exposes explicit `Store::initialize_fixture`, `Store::open`, `probe`,
-identity and typed insert/put/delete/read batches for isolated fixtures. Initialization
-requires a nonexistent root and atomically claims it with directory creation;
-existing empty, foreign and Python roots are not adopted. Generation/schema are
-persisted in SQLite. Missing-root probes create nothing. There is no public creation,
-recovery, task/event ingestion, import or capture API.
+`hf-storage` exposes explicit fixture initialization, identity probing/opening,
+typed insert/put/delete/read batches, and internal checkpoint/recovery primitives.
+Initialization requires a nonexistent root; existing empty, foreign and Python roots
+are not adopted. Generation/schema are persisted in SQLite; a bounded immutable
+protocol marker identifies the initialized root. R02-A's old lock-only fixtures
+refuse rather than silently upgrade. No public creation, recovery, task/event,
+import or capture API exists.
 
-One Store owns an exclusive OS lock on the persistent `store.lock` for its lifetime.
-Callers may share that handle; mutex admission rejects overlap with `Busy`, without
-queueing later effects. Another open or active-store probe refuses. A quiescent
-probe takes a shared existing lock and does not create the lock file. Locks are
-cooperative: external SQLite writers that bypass this protocol are outside this
-fixture API's guarantees. Process death releases the OS lock, not execution or
-reservation uncertainty in future engine layers.
+Independent handles hold shared lifecycle ownership; write/open/snapshot/checkpoint
+operations use a separate cooperative I/O gate. Per-handle mutex admission rejects
+overlap without queuing late work. Read batches use SQLite snapshot isolation.
+Explicit recovery/TRUNCATE requires exclusive lifecycle ownership; PASSIVE checkpoint
+may return incomplete progress while readers remain. Checkpoint frame counts,
+not busy status alone, determine completeness. There is no schema migration API.
 
-Initial open/probe refuse a nonempty residual WAL with `NeedsCheckpoint` before
-SQLite access; they never automatically checkpoint/recover another store. No raw
-WAL parser or SQLite immutable mode is used. Live multiprocess reopen and recovery
-need a separately reviewed qualification protocol before detached-owner work can
-rely on this store. This limitation does not remove R01's eventual concurrent-owner
-requirements. Normal transactions on an already opened handle use WAL.
+Probe never opens source SQLite. Under the gates, it qualifies a private bounded
+main+WAL copy using SQLite, without copying SHM. A missing root creates nothing;
+foreign/unknown/future/corrupt identity refuses before original SQLite access.
+Probe may write private scratch, not source contents/sidecars. Normal open is
+explicitly authorized internally to let SQLite recover a legitimate residual WAL
+and rebuild SHM only after private-copy qualification. There is no parser, immutable
+live-WAL shortcut, file deletion/reset or automatic external-effect replay.
 
-Every writable connection enables and verifies WAL, FULL synchronization and foreign
-keys. Transactions accept only typed bounded mutations, not arbitrary callbacks or
-SQL. One absolute deadline governs admission and recomputed SQLite busy waits;
-reads enforce input/output row/byte limits. There is no background queue. OS I/O
-cannot be preempted at a deadline; a completed commit is reported truthfully, and
-commit/post-commit binding failures report `CommitOutcomeUnknown`. No public retry
-semantics follow from these internal error variants.
+Source connections use WAL/FULL/foreign keys and suppress automatic and last-close
+checkpoints. Explicit checkpoints honor the gate. Snapshot size/deadline bounds
+fail closed; they are qualification limits, not performance results. Scratch is
+private and cleaned on normal outcomes; supervising tests clean exact invocation
+remnants after killed children, since SIGKILL bypasses RAII.
 
-Root/database/lock and sidecar checks reject symlinks and observed inode replacement
-on supported Unix filesystems. Ancestor symlinks are rejected, so fixture callers
-must supply a canonical temporary parent (macOS `/tmp` and `/var` aliases need
-canonicalization). Checks are not atomic hostile-path nofollow protection. The
-non-Unix binding adapter refuses: Windows scaffold compilation is not storage
-qualification. No directory/device power-loss durability or performance acceptance
-is claimed by successful rollback/reopen tests.
+Transactions accept typed bounded mutations, never arbitrary callbacks/SQL.
+Absolute deadlines govern admission and remaining SQLite busy waits. OS I/O and
+individual SQLite calls cannot be forcibly preempted; completed commit is reported
+truthfully, and uncertain commit/binding results remain explicit. No public retry
+semantics follow from internal errors.
 
-Dependency: exact rusqlite 0.41.1 with default features disabled and bundled only;
-libsqlite3-sys 0.39.1 supplies SQLite 3.54.1. Cargo.lock pins the transitive closure.
-Reviewed roles are SQLite wrapper/native SQLite and its C build tooling, not new
-domain effects. The architecture guard permits only this storage dependency with
-its exact version/features, retains all other edges and domain purity rules, and
-rejects non-normal, renamed, optional or target-specific substitutes. Dependency
-internal native/unsafe code remains distinct from forbidden workspace unsafe.
+Local same-host cooperative Unix roots only. Metadata checks reject symlinks and
+observed root/database/lock/marker replacement, not atomic hostile path races.
+Callers supply canonical temporary parents; raw writers bypassing protocol gates
+are not supported schema changers. Non-Unix binding refuses. No Linux/Windows,
+network-filesystem, arbitrary corrupt-WAL detection, directory-fsync/power-loss,
+performance or R14 qualification follows from targeted macOS process tests.
+SQLite decides valid committed WAL history; ignored/torn/uncommitted tails do not
+become proved external effects or permission to replay.
 
-Use the repository's pinned Rust 1.99.1 with rustfmt/clippy and documented development
-checks. Local setup may require `/Users/nayanda/.cargo/bin` on PATH for this account;
-no shell profile change is required. Tests use only isolated temporary fixture roots.
+Dependency unchanged: exact rusqlite0.41.1, default features disabled, bundled only;
+libsqlite3-sys0.39.1 supplies SQLite3.54.1. Cargo.lock pins the closure. The guard
+keeps exact storage edge/version/features and all other layer/domain/unsafe rules.
+Safe rusqlite configuration is used; no workspace unsafe or added runtime framework.
+Use pinned Rust1.99.1/rustfmt/clippy and documented checks. No shell profile change
+is required; tests use isolated temporary fixture roots and owned processes only.

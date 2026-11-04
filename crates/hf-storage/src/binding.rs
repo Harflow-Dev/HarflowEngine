@@ -20,6 +20,12 @@ fn identify(path: &Path, directory: bool) -> Result<FileIdentity> {
     }
     identity(&metadata)
 }
+fn protocol_identity(path: &Path) -> Result<FileIdentity> {
+    identify(path, false).map_err(|error| match error {
+        Error::Io(error) if error.kind() == std::io::ErrorKind::NotFound => Error::Incompatible,
+        other => other,
+    })
+}
 #[cfg(unix)]
 fn identity(metadata: &Metadata) -> Result<FileIdentity> {
     Ok(FileIdentity {
@@ -36,6 +42,8 @@ pub(crate) struct Binding {
     root_id: FileIdentity,
     database_id: Option<FileIdentity>,
     lock_id: FileIdentity,
+    io_id: FileIdentity,
+    marker_id: Option<FileIdentity>,
 }
 impl Binding {
     pub(crate) fn validate_probe_path(root: &Path) -> Result<()> {
@@ -84,15 +92,30 @@ impl Binding {
             None
         };
         let binding = Self {
-            root: absolute,
+            root: absolute.clone(),
             root_id,
             database_id,
             lock_id,
+            io_id: protocol_identity(&absolute.join("io.lock"))?,
+            marker_id: if existing {
+                Some(protocol_identity(&absolute.join("store.identity"))?)
+            } else {
+                None
+            },
         };
         if existing {
             binding.check()?;
         }
         Ok(binding)
+    }
+    pub(crate) fn root(&self) -> &Path {
+        &self.root
+    }
+    pub(crate) fn io(&self) -> Result<fs::File> {
+        let file = fs::File::open(self.root.join("io.lock"))?;
+        crate::connection::claim(&file, false)?;
+        self.check()?;
+        Ok(file)
     }
     pub(crate) fn database(&self) -> PathBuf {
         self.root.join("store.sqlite3")
@@ -106,6 +129,14 @@ impl Binding {
     pub(crate) fn check(&self) -> Result<()> {
         self.check_root()?;
         if identify(&self.root.join("store.lock"), false)? != self.lock_id {
+            return Err(Error::Replaced);
+        }
+        if identify(&self.root.join("io.lock"), false)? != self.io_id {
+            return Err(Error::Replaced);
+        }
+        if let Some(marker) = &self.marker_id
+            && &identify(&self.root.join("store.identity"), false)? != marker
+        {
             return Err(Error::Replaced);
         }
         if self.database_id.as_ref() != Some(&identify(&self.database(), false)?) {

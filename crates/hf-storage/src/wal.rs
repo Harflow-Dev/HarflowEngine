@@ -1,16 +1,161 @@
-//! Until a shared schema-qualification protocol exists, initial open/probe only
-//! accept quiescent checkpointed stores. They never checkpoint another connection.
-use crate::{Error, Result};
-use std::{fs, path::Path};
-pub(crate) fn qualify(database: &Path) -> Result<()> {
-    let path = database.with_file_name("store.sqlite3-wal");
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
-            Err(Error::InvalidRoot)
-        }
-        Ok(metadata) if metadata.len() > 0 => Err(Error::NeedsCheckpoint),
-        Ok(_) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
+//! Qualification opens only a bounded private main+WAL copy, never source SQLite.
+use crate::{Error, Identity, Result, binding::Binding, connection};
+use std::{
+    fs::{self, File, OpenOptions},
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+    time::Instant,
+};
+const CAP: u64 = 64 * 1024 * 1024;
+static SERIAL: AtomicU64 = AtomicU64::new(0);
+struct Scratch(PathBuf);
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
     }
+}
+impl Scratch {
+    fn cleanup(&self) -> Result<()> {
+        fs::remove_dir_all(&self.0)?;
+        Ok(())
+    }
+    fn create(parent: &Path) -> Result<Self> {
+        Binding::validate_probe_path(parent)?;
+        #[cfg(unix)]
+        use std::os::unix::fs::DirBuilderExt;
+        for _ in 0..32 {
+            let path = parent.join(format!(
+                ".hf-snapshot-{}-{}",
+                std::process::id(),
+                SERIAL.fetch_add(1, Ordering::Relaxed)
+            ));
+            let mut builder = fs::DirBuilder::new();
+            #[cfg(unix)]
+            builder.mode(0o700);
+            match builder.create(&path) {
+                Ok(()) => return Ok(Self(path)),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Err(Error::Busy)
+    }
+}
+pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
+    let file = File::open(binding.root().join("store.identity"))?;
+    if file.metadata()?.len() > 128 {
+        return Err(Error::Incompatible);
+    }
+    let mut text = String::new();
+    file.take(129).read_to_string(&mut text)?;
+    let mut lines = text.lines();
+    if lines.next() != Some("harflow-storage-2") || lines.next() != Some("1") {
+        return Err(Error::Incompatible);
+    }
+    let generation = lines.next().ok_or(Error::Incompatible)?.to_owned();
+    if generation.len() != 32
+        || !generation.bytes().all(|b| b.is_ascii_hexdigit())
+        || lines.next().is_some()
+        || text != format!("harflow-storage-2\n1\n{generation}\n")
+    {
+        return Err(Error::Incompatible);
+    }
+    Ok(Identity {
+        generation,
+        schema_version: crate::SCHEMA_VERSION,
+    })
+}
+pub(crate) fn publish(root: &Path, identity: &Identity) -> Result<()> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(root.join("store.identity"))?;
+    write!(file, "harflow-storage-2\n1\n{}\n", identity.generation)?;
+    file.sync_all()?;
+    Ok(())
+}
+fn copy(source: &Path, target: &Path, remaining: &mut u64, deadline: Instant) -> Result<()> {
+    let mut input = File::open(source)?;
+    let size = input.metadata()?.len();
+    if size > *remaining {
+        return Err(Error::LimitExceeded);
+    }
+    *remaining -= size;
+    let mut output = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(target)?;
+    let mut buffer = [0; 64 * 1024];
+    let mut copied = 0;
+    loop {
+        connection::check_deadline(deadline)?;
+        let count = input.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        copied += count as u64;
+        if copied > size {
+            return Err(Error::Replaced);
+        }
+        output.write_all(&buffer[..count])?;
+    }
+    if copied != size {
+        return Err(Error::Replaced);
+    }
+    Ok(())
+}
+pub(crate) fn qualify(binding: &Binding, parent: &Path, deadline: Instant) -> Result<Identity> {
+    connection::check_deadline(deadline)?;
+    binding.check()?;
+    let journal = binding.root().join("store.sqlite3-journal");
+    match fs::metadata(journal) {
+        Ok(metadata) if metadata.len() != 0 => return Err(Error::NeedsCheckpoint),
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
+        _ => {}
+    }
+    let expected = marker(binding)?;
+    Binding::validate_probe_path(parent)?;
+    let parent = fs::canonicalize(parent)?;
+    if parent.starts_with(fs::canonicalize(binding.root())?) {
+        return Err(Error::InvalidRoot);
+    }
+    let scratch = Scratch::create(&parent)?;
+    let result = qualify_copy(binding, &scratch, expected, deadline);
+    scratch.cleanup()?;
+    result
+}
+fn qualify_copy(
+    binding: &Binding,
+    scratch: &Scratch,
+    expected: Identity,
+    deadline: Instant,
+) -> Result<Identity> {
+    let database = scratch.0.join("store.sqlite3");
+    let mut remaining = CAP;
+    copy(&binding.database(), &database, &mut remaining, deadline)?;
+    let source_wal = binding.root().join("store.sqlite3-wal");
+    if source_wal.try_exists()? {
+        copy(
+            &source_wal,
+            &scratch.0.join("store.sqlite3-wal"),
+            &mut remaining,
+            deadline,
+        )?;
+    }
+    binding.check()?;
+    connection::qualify_header(&database)?;
+    let connection = rusqlite::Connection::open_with_flags(
+        &database,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
+    )?;
+    connection::suppress_checkpoints(&connection)?;
+    let observed = connection::identity(&connection, deadline)?;
+    connection::timeout(&connection, deadline)?;
+    let integrity: String = connection.query_row("PRAGMA quick_check(1)", [], |row| row.get(0))?;
+    if integrity != "ok" || observed != expected {
+        return Err(Error::Incompatible);
+    }
+    connection::check_deadline(deadline)?;
+    Ok(observed)
 }

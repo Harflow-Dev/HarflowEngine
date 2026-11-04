@@ -5,13 +5,16 @@ use std::{
     time::Instant,
 };
 impl Store {
-    fn admit(&self, deadline: Instant) -> Result<MutexGuard<'_, Connection>> {
+    pub(crate) fn admit(&self, deadline: Instant) -> Result<MutexGuard<'_, Connection>> {
         connection::check_deadline(deadline)?;
         let guard = self.connection.try_lock().map_err(|error| match error {
             TryLockError::WouldBlock => Error::Busy,
             TryLockError::Poisoned(_) => Error::Incompatible,
         })?;
         self.binding.check()?;
+        if crate::wal::marker(&self.binding)? != self.identity {
+            return Err(Error::Replaced);
+        }
         if connection::identity(&guard, deadline)? != self.identity {
             return Err(Error::Replaced);
         }
@@ -44,6 +47,8 @@ impl Store {
         }
         self.check_bounds(mutations.len(), bytes)?;
         let mut connection = self.admit(deadline)?;
+        let _io = self.binding.io()?;
+        connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         for mutation in mutations {
             connection::timeout(&transaction, deadline)?;

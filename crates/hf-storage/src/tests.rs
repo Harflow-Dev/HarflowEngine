@@ -2,8 +2,37 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::{Limits, Store};
-use std::fs;
 use std::time::{Duration, Instant};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Write},
+    process::{Child, Command, Stdio},
+    sync::mpsc,
+    sync::{Mutex, OnceLock},
+};
+
+static STAGE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+struct StageChild(Child);
+impl Drop for StageChild {
+    fn drop(&mut self) {
+        if self.0.try_wait().ok().flatten().is_none() {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+}
+
+pub(crate) fn stage(name: &str) {
+    let selected = STAGE.get_or_init(|| Mutex::new(None));
+    let matches = selected.lock().unwrap().as_deref() == Some(name);
+    if matches {
+        println!("STAGE:{name}");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        let _ = std::io::stdin().read_line(&mut line);
+    }
+}
 
 #[test]
 fn configured_store_connection_enforces_wal_full_and_foreign_keys() {
@@ -105,5 +134,121 @@ fn already_expired_deadline_rejects_without_a_write() {
             .is_empty()
     );
     drop(store);
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn interrupted_open_or_recovery_boundary_child() {
+    let Ok(root) = std::env::var("HF_STORAGE_STAGE_ROOT") else {
+        return;
+    };
+    *STAGE.get_or_init(|| Mutex::new(None)).lock().unwrap() =
+        Some(std::env::var("HF_STORAGE_STAGE_NAME").unwrap());
+    let name = std::env::var("HF_STORAGE_STAGE_NAME").unwrap();
+    if name.contains("source_open") {
+        let _ = Store::open_with_scratch(
+            &root,
+            Limits::default(),
+            Instant::now() + Duration::from_secs(10),
+            std::path::Path::new(&root).parent().unwrap(),
+        );
+    } else {
+        let _ = Store::recover(
+            &root,
+            Instant::now() + Duration::from_secs(10),
+            std::path::Path::new(&root).parent().unwrap(),
+        );
+    }
+}
+
+#[test]
+fn killing_at_observed_store_boundaries_releases_locks_and_preserves_reopenability() {
+    for stage_name in [
+        "before_source_open",
+        "after_source_open",
+        "before_checkpoint",
+        "after_checkpoint",
+    ] {
+        kill_at_boundary(stage_name);
+    }
+}
+
+fn kill_at_boundary(stage_name: &str) {
+    let parent = std::env::temp_dir().join(format!(
+        "hf-storage-stage-{}-{stage_name}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&parent);
+    fs::create_dir(&parent).unwrap();
+    let parent = fs::canonicalize(parent).unwrap();
+    let root = parent.join("store");
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        Instant::now() + Duration::from_secs(2),
+    )
+    .unwrap();
+    store
+        .apply_batch(
+            &[super::Mutation::Put {
+                key: "stable".into(),
+                value: b"ok".to_vec(),
+            }],
+            Instant::now() + Duration::from_secs(2),
+        )
+        .unwrap();
+    drop(store);
+    let child = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "tests::interrupted_open_or_recovery_boundary_child",
+            "--nocapture",
+        ])
+        .env("HF_STORAGE_STAGE_ROOT", &root)
+        .env("HF_STORAGE_STAGE_NAME", stage_name)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .unwrap();
+    let mut child = StageChild(child);
+    let output = child.0.stdout.take().unwrap();
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        for line in BufReader::new(output).lines() {
+            if sender.send(line.ok()).is_err() {
+                return;
+            }
+        }
+        let _ = sender.send(None);
+    });
+    let mut found = false;
+    for _ in 0..32 {
+        let line = receiver
+            .recv_timeout(Duration::from_secs(10))
+            .expect("stage child output timeout")
+            .expect("stage child exited before boundary");
+        if line.trim() == format!("STAGE:{stage_name}") {
+            found = true;
+            break;
+        }
+    }
+    assert!(found, "stage {stage_name} was not reached");
+    child.0.kill().unwrap();
+    assert!(!child.0.wait().unwrap().success());
+    let reopened = Store::open(
+        &root,
+        Limits::default(),
+        Instant::now() + Duration::from_secs(2),
+    )
+    .unwrap();
+    assert_eq!(
+        reopened
+            .read_batch(&["stable".into()], Instant::now() + Duration::from_secs(2))
+            .unwrap()[0]
+            .value,
+        b"ok"
+    );
+    drop(reopened);
     fs::remove_dir_all(parent).unwrap();
 }

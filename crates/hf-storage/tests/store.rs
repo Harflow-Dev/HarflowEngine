@@ -182,39 +182,47 @@ fn effective_uid() -> u32 {
 }
 
 #[test]
-fn live_store_excludes_probe_and_second_open_without_creating_files() {
+fn live_store_allows_shared_open_and_probe_without_creating_files() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
     let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(matches!(probe(&root), Err(Error::Busy)));
-    assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
-        Err(Error::Busy)
-    ));
+    assert!(probe(&root).unwrap().is_some());
+    let second = Store::open(&root, default_limits(), deadline()).unwrap();
+    assert_eq!(second.identity().generation, store.identity().generation);
     assert_eq!(snapshot_tree(&root), before);
     drop(store);
 }
 
 #[test]
-fn nonempty_live_wal_is_refused_without_touching_store_files() {
+fn normal_open_recovers_committed_wal_without_probe_side_effects() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
     drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
     let connection = Connection::open(root.join("store.sqlite3")).unwrap();
     connection
-        .execute_batch("PRAGMA journal_mode=WAL; PRAGMA user_version=2;")
+        .execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;")
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO fixture_records VALUES('crash-commit', X'6B657074')",
+            [],
+        )
         .unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(matches!(probe(&root), Err(Error::NeedsCheckpoint)));
-    assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
-        Err(Error::NeedsCheckpoint)
-    ));
+    assert!(probe(&root).unwrap().is_some());
     assert_eq!(snapshot_tree(&root), before);
     drop(connection);
+    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    assert_eq!(
+        reopened
+            .read_batch(&["crash-commit".into()], deadline())
+            .unwrap()[0]
+            .value,
+        b"kept"
+    );
 }
 
 #[cfg(unix)]
