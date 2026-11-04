@@ -21,3 +21,7 @@ production caller/lifecycle verification.
 Internal stored event paging and consumer-only mappings are described in
 [event reads](event-reads.md). They retain fixture authority and observation
 boundaries; no public host operation or watcher is implemented.
+
+The macOS arm64 fixture-only [process primitives](process-primitives.md) retain
+qualified direct-child handles and independent capture/exit evidence. They add no
+detached owner, public execution capability or descendant-containment guarantee.

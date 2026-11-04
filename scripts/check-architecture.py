@@ -9,7 +9,7 @@ EDGES = {
     "hf-domain": [], "hf-application": ["hf-domain"], "hf-contracts": [],
     "hf-storage": ["hf-application", "hf-domain", "rusqlite"],
     "hf-backends": ["hf-application", "hf-domain"],
-    "hf-platform": ["hf-application", "hf-domain"],
+    "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix"],
     "hf-interfaces": ["hf-application", "hf-domain", "serde_json"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
@@ -25,6 +25,23 @@ def validate(metadata, root):
             if dependency["name"] not in EDGES[package["name"]] or dependency["kind"] is not None:
                 raise ValueError(f"Forbidden dependency: {package['name']} -> {dependency['name']}")
         for dependency in package["dependencies"]:
+            os_wrappers = {
+                "libproc": ("=0.14.11", []),
+                "sysctl": ("=0.7.1", []),
+                "nix": ("=0.31.3", ["fs", "poll", "process", "signal"]),
+            }
+            if dependency["name"] in os_wrappers:
+                version, features = os_wrappers[dependency["name"]]
+                if (
+                    package["name"] != "hf-platform"
+                    or dependency.get("req") != version
+                    or dependency.get("uses_default_features") is not False
+                    or dependency.get("features") != features
+                    or dependency.get("optional") is not False
+                    or dependency.get("target") != 'cfg(target_os = "macos")'
+                    or dependency.get("rename") is not None
+                ):
+                    raise ValueError(f"{dependency['name']} requires platform-only exact macOS wrapper policy")
             if dependency["name"] == "rusqlite" and (
                 dependency.get("req") != "=0.41.1"
                 or dependency.get("uses_default_features") is not False

@@ -127,6 +127,49 @@ class ArchitectureMetadataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "build scripts are forbidden"):
             validate(self.metadata, self.root)
 
+    def test_platform_os_wrappers_require_exact_macos_only_policy(self):
+        platform = next(package for package in self.packages if package["name"] == "hf-platform")
+        reviewed = {
+            "libproc": ("=0.14.11", []),
+            "sysctl": ("=0.7.1", []),
+            "nix": ("=0.31.3", ["fs", "poll", "process", "signal"]),
+        }
+        def dependency(name, version, features):
+            return {
+                "name": name, "kind": None, "req": version,
+                "uses_default_features": False, "features": features,
+                "optional": False, "target": 'cfg(target_os = "macos")', "rename": None,
+            }
+        platform["dependencies"] = [dependency(name, *spec) for name, spec in reviewed.items()]
+        validate(self.metadata, self.root)
+
+        for name, (version, features) in reviewed.items():
+            accepted = dependency(name, version, features)
+            changes = [
+                {"req": version.lstrip("=")},
+                {"req": "=9.9.9"},
+                {"uses_default_features": True},
+                {"features": features + ["extra"]},
+                {"kind": "dev"},
+                {"kind": "build"},
+                {"optional": True},
+                {"target": 'cfg(unix)'},
+                {"target": None},
+                {"rename": "renamed"},
+            ]
+            if name == "nix":
+                changes.append({"features": ["fs", "poll", "signal"]})
+            for change in changes:
+                platform["dependencies"] = [dict(accepted, **change)]
+                with self.subTest(name=name, change=change), self.assertRaisesRegex(ValueError, name):
+                    validate(self.metadata, self.root)
+
+            outsider = next(package for package in self.packages if package["name"] == "hf-domain")
+            outsider["dependencies"] = [accepted]
+            with self.subTest(name=name, owner="hf-domain"), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
+                validate(self.metadata, self.root)
+            outsider["dependencies"] = []
+
     def test_rejects_custom_domain_targets_and_oversized_rust_files(self):
         domain = self.packages[0]
         domain["targets"].append({"kind": ["bin"], "src_path": str(self.root / "crates/hf-domain/src/main.rs")})
