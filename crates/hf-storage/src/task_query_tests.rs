@@ -26,6 +26,7 @@ fn explain(connection: &Connection, filter: &PageFilter, cursor: Option<&Cursor>
 
 #[test]
 fn generated_page_queries_seek_the_matching_index_without_sorting() {
+    let _guard = crate::tests::fixture_guard();
     let parent = std::env::temp_dir().join(format!("hf-query-plan-{}", std::process::id()));
     let _ = fs::remove_dir_all(&parent);
     fs::create_dir(&parent).unwrap();
@@ -87,6 +88,7 @@ fn generated_page_queries_seek_the_matching_index_without_sorting() {
 
 #[test]
 fn production_selects_return_only_their_bounded_generation_and_identifier_prefixes() {
+    let _guard = crate::tests::fixture_guard();
     let parent = std::env::temp_dir().join(format!("hf-query-projection-{}", std::process::id()));
     let _ = fs::remove_dir_all(&parent);
     fs::create_dir(&parent).unwrap();

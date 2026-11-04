@@ -7,6 +7,7 @@ use std::{
 
 #[test]
 fn production_seek_query_caps_runtime_kind_projection_and_avoids_body_materialization() {
+    let _guard = super::fixture_guard();
     let parent = std::env::temp_dir().join(format!("hf-event-projection-{}", std::process::id()));
     let _ = fs::remove_dir_all(&parent);
     fs::create_dir(&parent).unwrap();

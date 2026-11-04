@@ -103,3 +103,12 @@ lock release/reopen behavior; they do not instrument or certify interruption ins
 SQLite recovery/checkpoint syscalls or a VFS write. Tests use bounded IPC and exact
 invocation scratch ownership; those infrastructure guarantees are distinct from
 future engine process containment.
+
+## R03-B1 fresh-schema evolution
+
+Current initialization uses SQLite schema2 and an actual schema2 marker. Schema1
+fixtures refuse without automatic upgrade. The new internal ownership namespace
+has its own version/generation checks and is separate from task/event fixture DML;
+see [ownership foundation](ownership-foundation.md). Lock hierarchy, WAL/FULL/FK,
+64MiB qualification, nonmutating probe/source-open distinction and explicit recovery
+remain unchanged. This is new-root initialization, not a schema-migration API.

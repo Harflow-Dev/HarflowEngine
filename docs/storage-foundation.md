@@ -51,9 +51,15 @@ performance or R14 qualification follows from targeted macOS process tests.
 SQLite decides valid committed WAL history; ignored/torn/uncommitted tails do not
 become proved external effects or permission to replay.
 
-Dependency unchanged: exact rusqlite0.41.1, default features disabled, bundled only;
+SQLite dependency remains exact rusqlite0.41.1, default features disabled, bundled only;
 libsqlite3-sys0.39.1 supplies SQLite3.54.1. Cargo.lock pins the closure. The guard
 keeps exact storage edge/version/features and all other layer/domain/unsafe rules.
 Safe rusqlite configuration is used; no workspace unsafe or added runtime framework.
 Use pinned Rust1.99.1/rustfmt/clippy and documented checks. No shell profile change
 is required; tests use isolated temporary fixture roots and owned processes only.
+
+R03-B1 deliberately initializes fresh schema2 roots and rejects older schema1 roots
+without an automatic upgrade. It adds a separate internal ownership namespace and
+exact storage-only SHA-256 verification dependency; see the
+[ownership foundation](ownership-foundation.md). This does not make fixture task/
+event DML authoritative execution state or add a supported engine operation.

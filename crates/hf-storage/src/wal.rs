@@ -50,20 +50,31 @@ pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
     let mut text = String::new();
     file.take(129).read_to_string(&mut text)?;
     let mut lines = text.lines();
-    if lines.next() != Some("harflow-storage-2") || lines.next() != Some("1") {
+    if lines.next() != Some("harflow-storage-2") {
+        return Err(Error::Incompatible);
+    }
+    let version = lines
+        .next()
+        .ok_or(Error::Incompatible)?
+        .parse::<u32>()
+        .map_err(|_| Error::Incompatible)?;
+    if version > crate::SCHEMA_VERSION {
+        return Err(Error::FutureSchema);
+    }
+    if version != crate::SCHEMA_VERSION {
         return Err(Error::Incompatible);
     }
     let generation = lines.next().ok_or(Error::Incompatible)?.to_owned();
     if generation.len() != 32
         || !generation.bytes().all(|b| b.is_ascii_hexdigit())
         || lines.next().is_some()
-        || text != format!("harflow-storage-2\n1\n{generation}\n")
+        || text != format!("harflow-storage-2\n{version}\n{generation}\n")
     {
         return Err(Error::Incompatible);
     }
     Ok(Identity {
         generation,
-        schema_version: crate::SCHEMA_VERSION,
+        schema_version: version,
     })
 }
 pub(crate) fn publish(root: &Path, identity: &Identity) -> Result<()> {
@@ -71,7 +82,11 @@ pub(crate) fn publish(root: &Path, identity: &Identity) -> Result<()> {
         .write(true)
         .create_new(true)
         .open(root.join("store.identity"))?;
-    write!(file, "harflow-storage-2\n1\n{}\n", identity.generation)?;
+    write!(
+        file,
+        "harflow-storage-2\n{}\n{}\n",
+        identity.schema_version, identity.generation
+    )?;
     file.sync_all()?;
     Ok(())
 }

@@ -3,7 +3,7 @@
 
 mod common;
 use common::{Fixture, deadline, default_limits};
-use hf_storage::{Error, Mutation, Store, probe};
+use hf_storage::{Error, Mutation, SCHEMA_VERSION, Store, probe};
 use rusqlite::{Connection, OpenFlags};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -278,7 +278,7 @@ fn generation_survives_reopen_and_database_uses_wal_mode() {
     let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
 
     assert_eq!(reopened.identity().generation, generation);
-    assert_eq!(reopened.identity().schema_version, 1);
+    assert_eq!(reopened.identity().schema_version, SCHEMA_VERSION);
 
     let connection = Connection::open_with_flags(
         root.join("store.sqlite3"),

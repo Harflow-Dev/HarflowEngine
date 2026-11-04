@@ -15,6 +15,13 @@ mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
 mod operations;
+mod ownership;
+mod ownership_codec;
+mod ownership_port;
+mod ownership_read;
+mod ownership_release;
+mod ownership_schema;
+mod ownership_write;
 mod task_fixture;
 mod task_page;
 mod task_query;
@@ -30,10 +37,14 @@ use binding::Binding;
 use rusqlite::Connection;
 use std::{path::Path, sync::Mutex, time::Instant};
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
+    InvalidOwnership,
+    OwnershipConflict,
+    StaleOwnership,
+    OwnershipUnavailable,
     Io(std::io::Error),
     Sqlite(rusqlite::Error),
     InvalidRoot,

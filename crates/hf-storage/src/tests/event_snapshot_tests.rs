@@ -75,6 +75,7 @@ fn event_read_snapshot_child() {
 
 #[test]
 fn event_read_observes_one_snapshot_during_concurrent_fixture_replacement() {
+    let _guard = super::fixture_guard();
     let parent = std::env::temp_dir().join(format!("hf-event-snapshot-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&parent);
     std::fs::create_dir(&parent).unwrap();
@@ -146,6 +147,7 @@ fn event_read_observes_one_snapshot_during_concurrent_fixture_replacement() {
 
 #[test]
 fn actual_seek_queries_use_deep_indexes_and_bound_metadata_projections() {
+    let _guard = super::fixture_guard();
     let parent = std::env::temp_dir().join(format!("hf-event-plan-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&parent);
     std::fs::create_dir(&parent).unwrap();

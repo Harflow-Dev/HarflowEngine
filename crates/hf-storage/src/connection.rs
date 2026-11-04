@@ -111,6 +111,7 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
         CREATE TABLE store_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),generation TEXT NOT NULL);
         INSERT INTO store_identity VALUES(1,lower(hex(randomblob(16))));
         CREATE TABLE fixture_records(key TEXT PRIMARY KEY NOT NULL,value BLOB NOT NULL);"))?;
+    transaction.execute_batch(crate::ownership_schema::SCHEMA)?;
     transaction.execute_batch(crate::task_fixture::TASK_SCHEMA)?;
     transaction.execute_batch(crate::event_fixture::EVENT_SCHEMA)?;
     timeout(&transaction, deadline)?;

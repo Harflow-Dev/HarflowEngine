@@ -55,6 +55,34 @@ class ArchitectureMetadataTests(unittest.TestCase):
         })
         validate(self.metadata, self.root)
 
+    def test_storage_allows_only_exact_storage_owned_sha256_dependency(self):
+        storage = next(package for package in self.packages if package["name"] == "hf-storage")
+        reviewed = {
+            "name": "sha2", "kind": None, "req": "=0.10.9",
+            "uses_default_features": False, "features": [],
+            "optional": False, "target": None, "rename": None,
+        }
+        storage["dependencies"] = [reviewed]
+        validate(self.metadata, self.root)
+
+        for owner in ("hf-domain", "hf-application", "hf-contracts", "hf-backends", "hf-platform", "hf-interfaces", "hf-host", "hf-architecture"):
+            package = next(item for item in self.packages if item["name"] == owner)
+            package["dependencies"] = [reviewed]
+            with self.subTest(owner=owner), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
+                validate(self.metadata, self.root)
+            package["dependencies"] = []
+
+        for change in (
+            {"req": "0.10.9"}, {"req": "=0.10.8"},
+            {"uses_default_features": True}, {"features": ["std"]},
+            {"features": ["compress"]}, {"kind": "dev"},
+            {"kind": "build"}, {"optional": True},
+            {"target": 'cfg(unix)'}, {"rename": "digest"},
+        ):
+            storage["dependencies"] = [{**reviewed, **change}]
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "sha2"):
+                validate(self.metadata, self.root)
+
     def test_rejects_rusqlite_outside_storage_or_with_unreviewed_features(self):
         storage = next(package for package in self.packages if package["name"] == "hf-storage")
         reviewed = {
