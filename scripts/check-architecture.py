@@ -7,7 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 EDGES = {
     "hf-domain": [], "hf-application": ["hf-domain"], "hf-contracts": [],
-    "hf-storage": ["hf-application", "hf-domain"],
+    "hf-storage": ["hf-application", "hf-domain", "rusqlite"],
     "hf-backends": ["hf-application", "hf-domain"],
     "hf-platform": ["hf-application", "hf-domain"],
     "hf-interfaces": ["hf-application", "hf-domain"],
@@ -24,6 +24,16 @@ def validate(metadata, root):
         for dependency in package["dependencies"]:
             if dependency["name"] not in EDGES[package["name"]] or dependency["kind"] is not None:
                 raise ValueError(f"Forbidden dependency: {package['name']} -> {dependency['name']}")
+        for dependency in package["dependencies"]:
+            if dependency["name"] == "rusqlite" and (
+                dependency.get("req") != "=0.41.1"
+                or dependency.get("uses_default_features") is not False
+                or dependency.get("features") != ["bundled"]
+                or dependency.get("optional") is not False
+                or dependency.get("target") is not None
+                or dependency.get("rename") is not None
+            ):
+                raise ValueError("rusqlite requires exact reviewed version and bundled-only features")
         manifest_path = Path(package["manifest_path"])
         if package["name"] == "hf-domain":
             expected = (manifest_path.parent / "src/lib.rs").resolve()

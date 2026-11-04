@@ -11,3 +11,4 @@ workspace = true
 [dependencies]
 hf-application = { path = "../hf-application" }
 hf-domain = { path = "../hf-domain" }
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }

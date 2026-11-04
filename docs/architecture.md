@@ -1,6 +1,6 @@
 # Architecture
 
-hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage/hf-backends/hf-platform implement future application ports. hf-interfaces maps future transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; it prints an unsupported diagnostic, reads no engine environment or user state, and writes no state.
+hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends/hf-platform remain reserved adapter seams. hf-interfaces maps future transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; it prints an unsupported diagnostic, reads no engine environment or user state, and writes no state.
 
 Target files below 250 substantive lines and functions below 50 code lines. Enforced production maxima are 400 and 80. Changes must preserve constructor injection, explicit errors and bounded work. No compatibility or migration claim follows from a successful build.
 

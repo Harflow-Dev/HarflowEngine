@@ -46,6 +46,43 @@ class ArchitectureMetadataTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Forbidden dependency"):
                     validate(self.metadata, self.root)
 
+    def test_storage_allows_only_exact_bundled_rusqlite_dependency(self):
+        storage = next(package for package in self.packages if package["name"] == "hf-storage")
+        storage["dependencies"].append({
+            "name": "rusqlite", "kind": None, "req": "=0.41.1",
+            "uses_default_features": False, "features": ["bundled"],
+            "optional": False, "target": None, "rename": None,
+        })
+        validate(self.metadata, self.root)
+
+    def test_rejects_rusqlite_outside_storage_or_with_unreviewed_features(self):
+        storage = next(package for package in self.packages if package["name"] == "hf-storage")
+        reviewed = {
+            "name": "rusqlite", "kind": None, "req": "=0.41.1",
+            "uses_default_features": False, "features": ["bundled"],
+            "optional": False, "target": None, "rename": None,
+        }
+        for owner in ("hf-domain", "hf-application", "hf-backends", "hf-platform", "hf-host"):
+            package = next(item for item in self.packages if item["name"] == owner)
+            package["dependencies"] = [reviewed]
+            with self.subTest(owner=owner), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
+                validate(self.metadata, self.root)
+            package["dependencies"] = []
+
+        for change in (
+            {"req": "0.41.1"},
+            {"uses_default_features": True},
+            {"features": ["bundled", "backup"]},
+            {"kind": "dev"},
+            {"optional": True},
+            {"target": "cfg(unix)"},
+            {"rename": "sqlite"},
+        ):
+            dependency = {**reviewed, **change}
+            storage["dependencies"] = [dependency]
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "rusqlite"):
+                validate(self.metadata, self.root)
+
     def test_rejects_missing_lint_inheritance_and_domain_build_script(self):
         manifest = Path(self.packages[0]["manifest_path"])
         manifest.write_text("[package]\nname = 'hf-domain'\n", encoding="utf-8")
