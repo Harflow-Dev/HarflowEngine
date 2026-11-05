@@ -41,7 +41,53 @@ The separate version-only diagnostic added exactly
 1.4.4 crash banner with macOS 26.6.2 but retained SIGTRAP. That is not evidence
 that OS-version denial caused the trap. The base profile remains unchanged;
 Mach, process inspection, process creation and broad sysctl permissions were
-not relaxed. The startup cause remains unknown.
+not relaxed. The startup cause was unknown at stage delivery; the following
+diagnosis localizes that observed trap without changing the profile.
+
+### Follow-up: page-size assertion
+
+Two independent read-only diagnoses decoded the existing trace locally; no
+telemetry URL was opened. Both runs identify image-relative frame `0x5550377`.
+Static inspection of the exact executable identifies the trap at preferred
+address `0x105550378`, a `brk #0` carrying `WTF::pageSize()` metadata from
+`vendor/WebKit/Source/WTF/wtf/PageBlock.cpp`, line 64. Preceding instructions call
+`sysconf(29)` (`_SC_PAGESIZE` in the installed SDK) and branch to this assertion
+when the returned value is not a power of two.
+
+The primary independently inspected these instructions and embedded literals,
+then ran a fixed C helper from a fresh `FixtureRoot`. The existing
+`VendorNoFork` profile factory was used with its declared runtime/helper reads
+and an exclusively reserved dual-stack loopback port. No sysctl exception or
+other permission was added. The helper invokes no vendor and creates no child.
+
+| Observation | Outside profile positive control | VendorNoFork profile |
+| --- | --- | --- |
+| `sysconf(_SC_PAGESIZE)` | 16384, errno 0 | -1, errno 1 (EPERM) |
+| `sysctlbyname("hw.pagesize")` | 16384, success | -1, errno 1 (EPERM) |
+
+Both helper processes exited zero, were reaped by their original parent and
+reached both output EOFs; no listener received a connection. The fixture is
+retained as diagnostic evidence. This establishes the observed failure chain:
+page-size denial returns an invalid size, which triggers the exact WebKit
+assertion in the captured Claude failure. Apple's
+[sysconf implementation](https://raw.githubusercontent.com/apple-oss-distributions/Libc/main/gen/FreeBSD/sysconf.c)
+and [getpagesize implementation](https://raw.githubusercontent.com/apple-oss-distributions/Libc/main/gen/FreeBSD/getpagesize.c)
+corroborate the call chain. Current upstream sources are explanatory evidence;
+the pinned executable and actual helper results identify this local failure.
+
+Artifacts: `/private/tmp/harflow-claude-trap/`, including helper source, generated
+profile, disassembly, assertion literals and `result.json`. Result SHA-256:
+`7032c02bb11c82e9117c46820f837000a59091d426847e85299dea489de32dbf`.
+Profile SHA-256:
+`026b5c9650187e6b465f4d62dfe13b58416531d8010994f5740f7403b9e2bf86`.
+Helper source SHA-256:
+`8be1694f1d9a589d9fd781519a5b594515e088bb7cac60de641d082f8b3891b0`.
+
+No runtime policy was changed and Claude was not rerun in this diagnosis.
+An exact `hw.pagesize` read-only exception is the smallest candidate for a later
+version-only experiment, with the full safety preflight repeated. It has not
+been tested or adopted. Resolving this assertion does not establish that later
+startup, protocol, tools or production qualification will succeed.
 
 Exact generated OS profile texts and operation names are captured by the
 opt-in probe. Claude logs record root device/inode, base and selected profile

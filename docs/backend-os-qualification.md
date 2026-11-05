@@ -105,6 +105,13 @@ and still trapped. Its crash banner gained the OS version, which establishes
 reporting access, not the cause of the original trap. Neither profile qualifies
 Claude, and no further permissions were broadened to obtain a passing result.
 
+A subsequent unchanged-profile helper diagnosis identifies the captured trap as
+WebKit's page-size assertion: `sysconf(_SC_PAGESIZE)` returns -1/EPERM while the
+outside-profile positive control returns 16384. The exact binary's assertion
+branch corroborates the failure chain. No policy fix or successful Claude
+startup is claimed; the receipt records the observations and smallest candidate
+for a later experiment.
+
 See [the measured stage receipt](backend-os-qualification-receipt.md) for the
 verification boundary and remaining production gates.
 
