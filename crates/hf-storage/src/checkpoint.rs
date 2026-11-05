@@ -1,5 +1,6 @@
 use crate::{Error, Result, Store, binding::Binding, connection, open_source, wal};
-use std::{path::Path, time::Instant};
+use hf_application::lease::{LeaseMode, LeasePort};
+use std::{path::Path, sync::Arc, time::Instant};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Checkpoint {
     pub busy: u32,
@@ -39,7 +40,7 @@ fn checkpoint(
 impl Store {
     pub fn checkpoint_passive(&self, deadline: Instant) -> Result<Checkpoint> {
         let connection = self.admit(deadline)?;
-        let _io = self.binding.io()?;
+        let _io = self.binding.io(deadline)?;
         connection::check_deadline(deadline)?;
         let result = checkpoint(&connection, false, deadline)?;
         self.binding.check()?;
@@ -50,12 +51,12 @@ impl Store {
         root: impl AsRef<Path>,
         deadline: Instant,
         scratch_parent: impl AsRef<Path>,
+        leases: Arc<dyn LeasePort>,
     ) -> Result<Checkpoint> {
         connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true)?;
-        let claim = std::fs::File::open(root.as_ref().join("store.lock"))?;
-        connection::claim(&claim, false)?;
-        let _io = binding.io()?;
+        let binding = Binding::capture(root.as_ref(), true, leases)?;
+        let _claim = binding.claim(LeaseMode::Exclusive, deadline)?;
+        let _io = binding.io(deadline)?;
         let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
         let connection = open_source(&binding, &identity, deadline)?;
         let result = checkpoint(&connection, true, deadline)?;

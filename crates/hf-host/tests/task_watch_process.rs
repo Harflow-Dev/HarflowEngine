@@ -17,13 +17,20 @@ use support::*;
 fn another_process_commits_between_watch_snapshots_and_result_is_changed() {
     let fixture = Fixture::new();
     let root = fixture.root();
-    let initial = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let initial = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        hf_platform::lease::shared(),
+    )
+    .unwrap();
     drop(initial);
     let baseline = WatchSession::new(
         &root,
         Limits::default(),
         WatchJsonCodec,
         hf_storage::RealWatchControl::default(),
+        hf_platform::lease::shared(),
     )
     .execute(
         &WatchRequest {
@@ -49,9 +56,14 @@ fn another_process_commits_between_watch_snapshots_and_result_is_changed() {
         let watched_root = root.clone();
         let (send_result, received_result) = mpsc::channel();
         let watcher = thread::spawn(move || {
-            let result =
-                WatchSession::new(watched_root, Limits::default(), WatchJsonCodec, control)
-                    .execute(&request, deadline());
+            let result = WatchSession::new(
+                watched_root,
+                Limits::default(),
+                WatchJsonCodec,
+                control,
+                hf_platform::lease::shared(),
+            )
+            .execute(&request, deadline());
             let _ = send_result.send(result);
         });
         entered
@@ -91,7 +103,13 @@ fn task_watch_writer_actor() {
     let _guard = support::FIXTURE_GATE
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    let store = Store::open(root, Limits::default(), deadline()).unwrap();
+    let store = Store::open(
+        root,
+        Limits::default(),
+        deadline(),
+        hf_platform::lease::shared(),
+    )
+    .unwrap();
     println!("WATCH_ACTOR_READY");
     std::io::stdout().flush().unwrap();
     let mut line = String::new();

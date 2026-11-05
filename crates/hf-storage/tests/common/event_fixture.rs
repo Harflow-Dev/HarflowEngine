@@ -3,7 +3,7 @@
 
 #[path = "mod.rs"]
 mod common;
-pub(super) use common::{Fixture, deadline, default_limits};
+pub(super) use common::{Fixture, deadline, default_limits, lease};
 pub(super) use hf_application::{
     event_read::{EventRecord, RecordClass},
     task_read::TaskRow,
@@ -35,9 +35,13 @@ pub(super) fn row() -> TaskRow {
 }
 pub(super) fn store() -> (Fixture, Store) {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {

@@ -57,7 +57,13 @@ fn ownership_actor_child() {
     let ledger = std::env::var("HF_B1_LEDGER").unwrap();
     let action = std::env::var("HF_B1_ACTION").unwrap();
     let op = std::env::var("HF_B1_OP").unwrap().parse::<u8>().unwrap();
-    let store = Store::open(root, Limits::default(), deadline()).unwrap();
+    let store = Store::open(
+        root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     if let Ok(hook) = std::env::var("HF_B1_HOOK") {
         *STAGE
             .get_or_init(|| std::sync::Mutex::new(None))

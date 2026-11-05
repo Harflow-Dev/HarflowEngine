@@ -12,7 +12,15 @@ fn missing_or_corrupt_protocol_marker_refuses_without_touching_files() {
     for marker in [None, Some(b"foreign protocol\n".as_slice())] {
         let fixture = Fixture::new();
         let root = fixture.path().join("store");
-        drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+        drop(
+            Store::initialize_fixture(
+                &root,
+                default_limits(),
+                deadline(),
+                common::lease::lease_port(),
+            )
+            .unwrap(),
+        );
         let path = root.join("store.identity");
         if let Some(bytes) = marker {
             fs::write(path, bytes).unwrap();
@@ -20,9 +28,17 @@ fn missing_or_corrupt_protocol_marker_refuses_without_touching_files() {
             fs::remove_file(path).unwrap();
         }
         let before = snapshot_tree(&root);
-        assert!(matches!(probe(&root), Err(Error::Incompatible)));
         assert!(matches!(
-            Store::open(&root, default_limits(), deadline()),
+            probe(&root, common::lease::lease_port()),
+            Err(Error::Incompatible)
+        ));
+        assert!(matches!(
+            Store::open(
+                &root,
+                default_limits(),
+                deadline(),
+                common::lease::lease_port()
+            ),
             Err(Error::Incompatible)
         ));
         assert_eq!(snapshot_tree(&root), before);
@@ -33,7 +49,13 @@ fn missing_or_corrupt_protocol_marker_refuses_without_touching_files() {
 fn well_formed_marker_generation_mismatch_refuses_all_paths_without_changes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let mut different = store.identity().generation.clone();
     different.replace_range(0..1, if &different[0..1] == "0" { "1" } else { "0" });
     drop(store);
@@ -43,15 +65,28 @@ fn well_formed_marker_generation_mismatch_refuses_all_paths_without_changes() {
     )
     .unwrap();
     let before = snapshot_tree(&root);
-    assert!(matches!(probe(&root), Err(Error::Incompatible)));
-    assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
+        probe(&root, common::lease::lease_port()),
         Err(Error::Incompatible)
     ));
     assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::recover(&root, deadline(), fixture.path()),
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
+        Err(Error::Incompatible)
+    ));
+    assert_eq!(snapshot_tree(&root), before);
+    assert!(matches!(
+        Store::recover(
+            &root,
+            deadline(),
+            fixture.path(),
+            common::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -61,13 +96,29 @@ fn well_formed_marker_generation_mismatch_refuses_all_paths_without_changes() {
 fn missing_io_gate_is_an_old_protocol_refusal_without_changes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     fs::remove_file(root.join("io.lock")).unwrap();
     let before = snapshot_tree(&root);
-    assert!(matches!(probe(&root), Err(Error::Incompatible)));
+    assert!(matches!(
+        probe(&root, common::lease::lease_port()),
+        Err(Error::Incompatible)
+    ));
     assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -77,7 +128,15 @@ fn missing_io_gate_is_an_old_protocol_refusal_without_changes() {
 fn future_schema_present_only_in_committed_wal_is_rejected_without_source_changes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let source = Connection::open(root.join("store.sqlite3")).unwrap();
     source
         .execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;")
@@ -87,15 +146,28 @@ fn future_schema_present_only_in_committed_wal_is_rejected_without_source_change
     assert!(wal.exists() && fs::metadata(&wal).unwrap().len() > 32);
     let before = snapshot_tree(&root);
 
-    assert!(matches!(probe(&root), Err(Error::FutureSchema)));
-    assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
+        probe(&root, common::lease::lease_port()),
         Err(Error::FutureSchema)
     ));
     assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::recover(&root, deadline(), fixture.path()),
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
+        Err(Error::FutureSchema)
+    ));
+    assert_eq!(snapshot_tree(&root), before);
+    assert!(matches!(
+        Store::recover(
+            &root,
+            deadline(),
+            fixture.path(),
+            common::lease::lease_port()
+        ),
         Err(Error::FutureSchema)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -106,7 +178,13 @@ fn future_schema_present_only_in_committed_wal_is_rejected_without_source_change
 fn expired_lock_handle_cannot_write_after_admission_deadline() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let result = store.apply_batch(
         &[hf_storage::Mutation::Put {
             key: "late-lock".into(),
@@ -127,15 +205,60 @@ fn expired_lock_handle_cannot_write_after_admission_deadline() {
 fn scratch_parent_inside_source_root_is_rejected_without_source_changes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let child = root.join("scratch");
     fs::create_dir(&child).unwrap();
     for scratch in [&root, &child, &child.join("..")] {
         let before = snapshot_tree(&root);
         assert!(matches!(
-            probe_with_scratch(&root, deadline(), scratch),
+            probe_with_scratch(&root, deadline(), scratch, common::lease::lease_port()),
             Err(Error::InvalidRoot)
         ));
         assert_eq!(snapshot_tree(&root), before);
     }
+}
+
+#[test]
+fn schema_four_is_incompatible_without_source_changes() {
+    let fixture = Fixture::new();
+    let root = fixture.path().join("store");
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
+    let source = Connection::open(root.join("store.sqlite3")).unwrap();
+    source.pragma_update(None, "user_version", 4_u32).unwrap();
+    source
+        .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+        .unwrap();
+    drop(source);
+    let before = snapshot_tree(&root);
+    assert!(matches!(
+        probe(&root, common::lease::lease_port()),
+        Err(Error::Incompatible)
+    ));
+    assert_eq!(snapshot_tree(&root), before);
+    assert!(matches!(
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
+        Err(Error::Incompatible)
+    ));
+    assert_eq!(snapshot_tree(&root), before);
 }

@@ -7,3 +7,5 @@ pub mod fixture;
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub mod recovery;
+
+pub mod lease;

@@ -20,7 +20,7 @@ impl Scratch {
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(fs::canonicalize(path).unwrap())
     }
 }
 impl Drop for Scratch {

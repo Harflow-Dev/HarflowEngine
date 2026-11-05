@@ -14,14 +14,24 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     // Fixed diagnostic effect only. This proves the inherited-lock boundary using
     // an independent real helper; fixture DML does not grant ownership authority.
     {
-        let identity = map(hf_storage::probe_with_scratch(&start.root, until, &parent))?
-            .ok_or_else(invalid)?;
+        let identity = map(hf_storage::probe_with_scratch(
+            &start.root,
+            until,
+            &parent,
+            hf_platform::lease::shared(),
+        ))?
+        .ok_or_else(invalid)?;
         if identity.generation != start.fence.generation.as_str()
             || start.operation != start.fence.operation
         {
             return Err(invalid());
         }
-        let store = map(Store::open(&start.root, Limits::default(), until))?;
+        let store = map(Store::open(
+            &start.root,
+            Limits::default(),
+            until,
+            hf_platform::lease::shared(),
+        ))?;
         if store.identity() != &identity {
             return Err(invalid());
         }

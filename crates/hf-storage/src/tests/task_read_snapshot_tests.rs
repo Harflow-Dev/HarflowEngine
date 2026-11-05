@@ -13,6 +13,7 @@ fn task_read_snapshot_child() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(10),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let query = TaskQuery::page(10, PageFilter::new(false, None).unwrap(), None).unwrap();
@@ -45,6 +46,7 @@ fn task_read_uses_one_sqlite_snapshot_while_a_fixture_is_replaced() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     writer

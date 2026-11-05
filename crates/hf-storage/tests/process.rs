@@ -118,7 +118,13 @@ fn child_worker() {
         return;
     };
     let mode = std::env::var("HF_STORAGE_CHILD_MODE").unwrap();
-    let store = Store::open(&root, default_limits(), deadline()).unwrap();
+    let store = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let transaction = if mode == "uncommitted" {
         let connection =
             Connection::open(std::path::Path::new(&root).join("store.sqlite3")).unwrap();
@@ -172,11 +178,27 @@ fn child_relative_root_round_trip() {
         return;
     }
     let root = std::path::Path::new("store");
-    let store = Store::initialize_fixture(root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
-    assert!(hf_storage::probe(root).unwrap().is_some());
-    let reopened = Store::open(root, default_limits(), deadline()).unwrap();
+    assert!(
+        hf_storage::probe(root, common::lease::lease_port())
+            .unwrap()
+            .is_some()
+    );
+    let reopened = Store::open(
+        root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(reopened.identity().generation, generation);
 }
 
@@ -184,7 +206,13 @@ fn child_relative_root_round_trip() {
 fn independent_processes_open_same_generation_and_write() {
     let scratch = Fixture::new();
     let root = scratch.path().join("store");
-    let initial = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let initial = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let generation = initial.identity().generation.clone();
     drop(initial);
 
@@ -234,7 +262,13 @@ fn independent_processes_open_same_generation_and_write() {
         .unwrap();
     assert_eq!(visible, 2);
 
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(reopened.identity().generation, generation);
     let raw = Connection::open(root.join("store.sqlite3")).unwrap();
     let rows: i64 = raw
@@ -255,11 +289,25 @@ fn independent_processes_open_same_generation_and_write() {
 fn process_death_releases_locks_and_parent_owns_crash_remnants() {
     let scratch = Fixture::new();
     let root = scratch.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let mut worker = Worker::spawn(&root, "killed");
     assert_eq!(worker.command("WRITE"), "WROTE");
     worker.kill_and_reap();
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(
         reopened
             .read_batch(&["worker-killed".into()], deadline())
@@ -289,7 +337,15 @@ fn process_death_releases_locks_and_parent_owns_crash_remnants() {
 fn killed_uncommitted_sqlite_writer_does_not_publish_its_transaction() {
     let scratch = Fixture::new();
     let root = scratch.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let wal = root.join("store.sqlite3-wal");
     let initial_wal_size = std::fs::metadata(&wal).map(|m| m.len()).unwrap_or(0);
     let worker = Worker::spawn(&root, "uncommitted");
@@ -298,7 +354,13 @@ fn killed_uncommitted_sqlite_writer_does_not_publish_its_transaction() {
         "actual uncommitted frames must spill to WAL"
     );
     worker.kill_and_reap();
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert!(
         reopened
             .read_batch(&["uncommitted".into()], deadline())

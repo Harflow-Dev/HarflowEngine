@@ -19,8 +19,13 @@ fn task() -> TaskId {
 }
 fn setup() -> (Fixture, Store) {
     let dir = Fixture::new();
-    let store =
-        Store::initialize_fixture(dir.path().join("store"), default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        dir.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {

@@ -18,10 +18,27 @@ use std::{
         unix::{fs::symlink, net::UnixListener},
     },
     path::{Path, PathBuf},
+    sync::Mutex,
     sync::atomic::{AtomicU64, Ordering},
     thread,
     time::{Duration, Instant},
 };
+
+static LEASE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+fn case_guard() -> std::sync::MutexGuard<'static, ()> {
+    let until = Instant::now() + Duration::from_secs(5);
+    loop {
+        match LEASE_TEST_LOCK.try_lock() {
+            Ok(guard) => return guard,
+            Err(std::sync::TryLockError::Poisoned(error)) => return error.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) if Instant::now() < until => {
+                std::thread::yield_now();
+            }
+            Err(std::sync::TryLockError::WouldBlock) => panic!("test case admission deadline"),
+        }
+    }
+}
 
 struct Scratch(PathBuf);
 impl Scratch {
@@ -33,7 +50,7 @@ impl Scratch {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(fs::canonicalize(path).unwrap())
     }
     fn path(&self) -> &Path {
         &self.0
@@ -137,6 +154,7 @@ fn fixture_gate_exchanges_bounded_bound_packet_and_rejects_non_socket_endpoints(
 
 #[test]
 fn effect_ledger_is_fixed_exclusive_and_rejects_identity_changes_and_links() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let path = ledger(&root);
@@ -188,16 +206,19 @@ fn effect_ledger_is_fixed_exclusive_and_rejects_identity_changes_and_links() {
 
 #[test]
 fn effect_ledger_lock_contention_refuses_without_waiting_or_appending() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let path = ledger(&root);
     let qualified = qualify_ledger(&root).unwrap();
-    let lock = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(&path)
+    let lock = hf_platform::lease::shared()
+        .acquire(
+            &path.with_extension("effects.lock"),
+            hf_application::lease::LeaseMode::Exclusive,
+            true,
+            Instant::now() + Duration::from_secs(1),
+        )
         .unwrap();
-    lock.lock().unwrap();
     let result = append_effect(
         &root,
         qualified,
@@ -207,4 +228,5 @@ fn effect_ledger_lock_contention_refuses_without_waiting_or_appending() {
     );
     assert!(result.is_err());
     assert_eq!(fs::read(&path).unwrap(), Vec::<u8>::new());
+    drop(lock);
 }

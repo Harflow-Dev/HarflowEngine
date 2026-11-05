@@ -6,7 +6,13 @@ mod terminal_release;
 fn raw_payload_digest_tampering_refuses_observation_before_any_grant() {
     let fixture = Fixture::new("tamper");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let request = request(&store, 2, 3, 4, 5, b"stored identity bytes");
     store.ownership_prepare(&request, deadline()).unwrap();
     drop(store);
@@ -17,7 +23,13 @@ fn raw_payload_digest_tampering_refuses_observation_before_any_grant() {
     )
     .unwrap();
     drop(raw);
-    let reopened = Store::open(&root, Limits::default(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     assert!(matches!(
         reopened.ownership_observe(&request.operation, deadline()),
         Err(Error::InvalidOwnership)
@@ -38,7 +50,13 @@ fn raw_payload_digest_tampering_refuses_observation_before_any_grant() {
 fn schema_one_marker_refuses_before_source_sqlite_change() {
     let fixture = Fixture::new("old-schema");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
@@ -49,7 +67,12 @@ fn schema_one_marker_refuses_before_source_sqlite_change() {
     )
     .unwrap();
     assert!(matches!(
-        Store::open(&root, Limits::default(), deadline()),
+        Store::open(
+            &root,
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     assert_eq!(fs::read(&database).unwrap(), before);
@@ -59,7 +82,13 @@ fn schema_one_marker_refuses_before_source_sqlite_change() {
 fn schema_one_sqlite_header_with_current_marker_refuses_without_rewrite() {
     let fixture = Fixture::new("old-header");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     drop(store);
     let database = root.join("store.sqlite3");
     let raw = rusqlite::Connection::open(&database).unwrap();
@@ -67,7 +96,12 @@ fn schema_one_sqlite_header_with_current_marker_refuses_without_rewrite() {
     drop(raw);
     let before = fs::read(&database).unwrap();
     assert!(matches!(
-        Store::open(&root, Limits::default(), deadline()),
+        Store::open(
+            &root,
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     assert_eq!(fs::read(&database).unwrap(), before);
@@ -77,7 +111,13 @@ fn schema_one_sqlite_header_with_current_marker_refuses_without_rewrite() {
 fn malformed_ownership_generation_projection_refuses_without_metadata_rewrite() {
     let fixture = Fixture::new("metadata-projection");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
@@ -93,7 +133,13 @@ fn malformed_ownership_generation_projection_refuses_without_metadata_rewrite() 
         )
         .unwrap();
     drop(raw);
-    let reopened = Store::open(&root, Limits::default(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     assert!(matches!(
         reopened.ownership_observe(&id(1), deadline()),
         Err(Error::OwnershipUnavailable)
@@ -123,7 +169,13 @@ fn production_preflight_sql_returns_only_scalar_bounds_for_oversized_cells() {
     {
         let fixture = Fixture::new(&format!("preflight-sql-{index}"));
         let root = fixture.0.join("store");
-        let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+        let store = Store::initialize_fixture(
+            &root,
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap();
         let request = request(&store, 2, 3, 4, 5, b"payload");
         store.ownership_prepare(&request, deadline()).unwrap();
         if needs_claim {
@@ -158,7 +210,13 @@ fn production_preflight_sql_returns_only_scalar_bounds_for_oversized_cells() {
 fn production_metadata_sql_returns_null_for_embedded_nul_and_oversize_generation() {
     let fixture = Fixture::new("meta-preflight-sql");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
     let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
@@ -177,7 +235,13 @@ fn production_metadata_sql_returns_null_for_embedded_nul_and_oversize_generation
 fn future_root_marker_refuses_without_source_database_change() {
     let fixture = Fixture::new("future-root");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
@@ -188,7 +252,12 @@ fn future_root_marker_refuses_without_source_database_change() {
     )
     .unwrap();
     assert!(matches!(
-        Store::open(&root, Limits::default(), deadline()),
+        Store::open(
+            &root,
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(Error::FutureSchema)
     ));
     assert_eq!(fs::read(&database).unwrap(), before);
@@ -198,7 +267,13 @@ fn future_root_marker_refuses_without_source_database_change() {
 fn future_ownership_namespace_version_refuses_without_metadata_rewrite() {
     let fixture = Fixture::new("future-namespace");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
     raw.execute("UPDATE ownership_meta SET version=99", [])
         .unwrap();
@@ -227,7 +302,13 @@ fn future_ownership_namespace_version_refuses_without_metadata_rewrite() {
 fn missing_ownership_namespace_prepare_does_not_reinitialize_or_reset_tables() {
     let fixture = Fixture::new("missing-namespace");
     let root = fixture.0.join("store");
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
@@ -235,7 +316,13 @@ fn missing_ownership_namespace_prepare_does_not_reinitialize_or_reset_tables() {
     raw.execute_batch("DROP TABLE ownership_meta").unwrap();
     let before = table_names(&raw);
     drop(raw);
-    let reopened = Store::open(&root, Limits::default(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let request = PreparedRequest {
         operation: id(2),
         session: id(3),
@@ -266,109 +353,5 @@ fn table_names(connection: &rusqlite::Connection) -> Vec<String> {
         .unwrap()
 }
 
-#[test]
-fn malformed_scalar_and_partial_nullable_groups_refuse_without_repair() {
-    let corruptions = [
-        ("phase", "9"),
-        ("revision", "-1"),
-        ("revision", "9223372036854775807"),
-        ("cancelled", "2"),
-        ("owner", "'00000000000000000000000000000009'"),
-        ("child", "'202:12:34:abcdef01-2345-6789-abcd-ef0123456789'"),
-    ];
-    for (index, (column, value)) in corruptions.into_iter().enumerate() {
-        let fixture = Fixture::new(&format!("bad-scalar-{index}"));
-        let root = fixture.0.join("store");
-        let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
-        let request = request(&store, 2, 3, 4, 5, b"payload");
-        store.ownership_prepare(&request, deadline()).unwrap();
-        drop(store);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
-        raw.execute_batch(&format!("UPDATE ownership_records SET {column}={value}"))
-            .unwrap();
-        let before: String = raw
-            .query_row(
-                &format!("SELECT quote({column}) FROM ownership_records"),
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        drop(raw);
-        let reopened = Store::open(&root, Limits::default(), deadline()).unwrap();
-        assert!(matches!(
-            reopened.ownership_observe(&request.operation, deadline()),
-            Err(Error::InvalidOwnership)
-        ));
-        drop(reopened);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
-        let after: String = raw
-            .query_row(
-                &format!("SELECT quote({column}) FROM ownership_records"),
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(after, before);
-    }
-}
-
-#[test]
-fn oversized_persisted_payload_and_process_scalar_refuse_before_decoding() {
-    for (index, update) in [
-        ("payload", "payload=zeroblob(16385)"),
-        ("owner_process", "owner_process=printf('%0101d',1)"),
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        let fixture = Fixture::new(&format!("oversized-cell-{index}"));
-        let root = fixture.0.join("store");
-        let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
-        let request = request(&store, 2, 3, 4, 5, b"payload");
-        store.ownership_prepare(&request, deadline()).unwrap();
-        if index == 1 {
-            store
-                .ownership_claim(
-                    &request.operation,
-                    &request.generation,
-                    0,
-                    &owner(),
-                    deadline(),
-                )
-                .unwrap();
-        }
-        drop(store);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
-        raw.execute_batch(&format!("UPDATE ownership_records SET {}", update.1))
-            .unwrap();
-        let before: String = raw
-            .query_row(
-                &format!(
-                    "SELECT hex(CAST({} AS BLOB)) FROM ownership_records",
-                    update.0
-                ),
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        drop(raw);
-        let reopened = Store::open(&root, Limits::default(), deadline()).unwrap();
-        assert!(matches!(
-            reopened.ownership_observe(&request.operation, deadline()),
-            Err(Error::InvalidOwnership)
-        ));
-        drop(reopened);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
-        let after: String = raw
-            .query_row(
-                &format!(
-                    "SELECT hex(CAST({} AS BLOB)) FROM ownership_records",
-                    update.0
-                ),
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(after, before);
-    }
-}
+#[path = "release_schema/shape_refusals.rs"]
+mod shape_refusals;

@@ -1,9 +1,15 @@
 # Read-only recovery observation (R04-A)
 
+Subsequent [R04-C](migration-receipts/R04-C.md) uses fresh schema5 roots, explicit
+lease injection and a safe allowlisted spawn/retained PID waiter. Earlier schema
+and close-before-spawn descriptions below record the owning stage; current
+concurrent isolation uses dedicated record-lock sentinels, not fixture admission
+guards. Schema4 and older roots refuse without conversion.
+
 This is an internal inspection foundation for one explicit operation in an isolated
 Rust fixture root. It is not a supported runtime command, recovery service or public
 capability. HarflowMCP remains the canonical contract owner; the corrected0.0.10
-207-fixture selection and Rust1.99.1 are unchanged. Schema4 remains current.
+207-fixture selection and Rust1.99.1 are unchanged. Schema4 was current at R04-A entry.
 
 ## Missing production prerequisites
 

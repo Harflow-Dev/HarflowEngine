@@ -14,6 +14,7 @@ pub use event_read::EventReadSession;
 mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
+use connection::open_source;
 mod operations;
 mod ownership;
 mod ownership_codec;
@@ -34,10 +35,15 @@ mod task_query_tests;
 mod tests;
 mod wal;
 use binding::Binding;
+use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};
 use rusqlite::Connection;
-use std::{path::Path, sync::Mutex, time::Instant};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
@@ -115,13 +121,14 @@ pub struct Store {
     binding: Binding,
     identity: Identity,
     limits: Limits,
-    _claim: std::fs::File,
+    _claim: Box<dyn LeaseGuard>,
 }
 impl Store {
     pub fn initialize_fixture(
         root: impl AsRef<Path>,
         limits: Limits,
         deadline: Instant,
+        leases: Arc<dyn LeasePort>,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         let root = root.as_ref();
@@ -133,11 +140,18 @@ impl Store {
                 error.into()
             }
         })?;
-        let claim = create_lock(root, "store.lock")?;
-        connection::claim(&claim, false)?;
-        let io = create_lock(root, "io.lock")?;
-        connection::claim(&io, false)?;
-        let binding = Binding::capture(root, false)?;
+        let claim = leases
+            .acquire(
+                &root.join("store.lock"),
+                LeaseMode::Exclusive,
+                true,
+                deadline,
+            )
+            .map_err(lease_error)?;
+        let io = leases
+            .acquire(&root.join("io.lock"), LeaseMode::Exclusive, true, deadline)
+            .map_err(lease_error)?;
+        let binding = Binding::capture(root, false, leases.clone())?;
         let mut connection = Connection::open(binding.database())?;
         connection::suppress_checkpoints(&connection)?;
         binding.check_root()?;
@@ -149,12 +163,17 @@ impl Store {
         drop(connection);
         drop(io);
         drop(claim);
-        Self::open(root, limits, deadline)
+        Self::open(root, limits, deadline, leases)
     }
-    pub fn open(root: impl AsRef<Path>, limits: Limits, deadline: Instant) -> Result<Self> {
+    pub fn open(
+        root: impl AsRef<Path>,
+        limits: Limits,
+        deadline: Instant,
+        leases: Arc<dyn LeasePort>,
+    ) -> Result<Self> {
         let root = std::path::absolute(root.as_ref())?;
         let parent = root.parent().ok_or(Error::InvalidRoot)?;
-        Self::open_with_scratch(&root, limits, deadline, parent)
+        Self::open_with_scratch(&root, limits, deadline, parent, leases)
     }
     /// Internal permission to rebuild WAL-index/recover valid crash WAL after isolated qualification.
     pub fn open_with_scratch(
@@ -162,12 +181,12 @@ impl Store {
         limits: Limits,
         deadline: Instant,
         scratch_parent: impl AsRef<Path>,
+        leases: Arc<dyn LeasePort>,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true)?;
-        let claim = std::fs::File::open(root.as_ref().join("store.lock"))?;
-        connection::claim(&claim, true)?;
-        let _io = binding.io()?;
+        let binding = Binding::capture(root.as_ref(), true, leases)?;
+        let claim = binding.claim(LeaseMode::Shared, deadline)?;
+        let _io = binding.io(deadline)?;
         let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
         let connection = open_source(&binding, &identity, deadline)?;
         Ok(Self {
@@ -182,55 +201,40 @@ impl Store {
         &self.identity
     }
 }
-fn create_lock(root: &Path, name: &str) -> Result<std::fs::File> {
-    Ok(std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create_new(true)
-        .open(root.join(name))?)
-}
-fn open_source(binding: &Binding, identity: &Identity, deadline: Instant) -> Result<Connection> {
-    binding.check()?;
-    #[cfg(test)]
-    crate::tests::stage("before_source_open");
-    connection::check_deadline(deadline)?;
-    let connection = Connection::open_with_flags(
-        binding.database(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
-    )?;
-    connection::suppress_checkpoints(&connection)?;
-    #[cfg(test)]
-    crate::tests::stage("after_source_open");
-    if connection::identity(&connection, deadline)? != *identity {
-        return Err(Error::Replaced);
+fn lease_error(error: LeaseError) -> Error {
+    match error {
+        LeaseError::Busy => Error::Busy,
+        LeaseError::DeadlineExceeded => Error::DeadlineExceeded,
+        LeaseError::LimitExceeded => Error::LimitExceeded,
+        LeaseError::Invalid => Error::InvalidRoot,
+        LeaseError::Replaced => Error::Replaced,
+        LeaseError::Unavailable => Error::Io(std::io::Error::other("lease unavailable")),
     }
-    connection::configure(&connection, deadline)?;
-    binding.check()?;
-    Ok(connection)
 }
 /// Missing roots create nothing; existing roots are qualified using only a private copy.
-pub fn probe(root: impl AsRef<Path>) -> Result<Option<Identity>> {
+pub fn probe(root: impl AsRef<Path>, leases: Arc<dyn LeasePort>) -> Result<Option<Identity>> {
     let root = std::path::absolute(root.as_ref())?;
     probe_with_scratch(
         &root,
         Instant::now() + std::time::Duration::from_secs(1),
         root.parent().ok_or(Error::InvalidRoot)?,
+        leases,
     )
 }
 pub fn probe_with_scratch(
     root: impl AsRef<Path>,
     deadline: Instant,
     scratch_parent: impl AsRef<Path>,
+    leases: Arc<dyn LeasePort>,
 ) -> Result<Option<Identity>> {
     connection::check_deadline(deadline)?;
     Binding::validate_probe_path(root.as_ref())?;
     if !root.as_ref().try_exists()? {
         return Ok(None);
     }
-    let binding = Binding::capture(root.as_ref(), true)?;
-    let claim = std::fs::File::open(root.as_ref().join("store.lock"))?;
-    connection::claim(&claim, true)?;
-    let _io = binding.io()?;
+    let binding = Binding::capture(root.as_ref(), true, leases)?;
+    let _claim = binding.claim(LeaseMode::Shared, deadline)?;
+    let _io = binding.io(deadline)?;
     let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
     binding.check()?;
     Ok(Some(identity))

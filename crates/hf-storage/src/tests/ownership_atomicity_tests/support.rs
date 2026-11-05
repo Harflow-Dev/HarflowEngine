@@ -43,10 +43,22 @@ impl Fixture {
         self.0.join("granted.log")
     }
     pub(super) fn store(&self) -> Store {
-        Store::initialize_fixture(self.root(), Limits::default(), deadline()).unwrap()
+        Store::initialize_fixture(
+            self.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
     pub(super) fn open_store(&self) -> Store {
-        Store::open(self.root(), Limits::default(), deadline()).unwrap()
+        Store::open(
+            self.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
     pub(super) fn raw_readonly(&self) -> Connection {
         Connection::open_with_flags(

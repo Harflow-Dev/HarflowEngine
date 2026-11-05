@@ -88,6 +88,7 @@ fn watcher(
             Limits::default(),
             WatchJsonCodec,
             RealWatchControl::default(),
+            hf_platform::lease::shared(),
         ),
     )
 }
@@ -131,7 +132,13 @@ fn roundtrip(root: &Path, cursor: Option<String>) -> hf_interfaces::watch_consum
 #[test]
 fn fixture_watch_roundtrip_invalidates_exact_reversion_and_coalesces_busy_refresh() {
     let root = Root::new();
-    let initial = Store::initialize_fixture(&root.0, Limits::default(), deadline()).unwrap();
+    let initial = Store::initialize_fixture(
+        &root.0,
+        Limits::default(),
+        deadline(),
+        hf_platform::lease::shared(),
+    )
+    .unwrap();
     initial
         .replace_task_fixture(&fixture(b"original"), deadline())
         .unwrap();
@@ -145,7 +152,13 @@ fn fixture_watch_roundtrip_invalidates_exact_reversion_and_coalesces_busy_refres
     assert_eq!(consumer.take_refresh(), Some(RefreshWork::Snapshot));
 
     // Read actual stored headers as the snapshot paired with the established cursor.
-    let snapshot = Store::open(&root.0, Limits::default(), deadline()).unwrap();
+    let snapshot = Store::open(
+        &root.0,
+        Limits::default(),
+        deadline(),
+        hf_platform::lease::shared(),
+    )
+    .unwrap();
     let rows = snapshot
         .task_read(
             &AuthorizedScope::Global,
@@ -157,7 +170,13 @@ fn fixture_watch_roundtrip_invalidates_exact_reversion_and_coalesces_busy_refres
     assert_eq!(rows.rows[0].header, b"original");
     drop(snapshot);
 
-    let writer = Store::open(&root.0, Limits::default(), deadline()).unwrap();
+    let writer = Store::open(
+        &root.0,
+        Limits::default(),
+        deadline(),
+        hf_platform::lease::shared(),
+    )
+    .unwrap();
     writer
         .replace_task_fixture(&fixture(b"temporary"), deadline())
         .unwrap();

@@ -1,8 +1,8 @@
 use nix::fcntl::{FcntlArg, OFlag, fcntl};
 use nix::poll::{PollFd, PollFlags, poll};
+use std::fs::File;
 use std::io::{self, Read};
 use std::os::fd::AsFd;
-use std::process::{ChildStderr, ChildStdout};
 use std::time::Instant;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct StreamCapture {
@@ -51,8 +51,8 @@ fn read_stream(
     }
 }
 pub(super) fn pump(
-    out: &mut ChildStdout,
-    err: &mut ChildStderr,
+    out: &mut File,
+    err: &mut File,
     state: &mut Capture,
     cap: usize,
     budget: usize,

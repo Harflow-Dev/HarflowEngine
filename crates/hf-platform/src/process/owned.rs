@@ -3,10 +3,10 @@ use super::capture::{self, Capture};
 use hf_application::process::IdentityPort;
 use hf_domain::process::{Containment, IdentityObservation, ProcessExit, ProcessIdentity};
 use nix::sys::signal::{Signal, kill};
+use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
 use nix::unistd::Pid;
+use std::fs::File;
 use std::io::{self, Write};
-use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::Instant;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OwnedSignal {
@@ -35,10 +35,12 @@ pub enum SpawnInitialization {
 /// The child is private: this object is the exclusive waiter and signal authority.
 /// Unknown identity never discards ownership and never authorizes a signal.
 pub struct RetainedOwnedChild {
-    child: Child,
-    stdin: Option<ChildStdin>,
-    stdout: Option<ChildStdout>,
-    stderr: Option<ChildStderr>,
+    child: Pid,
+    authority_unknown: bool,
+    wait_authority_lost: bool,
+    stdin: Option<File>,
+    stdout: Option<File>,
+    stderr: Option<File>,
     registered: Option<ProcessIdentity>,
     exit: ProcessExit,
     reaped: bool,
@@ -54,22 +56,15 @@ impl RetainedOwnedChild {
         source: &impl IdentityPort,
         deadline: Instant,
     ) -> io::Result<Self> {
+        let deadline = deadline.min(Instant::now() + std::time::Duration::from_secs(2));
         check_spawn_deadline(deadline)?;
         spec.validate()?;
         check_spawn_deadline(deadline)?;
-        let mut child = Command::new(&spec.executable)
-            .current_dir(&spec.cwd)
-            .args(&spec.args)
-            .env_clear()
-            .envs(spec.environment)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .process_group(0)
-            .spawn()?;
-        let stdin = child.stdin.take();
-        let stdout = child.stdout.take();
-        let stderr = child.stderr.take();
+        let spawned = super::spawn::spawn(&spec, deadline)?;
+        let child = spawned.pid;
+        let stdin = Some(spawned.input);
+        let stdout = Some(spawned.output);
+        let stderr = Some(spawned.error);
         let setup = match (&stdout, &stderr, &stdin) {
             (Some(out), Some(err), Some(input)) => capture::nonblocking(out)
                 .and_then(|()| capture::nonblocking(err))
@@ -77,8 +72,8 @@ impl RetainedOwnedChild {
             _ => Err(io::Error::other("piped stdio absent")),
         };
         let registered = source
-            .identity(child.id())
-            .filter(|identity| identity.pid() == child.id());
+            .identity(child.as_raw() as u32)
+            .filter(|identity| spawned.qualified && identity.pid() == child.as_raw() as u32);
         let initialization = if Instant::now() >= deadline {
             SpawnInitialization::DeadlineExpired
         } else if setup.is_err() {
@@ -90,6 +85,8 @@ impl RetainedOwnedChild {
         };
         Ok(Self {
             child,
+            authority_unknown: !spawned.qualified,
+            wait_authority_lost: false,
             stdin,
             stdout,
             stderr,
@@ -132,7 +129,7 @@ impl RetainedOwnedChild {
         self.initialization
     }
     pub fn pid(&self) -> u32 {
-        self.child.id()
+        self.child.as_raw() as u32
     }
     pub fn registered_identity(&self) -> Option<&ProcessIdentity> {
         self.registered.as_ref()
@@ -197,16 +194,25 @@ impl RetainedOwnedChild {
         }
     }
     pub fn try_wait(&mut self) -> io::Result<ProcessExit> {
-        if self.reaped {
+        if self.reaped || self.wait_authority_lost {
             return Ok(self.exit);
         }
-        if let Some(status) = self.child.try_wait()? {
-            self.reaped = true;
-            self.exit = match (status.code(), status.signal()) {
-                (Some(code), _) => ProcessExit::Code(code),
-                (_, Some(signal)) => ProcessExit::Signal(signal),
-                _ => ProcessExit::Unobserved,
-            };
+
+        match waitpid(self.child, Some(WaitPidFlag::WNOHANG)) {
+            Ok(WaitStatus::Exited(_, code)) => {
+                self.reaped = true;
+                self.exit = ProcessExit::Code(code);
+            }
+            Ok(WaitStatus::Signaled(_, signal, _)) => {
+                self.reaped = true;
+                self.exit = ProcessExit::Signal(signal as i32);
+            }
+            Ok(_) | Err(nix::errno::Errno::EINTR) => (),
+            Err(nix::errno::Errno::ECHILD) => {
+                self.authority_unknown = true;
+                self.wait_authority_lost = true;
+            }
+            Err(error) => return Err(error.into()),
         }
         Ok(self.exit)
     }
@@ -221,10 +227,15 @@ impl RetainedOwnedChild {
             return Ok(SignalOutcome::DeadlineExpired);
         }
         self.try_wait()?;
+        if self.authority_unknown {
+            return Ok(SignalOutcome::Refused(IdentityObservation::Unknown));
+        }
         if self.reaped {
             return Ok(SignalOutcome::Refused(IdentityObservation::Dead));
         }
-        if expected.pid() != self.child.id() || self.registered.as_ref() != Some(expected) {
+        if expected.pid() != (self.child.as_raw() as u32)
+            || self.registered.as_ref() != Some(expected)
+        {
             return Ok(SignalOutcome::Refused(IdentityObservation::Mismatch));
         }
         let observation = source.observe(expected);
@@ -234,8 +245,8 @@ impl RetainedOwnedChild {
         if Instant::now() >= deadline {
             return Ok(SignalOutcome::DeadlineExpired);
         }
-        let pid =
-            i32::try_from(self.child.id()).map_err(|_| io::Error::other("invalid owned PID"))?;
+        let pid = i32::try_from(self.child.as_raw() as u32)
+            .map_err(|_| io::Error::other("invalid owned PID"))?;
         kill(
             Pid::from_raw(pid),
             match signal {
@@ -267,6 +278,10 @@ impl RetainedOwnedChild {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "owned/tests.rs"]
+mod tests;
 
 fn check_spawn_deadline(deadline: Instant) -> io::Result<()> {
     if Instant::now() >= deadline {

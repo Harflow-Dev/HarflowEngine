@@ -6,7 +6,17 @@ use hf_domain::{
     process::ProcessExit,
 };
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+fn open_actor_store(root: &Path) -> Store {
+    Store::open(
+        root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap()
+}
 
 pub(in crate::tests::capture_atomicity_tests) fn actor_child() {
     let Ok(root) = std::env::var("HARFLOW_B2C_ROOT") else {
@@ -15,7 +25,13 @@ pub(in crate::tests::capture_atomicity_tests) fn actor_child() {
     let action = std::env::var("HARFLOW_B2C_ACTION").unwrap();
     let hook = std::env::var("HARFLOW_B2C_HOOK").unwrap();
     let root = PathBuf::from(root);
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     let binding = accepted_binding(&store, 41);
     store.capture_begin(&binding, deadline()).unwrap();
     if action == "finish" {
@@ -41,7 +57,7 @@ pub(in crate::tests::capture_atomicity_tests) fn actor_child() {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     assert_eq!(input.trim(), "GO");
-    let store = Store::open(&root, Limits::default(), deadline()).unwrap();
+    let store = open_actor_store(&root);
     let operation = Id::new(format!("{:032x}", 41)).unwrap();
     let observed = store
         .ownership_observe(&operation, deadline())

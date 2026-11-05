@@ -64,7 +64,13 @@ fn page(limit: usize, active_only: bool, session: Option<&str>) -> TaskQuery {
 fn indexed_page_orders_equal_stamps_by_id_and_preserves_independent_observations() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     seed(
         &store,
         vec![
@@ -102,9 +108,13 @@ fn indexed_page_orders_equal_stamps_by_id_and_preserves_independent_observations
 #[test]
 fn filters_apply_only_supplied_active_and_session_facts() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     seed(
         &store,
         vec![
@@ -157,9 +167,13 @@ fn filters_apply_only_supplied_active_and_session_facts() {
 #[test]
 fn closed_namespace_hides_absent_and_unauthorized_prefix_candidates() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     seed(
         &store,
         vec![
@@ -182,9 +196,13 @@ fn closed_namespace_hides_absent_and_unauthorized_prefix_candidates() {
 #[test]
 fn exact_pending_lookup_is_separate_and_prefix_resolution_caps_ambiguity() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let rows = (0..6)
         .map(|n| row(&format!("task-prefix-{n}"), n, Some(false), None))
         .collect();

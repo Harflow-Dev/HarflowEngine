@@ -33,10 +33,22 @@ impl Fixture {
         self.0.join("store")
     }
     pub(super) fn initialize(&self) -> Store {
-        Store::initialize_fixture(self.root(), Limits::default(), deadline()).unwrap()
+        Store::initialize_fixture(
+            self.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
     pub(super) fn open(&self) -> Store {
-        Store::open(self.root(), Limits::default(), deadline()).unwrap()
+        Store::open(
+            self.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
     pub(super) fn raw(&self) -> Connection {
         Connection::open_with_flags(
@@ -185,7 +197,13 @@ impl WatchControl for Clock {
     }
 }
 pub(super) fn watch(root: &Path, clock: Clock) -> crate::WatchSession<Codec, Clock> {
-    crate::WatchSession::new(root, Limits::default(), Codec, clock)
+    crate::WatchSession::new(
+        root,
+        Limits::default(),
+        Codec,
+        clock,
+        crate::tests::lease::lease_port(),
+    )
 }
 pub(super) fn read_revision(db: &Connection) -> i64 {
     db.query_row(

@@ -28,13 +28,13 @@ detached owner, public execution capability or descendant-containment guarantee.
 
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
 intent/reservation/claim transactions and fenced observations. The original B1 stage selected
-schema2; current fresh roots use schema4 as described below. No automatic upgrade,
+schema2; current fresh roots use schema5 as described below. No automatic upgrade,
 detached runtime or public execution API is added.
 
 The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned
 fixture processes through bounded inherited channels. Fresh single-thread parent,
 owner and fixed effect modes reject ambient environment/unexpected descriptors,
-close every Store handle before spawn and preserve reservations after uncertainty.
+historically closed every Store handle before spawn and preserve reservations after uncertainty.
 They do not qualify a general concurrent launcher, detached runtime, backend,
 public lifecycle operation or durable capture/terminal ordering. No schema upgrade
 or public capability is introduced by these private modes.
@@ -47,11 +47,20 @@ production caller authority, task catalog lifecycle or public capability is adde
 
 The [private capture/completion foundation](capture-completion.md) extends that
 fixed owner with synced raw bytes, fenced private offset/events and terminal
-ordering. Current fresh roots use schema4; earlier schema3/2 descriptions record
+ordering. That stage introduced schema4; earlier schema3/2 descriptions record
 their owning stages. It retains reservations and Unknown containment, and adds no
 public runtime, restart adoption or R04 qualification.
 
 The [read-only recovery observation foundation](recovery-observation.md) inspects
 one explicit fixture operation using bounded private-copy snapshots and independent
-identity/raw evidence. It preserves schema4 and adds no recovery intent, source
+identity/raw evidence. That stage preserved schema4 and adds no recovery intent, source
 repair, process control, adoption, release or replacement authority.
+
+The internal [R04-C concurrent launch slice](migration-receipts/R04-C.md) introduces
+fresh schema5 roots to exclude old locking protocols, explicit application lease
+ports, a shared platform record-lock coordinator and safe Darwin descriptor-allowlisted
+spawn with sole-wait authority. Schema4 roots refuse without conversion. Store leases
+can remain held across launch; historical fixture close-before-spawn rules are no
+longer the concurrent isolation mechanism. Requested differing CWD is refused by
+the safe seam. This remains internal qualification, not a production owner runtime
+or new public capability; R04-B's later policy recommendations are not accepted.

@@ -1,21 +1,31 @@
 use crate::{Error, Limits, Store, binding::Binding};
+use hf_application::lease::LeasePort;
 use hf_application::task_watch::{TaskWatchPort, WatchCodecPort, WatchControl, WatchError};
 use hf_domain::task_watch::{WatchCursor, WatchReason, WatchRequest, WatchResult, WatchState};
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
 use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
 const POLL: Duration = Duration::from_millis(50);
 pub struct WatchSession<C, T> {
+    leases: Arc<dyn LeasePort>,
     root: PathBuf,
     limits: Limits,
     codec: C,
     control: T,
 }
 impl<C: WatchCodecPort, T: WatchControl> WatchSession<C, T> {
-    pub fn new(root: impl Into<PathBuf>, limits: Limits, codec: C, control: T) -> Self {
+    pub fn new(
+        root: impl Into<PathBuf>,
+        limits: Limits,
+        codec: C,
+        control: T,
+        leases: Arc<dyn LeasePort>,
+    ) -> Self {
         Self {
+            leases,
             root: root.into(),
             limits,
             codec,
@@ -41,7 +51,7 @@ impl<C: WatchCodecPort, T: WatchControl> WatchSession<C, T> {
         if !exists {
             return Ok(None);
         }
-        let opened = Store::open(&self.root, self.limits, deadline);
+        let opened = Store::open(&self.root, self.limits, deadline, self.leases.clone());
         self.check(deadline)?;
         opened.map(Some).map_err(root_error)
     }

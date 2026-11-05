@@ -93,7 +93,7 @@ impl Store {
         action: impl FnOnce(&Transaction<'_>) -> Result<T>,
     ) -> Result<T> {
         let mut db = self.admit(deadline)?;
-        let _io = self.binding.io()?;
+        let _io = self.binding.io(deadline)?;
         connection::timeout(&db, deadline)?;
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
         ownership_schema::check(&tx, &self.identity().generation)?;

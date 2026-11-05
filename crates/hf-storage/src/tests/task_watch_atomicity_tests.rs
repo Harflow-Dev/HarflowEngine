@@ -32,7 +32,13 @@ fn actor_child() {
             .lock()
             .unwrap() = Some(stage);
     }
-    let store = Store::open(root, Limits::default(), deadline()).unwrap();
+    let store = Store::open(
+        root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     println!("READY");
     std::io::stdout().flush().unwrap();
     let stdin = std::io::stdin();
@@ -61,8 +67,13 @@ fn actor_child() {
 #[test]
 fn independent_live_publishers_observe_busy_then_explicit_commit_with_atomic_rows_and_revision() {
     let fixture = Fixture::new();
-    let initialized =
-        Store::initialize_fixture(fixture.root(), Limits::default(), deadline()).unwrap();
+    let initialized = Store::initialize_fixture(
+        fixture.root(),
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     drop(initialized);
     let baseline = watch(&fixture.root())
         .execute(
@@ -127,8 +138,13 @@ fn independent_live_publishers_observe_busy_then_explicit_commit_with_atomic_row
 #[test]
 fn committed_rows_survive_lost_ack_and_remaining_live_writer_commits_next_revision() {
     let fixture = Fixture::new();
-    let initialized =
-        Store::initialize_fixture(fixture.root(), Limits::default(), deadline()).unwrap();
+    let initialized = Store::initialize_fixture(
+        fixture.root(),
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     drop(initialized);
     let mut first = Actor::spawn(
         &fixture.root(),
@@ -191,7 +207,13 @@ impl WatchControl for Immediate {
     }
 }
 fn watch(root: &Path) -> crate::WatchSession<Codec, Immediate> {
-    crate::WatchSession::new(root, Limits::default(), Codec, Immediate)
+    crate::WatchSession::new(
+        root,
+        Limits::default(),
+        Codec,
+        Immediate,
+        crate::tests::lease::lease_port(),
+    )
 }
 fn fixture(header: &[u8]) -> TaskFixture {
     TaskFixture {

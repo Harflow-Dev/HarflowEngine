@@ -1,12 +1,14 @@
 //! Operation-scoped observations from qualified private copies only.
 use crate::{Error, Limits, binding::Binding, connection, read_context::ReadContext};
+use hf_application::lease::{LeaseMode, LeasePort};
 use hf_application::recovery::{RecoveryError, RecoveryStorePort};
 use hf_domain::{
     ownership::{Id, Phase},
     recovery::RecoveryRecord,
 };
-use std::{path::PathBuf, time::Instant};
+use std::{path::PathBuf, sync::Arc, time::Instant};
 pub struct RecoveryReadSession {
+    leases: Arc<dyn LeasePort>,
     root: PathBuf,
     scratch_parent: PathBuf,
     limits: Limits,
@@ -16,8 +18,10 @@ impl RecoveryReadSession {
         root: impl Into<PathBuf>,
         scratch_parent: impl Into<PathBuf>,
         limits: Limits,
+        leases: Arc<dyn LeasePort>,
     ) -> Self {
         Self {
+            leases,
             root: root.into(),
             scratch_parent: scratch_parent.into(),
             limits,
@@ -29,10 +33,9 @@ impl RecoveryReadSession {
         if !self.root.try_exists()? {
             return Ok(None);
         }
-        let binding = Binding::capture(&self.root, true)?;
-        let claim = std::fs::File::open(self.root.join("store.lock"))?;
-        connection::claim(&claim, true)?;
-        let _io = binding.io()?;
+        let binding = Binding::capture(&self.root, true, self.leases.clone())?;
+        let _claim = binding.claim(LeaseMode::Shared, deadline)?;
+        let _io = binding.io(deadline)?;
         crate::wal::with_qualified_copy(&binding, &self.scratch_parent, deadline, |db, identity| {
             crate::ownership_schema::check(db, &identity.generation)?;
             crate::capture_schema::check(db, &identity.generation)?;

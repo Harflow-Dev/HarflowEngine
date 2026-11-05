@@ -66,7 +66,12 @@ fn valid_different_intermediate_history_changes_full_digest_only() {
     drop(store);
     let scratch = root.parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     let first = session.read(&operation, deadline()).unwrap().unwrap();
     let write = Connection::open(root.join("store.sqlite3")).unwrap();
     write
@@ -118,7 +123,12 @@ fn check_corruption(label: &str, sql: &str) {
     let before = source_hashes(&root);
     let scratch = root.parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     assert!(session.read(&operation, deadline()).is_err(), "{label}");
     assert_eq!(before, source_hashes(&root), "{label}");
     assert_eq!(fs::read_dir(scratch).unwrap().count(), 0, "{label}");
@@ -140,6 +150,7 @@ fn combined_main_and_wal_limit_refuses_sparse_wal_without_scratch_residue() {
             max_rows: 1,
             max_bytes: 16,
         },
+        crate::tests::lease::lease_port(),
     );
     assert!(low.read(&operation, deadline()).is_err());
     assert_eq!(fs::read_dir(&scratch).unwrap().count(), 0);
@@ -152,7 +163,12 @@ fn combined_main_and_wal_limit_refuses_sparse_wal_without_scratch_residue() {
     let length = fs::metadata(&wal).unwrap().len();
     let header = fs::read(&wal).unwrap()[..32].to_vec();
     let before = source_hashes(&root);
-    let full = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let full = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     assert!(full.read(&operation, deadline()).is_err());
     assert_eq!(before, source_hashes(&root));
     assert_eq!(fs::metadata(&wal).unwrap().len(), length);
@@ -238,7 +254,12 @@ fn spawn_reader(
     let (ready_send, ready) = mpsc::sync_channel(1);
     let (go, go_receive) = mpsc::sync_channel(1);
     let worker = thread::spawn(move || {
-        let session = RecoveryReadSession::new(root, scratch, Limits::default());
+        let session = RecoveryReadSession::new(
+            root,
+            scratch,
+            Limits::default(),
+            crate::tests::lease::lease_port(),
+        );
         ready_send.send(()).unwrap();
         let started = go_receive
             .recv_timeout(until.saturating_duration_since(Instant::now()))

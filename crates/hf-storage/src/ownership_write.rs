@@ -10,7 +10,7 @@ pub(crate) fn transaction<T>(
     action: impl FnOnce(&Transaction<'_>) -> Result<T>,
 ) -> Result<T> {
     let mut connection = store.admit(deadline)?;
-    let _io = store.binding.io()?;
+    let _io = store.binding.io(deadline)?;
     connection::timeout(&connection, deadline)?;
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     ownership_schema::check(&transaction, &store.identity().generation)?;

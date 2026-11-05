@@ -17,6 +17,7 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
 }
 fn execute(plan: &mut ParentPlan, until: Instant) -> io::Result<Frame> {
     let cwd = root_parent(&plan.root)?;
+    bootstrap_cwd(&cwd)?;
     let gate = gate_config(&plan.root, &plan.gate)?;
     if qualify_ledger(Path::new(&plan.root))? != plan.ledger {
         return Err(invalid());

@@ -25,3 +25,5 @@ mod fixture_tests;
 pub mod task_watch;
 
 pub mod recovery;
+
+pub mod lease;

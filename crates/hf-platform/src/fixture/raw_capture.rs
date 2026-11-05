@@ -18,6 +18,7 @@ pub struct SyncedOffsets {
     pub stderr: u64,
 }
 struct RawFile {
+    _lease: Box<dyn hf_application::lease::LeaseGuard>,
     file: File,
     path: PathBuf,
     identity: FileIdentity,
@@ -32,8 +33,8 @@ impl RawCapture {
         timely(deadline)?;
         let parent = root.parent().ok_or_else(refused)?;
         let name = format!("r03-b2c.{}", operation.as_str());
-        let stdout = RawFile::create(parent.join(format!("{name}.stdout")))?;
-        let stderr = RawFile::create(parent.join(format!("{name}.stderr")))?;
+        let stdout = RawFile::create(parent.join(format!("{name}.stdout")), deadline)?;
+        let stderr = RawFile::create(parent.join(format!("{name}.stderr")), deadline)?;
         if stdout.identity == stderr.identity {
             return Err(refused());
         }
@@ -125,16 +126,31 @@ impl RawCapture {
     }
 }
 impl RawFile {
-    fn create(path: PathBuf) -> io::Result<Self> {
+    fn create(path: PathBuf, deadline: Instant) -> io::Result<Self> {
+        let sentinel = path.with_extension(format!(
+            "{}.lock",
+            path.extension()
+                .and_then(|v| v.to_str())
+                .ok_or_else(refused)?
+        ));
+        let lease = crate::lease::shared()
+            .acquire(
+                &sentinel,
+                hf_application::lease::LeaseMode::Exclusive,
+                true,
+                deadline,
+            )
+            .map_err(|_| refused())?;
         let file = OpenOptions::new()
             .read(true)
             .write(true)
             .create_new(true)
             .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
             .open(&path)?;
-        file.try_lock().map_err(|_| refused())?;
+
         let identity = identify(&file.metadata()?, 0)?;
         let value = Self {
+            _lease: lease,
             file,
             path,
             identity,

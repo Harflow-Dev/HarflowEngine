@@ -1,5 +1,11 @@
 # Internal process primitives (R03-A)
 
+Subsequent [R04-C](migration-receipts/R04-C.md) uses fresh schema5 roots, explicit
+lease injection and a safe allowlisted spawn/retained PID waiter. Earlier schema
+and close-before-spawn descriptions below record the owning stage; current
+concurrent isolation uses dedicated record-lock sentinels, not fixture admission
+guards. Schema4 and older roots refuse without conversion.
+
 This seam controls isolated owned fixture children on macOS arm64. It is not a
 detached owner, execution engine or public run/resume/cancel API. The scaffold
 remains unsupported. R02 fixture storage and reads do not establish execution
@@ -15,7 +21,9 @@ failure is Unknown, including a process that disappeared or cannot be inspected;
 it is not converted into proof of death. A retained child's observed exit supplies
 separate death evidence. Injected observations are not production OS evidence.
 
-A retained std Child is the sole waiter. Its PID cannot be reused while it remains
+R03-A originally retained std Child as sole waiter; R04-C uses a private
+retained PID with exclusive waitpid authority and permanently stops waiting after
+unexpected ECHILD. Its PID cannot be reused while it remains
 an unreaped child. All wait/control methods require exclusive mutable access;
 there must be no external waitpid(-1) loop, SIGCHLD auto-reaper or other code
 reaping these children. Before a numeric signal, the expected identity must equal

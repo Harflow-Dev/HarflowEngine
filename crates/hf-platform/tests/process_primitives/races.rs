@@ -25,7 +25,7 @@ const FIXTURE: &str = concat!(
 fn race_spec(mode: &str, args: &[&str], cap: usize) -> SpawnSpec {
     SpawnSpec {
         executable: PathBuf::from(PYTHON),
-        cwd: PathBuf::from("/private/tmp"),
+        cwd: fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
         args: std::iter::once(FIXTURE.to_owned())
             .chain(std::iter::once(mode.to_owned()))
             .chain(args.iter().map(|value| (*value).to_owned()))

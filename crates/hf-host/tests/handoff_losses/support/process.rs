@@ -151,7 +151,7 @@ fn pid_presence(pid: u32) -> Presence {
             script.into(),
             pid.to_string().into(),
         ],
-        PathBuf::from("/private/tmp"),
+        std::fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
     );
     ps.0.close_stdin();
     let until = deadline(2);

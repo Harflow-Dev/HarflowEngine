@@ -211,9 +211,13 @@ fn replacement_expires_cursor_but_filter_mismatch_is_invalid_and_unknown_task_pr
 #[test]
 fn pending_exact_task_wins_before_cursor_validation_and_has_no_stream_facts() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        event_common::lease::lease_port(),
+    )
+    .unwrap();
     let pending = id("event-pending-1234");
     store
         .replace_task_fixture(

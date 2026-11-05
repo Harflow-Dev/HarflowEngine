@@ -48,9 +48,18 @@ pub fn append_effect(
     if Instant::now() >= deadline {
         return Err(io::Error::other("fixture effect deadline"));
     }
-    let mut file = open(root, true)?;
-    file.try_lock()
+    let parent = root
+        .parent()
+        .ok_or_else(|| io::Error::other("fixture ledger parent"))?;
+    let _lease = crate::lease::shared()
+        .acquire(
+            &parent.join("r03-b2.effects.lock"),
+            hf_application::lease::LeaseMode::Exclusive,
+            true,
+            deadline,
+        )
         .map_err(|_| io::Error::other("fixture ledger locked"))?;
+    let mut file = open(root, true)?;
     if identify(&file)? != expected {
         return Err(io::Error::other("fixture ledger replaced"));
     }

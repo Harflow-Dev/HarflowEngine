@@ -19,7 +19,7 @@ impl Store {
             }
         }
         let mut connection = self.admit(deadline)?;
-        let _io = self.binding.io()?;
+        let _io = self.binding.io(deadline)?;
         connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         super::task_read::dataset_optional(&transaction)?.ok_or(Error::TaskReadUnavailable)?;

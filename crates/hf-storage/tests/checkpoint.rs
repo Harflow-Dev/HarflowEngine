@@ -10,7 +10,13 @@ use rusqlite::Connection;
 fn passive_checkpoint_reports_long_reader_incomplete_then_completes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .apply_batch(
             &[Mutation::Put {
@@ -61,7 +67,13 @@ fn passive_checkpoint_reports_long_reader_incomplete_then_completes() {
 fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_close() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .apply_batch(
             &[Mutation::Put {
@@ -72,7 +84,12 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
         )
         .unwrap();
     assert!(matches!(
-        Store::recover(&root, deadline(), fixture.path()),
+        Store::recover(
+            &root,
+            deadline(),
+            fixture.path(),
+            common::lease::lease_port()
+        ),
         Err(Error::Busy)
     ));
     assert_eq!(
@@ -81,10 +98,22 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
     );
     drop(store);
 
-    let recovered = Store::recover(&root, deadline(), fixture.path()).unwrap();
+    let recovered = Store::recover(
+        &root,
+        deadline(),
+        fixture.path(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert!(recovered.complete);
     assert_eq!(recovered.busy, 0);
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(
         reopened
             .read_batch(&["persist".into()], deadline())
@@ -98,7 +127,13 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
 fn exclusive_io_gate_blocks_store_and_probe_without_late_effects() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     {
         let gate = std::fs::File::open(root.join("io.lock")).unwrap();
         gate.try_lock().unwrap();
@@ -116,9 +151,17 @@ fn exclusive_io_gate_blocks_store_and_probe_without_late_effects() {
             store.checkpoint_passive(deadline()),
             Err(Error::Busy)
         ));
-        assert!(matches!(hf_storage::probe(&root), Err(Error::Busy)));
         assert!(matches!(
-            Store::open(&root, default_limits(), deadline()),
+            hf_storage::probe(&root, common::lease::lease_port()),
+            Err(Error::Busy)
+        ));
+        assert!(matches!(
+            Store::open(
+                &root,
+                default_limits(),
+                deadline(),
+                common::lease::lease_port()
+            ),
             Err(Error::Busy)
         ));
     }
@@ -134,7 +177,13 @@ fn exclusive_io_gate_blocks_store_and_probe_without_late_effects() {
 fn dropping_final_store_handle_preserves_main_and_wal_bytes() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .apply_batch(
             &[Mutation::Put {

@@ -16,6 +16,7 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     };
     channel.expect_eof()?;
     let cwd = root_parent(&prepared.root)?;
+    bootstrap_cwd(&cwd)?;
     let gate = gate_config(&prepared.root, &prepared.gate)?;
     if qualify_ledger(Path::new(&prepared.root))? != prepared.ledger {
         return Err(invalid());

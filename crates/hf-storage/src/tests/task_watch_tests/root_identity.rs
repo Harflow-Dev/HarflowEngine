@@ -39,7 +39,12 @@ fn schema_two_roots_are_refused_without_upgrade_or_source_rewrite() {
     drop(raw);
     assert_eq!(before, 2);
     assert!(matches!(
-        Store::open(fixture.root(), Limits::default(), deadline()),
+        Store::open(
+            fixture.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(crate::Error::Incompatible)
     ));
     let verify = fixture.raw();
@@ -159,7 +164,12 @@ fn embedded_nul_identity_suffix_is_refused_without_rewriting_database_source() {
     assert_eq!(before.0, 39);
     drop(raw);
     assert!(matches!(
-        Store::open(fixture.root(), Limits::default(), deadline()),
+        Store::open(
+            fixture.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(crate::Error::Incompatible)
     ));
     let verify = Connection::open_with_flags(
@@ -192,7 +202,13 @@ fn root_replacement_during_wait_is_unavailable_and_fresh_operation_resets() {
     let retired_path = retired.clone();
     clock.on_wait(move || {
         fs::rename(&path, &retired_path).unwrap();
-        Store::initialize_fixture(&path, Limits::default(), deadline()).unwrap();
+        Store::initialize_fixture(
+            &path,
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap();
     });
     // The callback must run after WatchSession opens the old qualified handle. Its root binding
     // then detects the replacement on the next snapshot rather than reporting Timeout.

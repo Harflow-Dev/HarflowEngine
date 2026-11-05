@@ -58,12 +58,13 @@ impl Drop for Scratch {
 
 pub(super) struct ChildGuard(pub(super) RetainedOwnedChild);
 impl ChildGuard {
-    pub(super) fn spawn(executable: PathBuf, args: Vec<OsString>, cwd: PathBuf) -> Self {
+    pub(super) fn spawn(executable: PathBuf, args: Vec<OsString>, _cwd: PathBuf) -> Self {
         let child = RetainedOwnedChild::spawn(
             SpawnSpec {
                 executable,
                 args,
-                cwd,
+                cwd: fs::canonicalize(std::env::current_dir().unwrap())
+                    .expect("canonical inherited working directory"),
                 environment: Vec::new(),
                 capture_limit: 8192,
             },

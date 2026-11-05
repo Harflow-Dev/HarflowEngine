@@ -52,15 +52,15 @@ impl ChildGuard {
     pub(super) fn spawn(
         executable: PathBuf,
         args: Vec<OsString>,
-        cwd: PathBuf,
+        _cwd: PathBuf,
         until: Instant,
     ) -> Self {
-        Self::spawn_with_env(executable, args, cwd, Vec::new(), until)
+        Self::spawn_with_env(executable, args, _cwd, Vec::new(), until)
     }
     pub(super) fn spawn_with_env(
         executable: PathBuf,
         args: Vec<OsString>,
-        cwd: PathBuf,
+        _cwd: PathBuf,
         environment: Vec<(OsString, OsString)>,
         until: Instant,
     ) -> Self {
@@ -68,7 +68,8 @@ impl ChildGuard {
             SpawnSpec {
                 executable,
                 args,
-                cwd,
+                cwd: std::fs::canonicalize(std::env::current_dir().unwrap())
+                    .expect("canonical inherited working directory"),
                 environment,
                 capture_limit: 8192,
             },

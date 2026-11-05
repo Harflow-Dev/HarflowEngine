@@ -19,7 +19,12 @@ use std::{
 pub use base::{NONCE, OP, SESSION};
 
 pub fn inspect(fixture: &base::Fixture) -> RecoveryReport {
-    let store = RecoveryReadSession::new(&fixture.root, &fixture.scratch, Limits::default());
+    let store = RecoveryReadSession::new(
+        &fixture.root,
+        &fixture.scratch,
+        Limits::default(),
+        hf_platform::lease::shared(),
+    );
     let inspector = RecoveryInspector::new(
         store,
         MacRecoveryIdentity,

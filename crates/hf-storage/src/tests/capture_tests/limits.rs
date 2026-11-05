@@ -28,7 +28,12 @@ fn schema_three_root_refuses_without_upgrade_or_repair() {
     let marker_before = std::fs::read(&marker_path).unwrap();
     let before = std::fs::read(&path).unwrap();
     assert!(matches!(
-        Store::open(fixture.root(), Limits::default(), deadline()),
+        Store::open(
+            fixture.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     let raw = Writer::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();

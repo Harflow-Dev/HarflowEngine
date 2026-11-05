@@ -29,7 +29,7 @@ fn missing_probe_does_not_create_parent_or_root() {
     let absent_parent = fixture.path().join("absent");
     let root = absent_parent.join("store");
 
-    assert_eq!(probe(&root).unwrap(), None);
+    assert_eq!(probe(&root, common::lease::lease_port()).unwrap(), None);
     assert!(!absent_parent.exists());
     assert!(!root.exists());
 }
@@ -41,13 +41,16 @@ fn probe_rejects_dangling_root_symlink_and_symlink_ancestor() {
     let fixture = Fixture::new();
     let dangling = fixture.path().join("dangling-store");
     symlink(fixture.path().join("does-not-exist"), &dangling).unwrap();
-    assert!(matches!(probe(&dangling), Err(Error::InvalidRoot)));
+    assert!(matches!(
+        probe(&dangling, common::lease::lease_port()),
+        Err(Error::InvalidRoot)
+    ));
 
     let ancestor_link = fixture.path().join("linked-parent");
     symlink(fixture.path(), &ancestor_link).unwrap();
     let missing_below_link = ancestor_link.join("not-created").join("store");
     assert!(matches!(
-        probe(&missing_below_link),
+        probe(&missing_below_link, common::lease::lease_port()),
         Err(Error::InvalidRoot)
     ));
     assert!(!fixture.path().join("not-created").exists());
@@ -64,7 +67,12 @@ fn initialization_is_exclusive_and_concurrent_initializers_share_one_generation(
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || {
                 barrier.wait();
-                Store::initialize_fixture(&root, default_limits(), deadline())
+                Store::initialize_fixture(
+                    &root,
+                    default_limits(),
+                    deadline(),
+                    common::lease::lease_port(),
+                )
             })
         })
         .collect::<Vec<_>>();
@@ -100,7 +108,12 @@ fn foreign_and_empty_roots_refuse_without_changing_any_bytes() {
         let before = snapshot_tree(&root);
 
         assert!(matches!(
-            Store::initialize_fixture(&root, default_limits(), deadline()),
+            Store::initialize_fixture(
+                &root,
+                default_limits(),
+                deadline(),
+                common::lease::lease_port()
+            ),
             Err(Error::InvalidRoot | Error::Incompatible)
         ));
         assert_eq!(snapshot_tree(&root), before);
@@ -111,7 +124,15 @@ fn foreign_and_empty_roots_refuse_without_changing_any_bytes() {
 fn future_schema_probe_and_open_leave_database_and_sidecars_untouched() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let database = root.join("store.sqlite3");
     let connection = Connection::open(&database).unwrap();
     connection
@@ -128,9 +149,17 @@ fn future_schema_probe_and_open_leave_database_and_sidecars_untouched() {
     fs::write(root.join("store.sqlite3-shm"), b"fixture shm marker").unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(matches!(probe(&root), Err(Error::FutureSchema)));
     assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
+        probe(&root, common::lease::lease_port()),
+        Err(Error::FutureSchema)
+    ));
+    assert!(matches!(
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
         Err(Error::FutureSchema)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -140,13 +169,29 @@ fn future_schema_probe_and_open_leave_database_and_sidecars_untouched() {
 fn corrupt_database_is_typed_and_left_unchanged() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     fs::write(root.join("store.sqlite3"), b"corrupt database bytes").unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(matches!(probe(&root), Err(Error::Incompatible)));
     assert!(matches!(
-        Store::open(&root, default_limits(), deadline()),
+        probe(&root, common::lease::lease_port()),
+        Err(Error::Incompatible)
+    ));
+    assert!(matches!(
+        Store::open(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
         Err(Error::Incompatible)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -159,9 +204,17 @@ fn permission_denial_remains_a_typed_io_error_when_host_enforces_it() {
 
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
-    let result = probe(&root);
+    let result = probe(&root, common::lease::lease_port());
     fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
 
     match result {
@@ -185,11 +238,23 @@ fn effective_uid() -> u32 {
 fn live_store_allows_shared_open_and_probe_without_creating_files() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(probe(&root).unwrap().is_some());
-    let second = Store::open(&root, default_limits(), deadline()).unwrap();
+    assert!(probe(&root, common::lease::lease_port()).unwrap().is_some());
+    let second = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(second.identity().generation, store.identity().generation);
     assert_eq!(snapshot_tree(&root), before);
     drop(store);
@@ -199,7 +264,15 @@ fn live_store_allows_shared_open_and_probe_without_creating_files() {
 fn normal_open_recovers_committed_wal_without_probe_side_effects() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    drop(Store::initialize_fixture(&root, default_limits(), deadline()).unwrap());
+    drop(
+        Store::initialize_fixture(
+            &root,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port(),
+        )
+        .unwrap(),
+    );
     let connection = Connection::open(root.join("store.sqlite3")).unwrap();
     connection
         .execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;")
@@ -212,10 +285,16 @@ fn normal_open_recovers_committed_wal_without_probe_side_effects() {
         .unwrap();
     let before = snapshot_tree(&root);
 
-    assert!(probe(&root).unwrap().is_some());
+    assert!(probe(&root, common::lease::lease_port()).unwrap().is_some());
     assert_eq!(snapshot_tree(&root), before);
     drop(connection);
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(
         reopened
             .read_batch(&["crash-commit".into()], deadline())
@@ -233,10 +312,21 @@ fn symlink_and_replaced_roots_fail_closed_before_mutation() {
     let fixture = Fixture::new();
     let real_root = fixture.path().join("real-store");
     let alias = fixture.path().join("alias-store");
-    let store = Store::initialize_fixture(&real_root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &real_root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     symlink(&real_root, &alias).unwrap();
     assert!(matches!(
-        Store::open(&alias, default_limits(), deadline()),
+        Store::open(
+            &alias,
+            default_limits(),
+            deadline(),
+            common::lease::lease_port()
+        ),
         Err(Error::InvalidRoot)
     ));
 
@@ -272,10 +362,22 @@ fn symlink_and_replaced_roots_fail_closed_before_mutation() {
 fn generation_survives_reopen_and_database_uses_wal_mode() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
 
     assert_eq!(reopened.identity().generation, generation);
     assert_eq!(reopened.identity().schema_version, SCHEMA_VERSION);

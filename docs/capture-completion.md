@@ -1,5 +1,11 @@
 # Private durable capture and completion (R03-B2c)
 
+Subsequent [R04-C](migration-receipts/R04-C.md) uses fresh schema5 roots, explicit
+lease injection and a safe allowlisted spawn/retained PID waiter. Earlier schema
+and close-before-spawn descriptions below record the owning stage; current
+concurrent isolation uses dedicated record-lock sentinels, not fixture admission
+guards. Schema4 and older roots refuse without conversion.
+
 This foundation extends the fixed private fixture owner handoff. It is not a
 supported engine runtime, backend, task lifecycle or public capture API. The
 scaffold's default invocation remains unsupported. HarflowMCP retains canonical

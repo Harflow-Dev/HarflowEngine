@@ -11,7 +11,12 @@ impl<'a> Commands<'a> {
         Self { root, until }
     }
     fn open(&self) -> io::Result<Store> {
-        map(Store::open(self.root, Limits::default(), self.until))
+        map(Store::open(
+            self.root,
+            Limits::default(),
+            self.until,
+            hf_platform::lease::shared(),
+        ))
     }
     pub(super) fn prepare(&self, plan: &ParentPlan) -> io::Result<PrepareResult> {
         let store = if plan.initialize {
@@ -19,6 +24,7 @@ impl<'a> Commands<'a> {
                 self.root,
                 Limits::default(),
                 self.until,
+                hf_platform::lease::shared(),
             ))?
         } else {
             self.open()?
@@ -34,6 +40,7 @@ impl<'a> Commands<'a> {
             self.root,
             Limits::default(),
             self.until,
+            hf_platform::lease::shared(),
         ))?;
         map(Id::new(store.identity().generation.clone()))
     }

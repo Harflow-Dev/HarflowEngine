@@ -1,5 +1,11 @@
 # Private fixture owner handoff (R03-B2)
 
+Subsequent [R04-C](migration-receipts/R04-C.md) uses fresh schema5 roots, explicit
+lease injection and a safe allowlisted spawn/retained PID waiter. Earlier schema
+and close-before-spawn descriptions below record the owning stage; current
+concurrent isolation uses dedicated record-lock sentinels, not fixture admission
+guards. Schema4 and older roots refuse without conversion.
+
 This is a fixed diagnostic composition, not a supported engine runtime, detached
 owner service, backend or run/resume/cancel interface. The default scaffold still
 reports unsupported. It uses the existing binary's exact private parent, owner and

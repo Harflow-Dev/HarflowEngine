@@ -34,9 +34,13 @@ fn row(value: &str, stamp: i64) -> TaskRow {
 #[test]
 fn exact_short_id_and_eight_character_prefix_follow_distinct_rules() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {
@@ -78,9 +82,13 @@ fn exact_short_id_and_eight_character_prefix_follow_distinct_rules() {
 #[test]
 fn equal_stamp_keyset_pages_visit_every_id_once_in_descending_order() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {
@@ -124,9 +132,13 @@ fn equal_stamp_keyset_pages_visit_every_id_once_in_descending_order() {
 #[test]
 fn explicit_id_reads_keep_input_order_canonical_exactness_and_absence() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let canonical = "0123456789abcdef0123456789abcdef";
     store
         .replace_task_fixture(
@@ -188,13 +200,25 @@ fn explicit_id_reads_keep_input_order_canonical_exactness_and_absence() {
 fn preexisting_root_without_task_tables_is_unavailable_and_never_upgraded() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     drop(store);
     let raw = Connection::open(root.join("store.sqlite3")).unwrap();
     raw.execute_batch("DROP TABLE task_pending; DROP TABLE task_headers; DROP TABLE task_dataset;")
         .unwrap();
     drop(raw);
-    let store = Store::open(&root, default_limits(), deadline()).unwrap();
+    let store = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
 
     assert!(matches!(
         store.task_read(

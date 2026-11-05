@@ -18,6 +18,9 @@ use std::{
 static STAGE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
 static FIXTURE_GATE: Mutex<()> = Mutex::new(());
 
+#[path = "../tests/common/lease.rs"]
+pub(crate) mod lease;
+
 pub(crate) fn fixture_guard() -> std::sync::MutexGuard<'static, ()> {
     FIXTURE_GATE
         .lock()
@@ -73,6 +76,7 @@ fn configured_store_connection_enforces_wal_full_and_foreign_keys() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let connection = store.connection.lock().unwrap();
@@ -107,6 +111,7 @@ fn mutex_saturation_refuses_immediately_without_a_late_write() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let guard = store.connection.lock().unwrap();
@@ -144,6 +149,7 @@ fn already_expired_deadline_rejects_without_a_write() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
 
@@ -181,12 +187,14 @@ fn interrupted_open_or_recovery_boundary_child() {
             Limits::default(),
             Instant::now() + Duration::from_secs(10),
             std::path::Path::new(&root).parent().unwrap(),
+            crate::tests::lease::lease_port(),
         );
     } else {
         let _ = Store::recover(
             &root,
             Instant::now() + Duration::from_secs(10),
             std::path::Path::new(&root).parent().unwrap(),
+            crate::tests::lease::lease_port(),
         );
     }
 }
@@ -242,6 +250,7 @@ fn kill_at_boundary(stage_name: &str) {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     store
@@ -296,6 +305,7 @@ fn kill_at_boundary(stage_name: &str) {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     assert_eq!(

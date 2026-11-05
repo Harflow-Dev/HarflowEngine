@@ -144,12 +144,12 @@ impl Drop for Fixture {
 
 pub struct Owned(pub RetainedOwnedChild);
 impl Owned {
-    pub fn spawn(executable: PathBuf, args: Vec<OsString>, cwd: PathBuf) -> Self {
+    pub fn spawn(executable: PathBuf, args: Vec<OsString>, _cwd: PathBuf) -> Self {
         let child = RetainedOwnedChild::spawn(
             SpawnSpec {
                 executable,
                 args,
-                cwd,
+                cwd: fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
                 environment: Vec::new(),
                 capture_limit: 1_048_576,
             },

@@ -50,6 +50,7 @@ fn cancellation_and_deadline_during_final_cursor_encoding_override_a_success_res
             Limits::default(),
             EncodeActionCodec(callback),
             control,
+            crate::tests::lease::lease_port(),
         );
         let result = session.execute(&request(None, 0), deadline());
         assert_eq!(
@@ -101,7 +102,13 @@ fn cloned_real_control_cancels_an_actual_condvar_wait_without_sleep_ordering() {
     let path = fixture.root();
     let (send_result, result) = mpsc::channel();
     let handle = thread::spawn(move || {
-        let session = crate::WatchSession::new(path, Limits::default(), Codec, wrapper);
+        let session = crate::WatchSession::new(
+            path,
+            Limits::default(),
+            Codec,
+            wrapper,
+            crate::tests::lease::lease_port(),
+        );
         let _ = send_result.send(session.execute(&request(Some(baseline), 4), deadline()));
     });
     entered

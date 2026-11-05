@@ -68,9 +68,8 @@ fn spawn_with(
     identity: &impl IdentityPort,
     until: Instant,
 ) -> io::Result<RetainedOwnedChild> {
-    // Only this fresh, single-threaded mode may reach this seam. No Store or
-    // gate endpoint is retained here; inventory refuses unexpected ambient FDs.
-    check_entry()?;
+    // Entry already qualified ambient descriptors. The safe spawn seam now
+    // owns inheritance; coordinator sentinel descriptors intentionally stay open.
     RetainedOwnedChild::spawn(
         SpawnSpec {
             executable: std::env::current_exe()?,
@@ -95,6 +94,14 @@ fn root_parent(root: &str) -> io::Result<PathBuf> {
         return Err(invalid());
     }
     path.parent().map(Path::to_path_buf).ok_or_else(invalid)
+}
+/// Only fresh private modes call this before Store handles or worker threads.
+fn bootstrap_cwd(cwd: &Path) -> io::Result<()> {
+    let physical = std::fs::canonicalize(cwd)?;
+    if !physical.is_dir() || physical != cwd {
+        return Err(invalid());
+    }
+    std::env::set_current_dir(physical)
 }
 fn gate_config(root: &str, gate: &Option<Gate>) -> io::Result<FixtureGate> {
     let parent = root_parent(root)?;

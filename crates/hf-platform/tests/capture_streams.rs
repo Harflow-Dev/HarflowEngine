@@ -13,8 +13,25 @@ use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
+    sync::Mutex,
     time::{Duration, Instant},
 };
+
+static LEASE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+fn case_guard() -> std::sync::MutexGuard<'static, ()> {
+    let until = Instant::now() + Duration::from_secs(5);
+    loop {
+        match LEASE_TEST_LOCK.try_lock() {
+            Ok(guard) => return guard,
+            Err(std::sync::TryLockError::Poisoned(error)) => return error.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) if Instant::now() < until => {
+                std::thread::yield_now();
+            }
+            Err(std::sync::TryLockError::WouldBlock) => panic!("test case admission deadline"),
+        }
+    }
+}
 
 struct Scratch(PathBuf);
 impl Scratch {
@@ -26,7 +43,7 @@ impl Scratch {
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(fs::canonicalize(path).unwrap())
     }
     fn root(&self) -> PathBuf {
         let path = self.0.join("store");
@@ -92,7 +109,7 @@ fn deadline(milliseconds: u64) -> Instant {
 fn id() -> Id {
     Id::new("44444444444444444444444444444444".into()).unwrap()
 }
-fn spawn(script: &Path, cwd: &Path, cap: usize) -> ChildGuard {
+fn spawn(script: &Path, cap: usize) -> ChildGuard {
     let child = RetainedOwnedChild::spawn(
         SpawnSpec {
             executable: PathBuf::from("/usr/bin/python3"),
@@ -101,7 +118,7 @@ fn spawn(script: &Path, cwd: &Path, cap: usize) -> ChildGuard {
                 OsString::from("-S"),
                 script.as_os_str().into(),
             ],
-            cwd: cwd.to_path_buf(),
+            cwd: fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
             environment: Vec::new(),
             capture_limit: cap,
         },
@@ -138,6 +155,7 @@ fn raw_path(root: &Path, operation: &Id, stream: &str) -> PathBuf {
 
 #[test]
 fn bounded_fair_pumping_captures_backpressured_binary_streams_and_reaches_eof_before_exit() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -160,7 +178,7 @@ sys.stdin.buffer.readline()
 "#,
     )
     .unwrap();
-    let mut child = spawn(&script, &scratch.0, 16_384);
+    let mut child = spawn(&script, 16_384);
     let mut raw = RawCapture::create(&root, &operation, deadline(2_000)).unwrap();
     let mut stdout = 0;
     let mut stderr = 0;
@@ -199,6 +217,7 @@ sys.stdin.buffer.readline()
 
 #[test]
 fn observed_child_exit_can_precede_capture_eof_until_buffered_output_is_drained() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -208,7 +227,7 @@ fn observed_child_exit_can_precede_capture_eof_until_buffered_output_is_drained(
         "import os\nos.write(1,b'out\\x00')\nos.write(2,b'err\\xff')\n",
     )
     .unwrap();
-    let mut child = spawn(&script, &scratch.0, 1024);
+    let mut child = spawn(&script, 1024);
     let until = deadline(3_000);
     loop {
         let exit = child.0.try_wait().unwrap();
@@ -240,6 +259,7 @@ fn observed_child_exit_can_precede_capture_eof_until_buffered_output_is_drained(
 
 #[test]
 fn take_bytes_does_not_clear_overflow_or_eof_observation() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let script = scratch.0.join("overflow_writer.py");
     fs::write(
@@ -247,7 +267,7 @@ fn take_bytes_does_not_clear_overflow_or_eof_observation() {
         "import os\nos.write(1,b'out-too-long')\nos.write(2,b'err-too-long')\n",
     )
     .unwrap();
-    let mut child = spawn(&script, &scratch.0, 4);
+    let mut child = spawn(&script, 4);
     let until = deadline(2_000);
     assert!(matches!(
         child.0.wait_until(until, || false).unwrap(),

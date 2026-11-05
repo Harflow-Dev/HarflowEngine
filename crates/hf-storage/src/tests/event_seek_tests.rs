@@ -17,6 +17,7 @@ fn production_seek_query_caps_runtime_kind_projection_and_avoids_body_materializ
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let db = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();

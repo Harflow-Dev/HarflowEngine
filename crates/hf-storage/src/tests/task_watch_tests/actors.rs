@@ -158,7 +158,13 @@ fn task_watch_commit_boundary_actor() {
     let _guard = crate::tests::fixture_guard();
     let stage = std::env::var("HF_WATCH_STAGE").unwrap();
     crate::tests::select_stage(stage);
-    let store = Store::open(root, Limits::default(), deadline()).unwrap();
+    let store = Store::open(
+        root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     if let Ok(milliseconds) = std::env::var("HF_WATCH_STAGE_EXPIRE_MS") {
         let deadline = Instant::now() + Duration::from_millis(milliseconds.parse().unwrap());
         assert!(matches!(

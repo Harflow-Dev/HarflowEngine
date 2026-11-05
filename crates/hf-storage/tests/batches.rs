@@ -17,7 +17,8 @@ fn read_batches_enforce_rows_and_bytes_and_return_only_requested_records() {
         max_rows: 2,
         max_bytes: 16,
     };
-    let store = Store::initialize_fixture(&root, limits, deadline()).unwrap();
+    let store =
+        Store::initialize_fixture(&root, limits, deadline(), common::lease::lease_port()).unwrap();
     store
         .apply_batch(
             &[
@@ -51,6 +52,7 @@ fn read_batches_enforce_rows_and_bytes_and_return_only_requested_records() {
             max_bytes: 3,
         },
         deadline(),
+        common::lease::lease_port(),
     )
     .unwrap();
     assert!(matches!(
@@ -67,7 +69,8 @@ fn oversized_mutation_batches_are_rejected_without_writing_any_records() {
         max_rows: 1,
         max_bytes: 4,
     };
-    let store = Store::initialize_fixture(&root, limits, deadline()).unwrap();
+    let store =
+        Store::initialize_fixture(&root, limits, deadline(), common::lease::lease_port()).unwrap();
 
     assert!(matches!(
         store.apply_batch(
@@ -111,7 +114,13 @@ fn oversized_mutation_batches_are_rejected_without_writing_any_records() {
 fn committed_delete_insert_and_put_follow_batch_order() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .apply_batch(
             &[
@@ -174,7 +183,13 @@ fn committed_delete_insert_and_put_follow_batch_order() {
 fn constraint_failure_rolls_back_the_entire_batch() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .apply_batch(
             &[Mutation::Insert {
@@ -202,7 +217,13 @@ fn constraint_failure_rolls_back_the_entire_batch() {
         Err(Error::Sqlite(_))
     ));
     drop(store);
-    let reopened = Store::open(&root, default_limits(), deadline()).unwrap();
+    let reopened = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert_eq!(
         reopened
             .read_batch(&["existing".into()], deadline())
@@ -216,7 +237,13 @@ fn constraint_failure_rolls_back_the_entire_batch() {
 fn sqlite_write_contention_expires_admission_without_a_late_mutation() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let lock = Connection::open(root.join("store.sqlite3")).unwrap();
     lock.execute_batch("BEGIN IMMEDIATE").unwrap();
     let (sender, receiver) = mpsc::channel();
@@ -239,7 +266,13 @@ fn sqlite_write_contention_expires_admission_without_a_late_mutation() {
             if matches!(code.code, ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked))
     );
     lock.execute_batch("ROLLBACK").unwrap();
-    let observer = Store::open(&root, default_limits(), deadline()).unwrap();
+    let observer = Store::open(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     assert!(
         observer
             .read_batch(&["late".into()], deadline())

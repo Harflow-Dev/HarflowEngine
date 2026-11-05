@@ -1,5 +1,11 @@
 # Internal fixture storage foundation
 
+Subsequent [R04-C](migration-receipts/R04-C.md) uses fresh schema5 roots, explicit
+lease injection and a safe allowlisted spawn/retained PID waiter. Earlier schema
+and close-before-spawn descriptions below record the owning stage; current
+concurrent isolation uses dedicated record-lock sentinels, not fixture admission
+guards. Schema4 and older roots refuse without conversion.
+
 R02-A/R02-A2 implement no public engine operation. The host remains the unsupported
 scaffold; no client may select this as a compatible engine. See the
 [R02-A receipt](migration-receipts/R02-A.md),
@@ -70,7 +76,7 @@ is selected or advertised. See [task-list invalidation](task-list-watch.md).
 
 ## Subsequent B2c schema
 
-Current fresh roots use schema4 for the separate [private capture/completion
+B2c introduced schema4 for the separate [private capture/completion
 foundation](capture-completion.md). The schema3 watch foundation above is its
 historical entry stage; schema3 roots now refuse without upgrade or repair.
 Watcher publication and its current writer inventory are otherwise unchanged.

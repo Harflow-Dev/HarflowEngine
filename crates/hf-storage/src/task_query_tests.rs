@@ -36,6 +36,7 @@ fn generated_page_queries_seek_the_matching_index_without_sorting() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let connection = Connection::open(root.join("store.sqlite3")).unwrap();
@@ -101,6 +102,7 @@ fn production_selects_return_only_their_bounded_generation_and_identifier_prefix
             max_bytes: 128,
         },
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     store

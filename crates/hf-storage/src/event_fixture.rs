@@ -29,7 +29,7 @@ impl Store {
     ) -> Result<()> {
         validate(self, fixture, deadline)?;
         let mut db = self.admit(deadline)?;
-        let _io = self.binding.io()?;
+        let _io = self.binding.io(deadline)?;
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
         require_schema(&tx)?;
         let previous = crate::event_read::stream_optional(&tx, &fixture.task)?;

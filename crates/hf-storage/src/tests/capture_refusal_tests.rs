@@ -24,6 +24,7 @@ fn low_byte_limit_refuses_capture_begin_before_creating_rows() {
             max_bytes: 1,
         },
         deadline(),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     assert!(matches!(
@@ -52,6 +53,7 @@ fn low_byte_limit_refuses_progress_without_advancing_snapshot_or_event() {
             max_bytes: 1,
         },
         deadline(),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let progress = CaptureProgress {
@@ -112,7 +114,13 @@ fn assert_malformed_row_is_preserved(corruption: &str) {
     };
     drop(raw);
 
-    let reopened = Store::open(fixture.root(), Limits::default(), deadline()).unwrap();
+    let reopened = Store::open(
+        fixture.root(),
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     assert!(
         matches!(
             reopened.capture_observe(&binding.fence.operation, deadline()),

@@ -113,7 +113,12 @@ fn terminal_recovery_snapshot_matches_readonly_sqlite_and_preserves_source_files
     let before = source_hashes(&root);
     let scratch = root.parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     let record = session.read(&operation, deadline()).unwrap().unwrap();
     assert_eq!(before, source_hashes(&root));
     let raw = readonly(&root);
@@ -134,10 +139,17 @@ fn absent_invalid_and_expired_sources_refuse_without_initialization() {
         &root,
         root.parent().unwrap().join("scratch"),
         Limits::default(),
+        crate::tests::lease::lease_port(),
     );
     assert_eq!(session.read(&support::id(41), deadline()).unwrap(), None);
     assert!(!root.exists());
-    let store = Store::initialize_fixture(&root, Limits::default(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        Limits::default(),
+        deadline(),
+        crate::tests::lease::lease_port(),
+    )
+    .unwrap();
     drop(store);
     assert!(matches!(
         session.read(&support::id(41), Instant::now() - Duration::from_millis(1)),
@@ -152,6 +164,7 @@ fn absent_invalid_and_expired_sources_refuse_without_initialization() {
         &malformed,
         malformed.parent().unwrap().join("scratch2"),
         Limits::default(),
+        crate::tests::lease::lease_port(),
     );
     let result = malformed_session.read(&support::id(41), deadline());
     assert!(result.is_err(), "{result:?}");
@@ -175,7 +188,12 @@ fn oversized_event_cell_is_invalid_without_source_repair() {
     let before = fs::read(root.join("store.sqlite3")).unwrap();
     let scratch = root.parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     let result = session.read(&operation, deadline());
     assert!(result.is_err(), "{result:?}");
     assert_eq!(fs::read(root.join("store.sqlite3")).unwrap(), before);
@@ -190,7 +208,12 @@ fn oversized_ownership_version_text_and_blob_are_bounded_and_refused() {
     drop(store);
     let scratch = root.parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(&root, &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        &root,
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     for bad in [
         rusqlite::types::Value::Text("x".repeat(1024 * 1024)),
         rusqlite::types::Value::Blob(vec![b'x'; 1024 * 1024]),
@@ -225,7 +248,12 @@ fn held_exclusive_io_gate_returns_busy_then_allows_a_fresh_observation() {
     assert!(io.try_lock().is_ok());
     let scratch = fixture.root().parent().unwrap().join("scratch");
     fs::create_dir(&scratch).unwrap();
-    let session = RecoveryReadSession::new(fixture.root(), &scratch, Limits::default());
+    let session = RecoveryReadSession::new(
+        fixture.root(),
+        &scratch,
+        Limits::default(),
+        crate::tests::lease::lease_port(),
+    );
     assert!(matches!(
         session.read(&operation, deadline()),
         Err(hf_application::recovery::RecoveryError::Busy)

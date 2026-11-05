@@ -129,7 +129,12 @@ fn child_waiting_opener() {
     let mut store = None;
     for line in std::io::stdin().lock().lines() {
         match line.unwrap().as_str() {
-            "OPEN" if store.is_none() => match Store::open(&root, default_limits(), deadline()) {
+            "OPEN" if store.is_none() => match Store::open(
+                &root,
+                default_limits(),
+                deadline(),
+                common::lease::lease_port(),
+            ) {
                 Ok(opened) => {
                     println!("OPENED:{}", opened.identity().generation);
                     store = Some(opened);
@@ -152,7 +157,13 @@ fn child_waiting_opener() {
 fn concurrent_process_open_attempts_share_one_observed_generation() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let initial = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let initial = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let expected = initial.identity().generation.clone();
     drop(initial);
     let first = Opener::spawn(&root);

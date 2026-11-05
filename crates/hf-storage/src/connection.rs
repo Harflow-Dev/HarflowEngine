@@ -137,14 +137,26 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
     Ok(())
 }
 
-pub(crate) fn claim(file: &File, shared: bool) -> Result<()> {
-    let result = if shared {
-        file.try_lock_shared()
-    } else {
-        file.try_lock()
-    };
-    result.map_err(|error| match error {
-        std::fs::TryLockError::WouldBlock => Error::Busy,
-        std::fs::TryLockError::Error(error) => Error::Io(error),
-    })
+pub(crate) fn open_source(
+    binding: &crate::binding::Binding,
+    identity: &Identity,
+    deadline: Instant,
+) -> Result<Connection> {
+    binding.check()?;
+    #[cfg(test)]
+    crate::tests::stage("before_source_open");
+    self::check_deadline(deadline)?;
+    let connection = Connection::open_with_flags(
+        binding.database(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
+    )?;
+    self::suppress_checkpoints(&connection)?;
+    #[cfg(test)]
+    crate::tests::stage("after_source_open");
+    if self::identity(&connection, deadline)? != *identity {
+        return Err(Error::Replaced);
+    }
+    self::configure(&connection, deadline)?;
+    binding.check()?;
+    Ok(connection)
 }

@@ -35,7 +35,13 @@ fn row(value: &str, stamp: i64) -> TaskRow {
 fn non_boolean_sqlite_flags_never_become_true_facts() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {
@@ -88,7 +94,8 @@ fn oversized_persisted_generation_and_ids_are_bounded_before_mapping() {
         max_rows: 1,
         max_bytes: 256,
     };
-    let store = Store::initialize_fixture(&root, limits, deadline()).unwrap();
+    let store =
+        Store::initialize_fixture(&root, limits, deadline(), common::lease::lease_port()).unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {
@@ -164,7 +171,13 @@ fn oversized_persisted_generation_and_ids_are_bounded_before_mapping() {
 fn fixture_replacement_refuses_future_dataset_version_without_erasing_rows() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let store = Store::initialize_fixture(&root, default_limits(), deadline()).unwrap();
+    let store = Store::initialize_fixture(
+        &root,
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     store
         .replace_task_fixture(
             &TaskFixture {

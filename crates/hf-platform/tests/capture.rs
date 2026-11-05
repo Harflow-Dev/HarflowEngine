@@ -7,8 +7,25 @@ use std::{
     fs,
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
+    sync::Mutex,
     time::{Duration, Instant},
 };
+
+static LEASE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+fn case_guard() -> std::sync::MutexGuard<'static, ()> {
+    let until = Instant::now() + Duration::from_secs(5);
+    loop {
+        match LEASE_TEST_LOCK.try_lock() {
+            Ok(guard) => return guard,
+            Err(std::sync::TryLockError::Poisoned(error)) => return error.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) if Instant::now() < until => {
+                std::thread::yield_now();
+            }
+            Err(std::sync::TryLockError::WouldBlock) => panic!("test case admission deadline"),
+        }
+    }
+}
 
 struct Scratch(PathBuf);
 impl Scratch {
@@ -20,7 +37,7 @@ impl Scratch {
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(fs::canonicalize(path).unwrap())
     }
     fn root(&self) -> PathBuf {
         let path = self.0.join("store");
@@ -49,6 +66,7 @@ fn read(path: &Path) -> Vec<u8> {
 
 #[test]
 fn raw_capture_appends_exact_binary_streams_and_syncs_before_returning_offsets() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -74,6 +92,7 @@ fn raw_capture_appends_exact_binary_streams_and_syncs_before_returning_offsets()
 
 #[test]
 fn failed_pre_sync_observation_never_returns_offsets_or_allows_replaying_the_extent() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -104,6 +123,7 @@ fn failed_pre_sync_observation_never_returns_offsets_or_allows_replaying_the_ext
 
 #[test]
 fn failed_post_sync_publication_observation_never_returns_offsets_or_allows_reuse() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -134,6 +154,7 @@ fn failed_post_sync_publication_observation_never_returns_offsets_or_allows_reus
 
 #[test]
 fn path_replacement_at_sync_gate_is_rechecked_before_offsets_return() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();
@@ -168,6 +189,7 @@ fn path_replacement_at_sync_gate_is_rechecked_before_offsets_return() {
 
 #[test]
 fn raw_capture_refuses_path_replacement_and_hard_link_identity_changes() {
+    let _serial = case_guard();
     use std::os::unix::fs::symlink;
 
     let scratch = Scratch::new();
@@ -211,6 +233,7 @@ fn raw_capture_refuses_path_replacement_and_hard_link_identity_changes() {
 
 #[test]
 fn per_stream_total_cap_and_chunk_limit_are_enforced_before_append() {
+    let _serial = case_guard();
     let scratch = Scratch::new();
     let root = scratch.root();
     let operation = id();

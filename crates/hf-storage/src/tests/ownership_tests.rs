@@ -37,7 +37,13 @@ impl Fixture {
         Self(fs::canonicalize(path).unwrap(), guard)
     }
     fn store(&self) -> Store {
-        Store::initialize_fixture(self.0.join("store"), Limits::default(), deadline()).unwrap()
+        Store::initialize_fixture(
+            self.0.join("store"),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
 }
 impl Drop for Fixture {
@@ -188,6 +194,7 @@ fn prepare_rejects_oversize_payload_and_store_byte_budget_without_reservation() 
             max_bytes: 64,
         },
         deadline(),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let bounded = request(&tight, 6, 7, 8, 9, b"one");

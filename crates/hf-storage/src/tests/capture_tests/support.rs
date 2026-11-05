@@ -31,7 +31,13 @@ impl Fixture {
         self.0.join("store")
     }
     pub(super) fn store(&self) -> Store {
-        Store::initialize_fixture(self.root(), Limits::default(), deadline()).unwrap()
+        Store::initialize_fixture(
+            self.root(),
+            Limits::default(),
+            deadline(),
+            crate::tests::lease::lease_port(),
+        )
+        .unwrap()
     }
 }
 impl Drop for Fixture {

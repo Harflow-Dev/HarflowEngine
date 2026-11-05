@@ -155,6 +155,18 @@ fn explicit_term_grace_requalification_and_kill_are_bounded() {
 }
 
 #[test]
+fn different_requested_working_directory_is_refused_before_spawn() {
+    let mut requested = spec("exit", &["0"], 128);
+    requested.cwd = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+    assert_ne!(
+        requested.cwd,
+        std::fs::canonicalize(std::env::current_dir().unwrap()).unwrap()
+    );
+    let result = RetainedOwnedChild::spawn(requested, &MacIdentity, deadline(500));
+    assert!(matches!(result, Err(error) if error.kind() == io::ErrorKind::InvalidInput));
+}
+
+#[test]
 fn dropped_or_pipeholding_descendants_remain_explicitly_unknown_and_cooperatively_cleaned() {
     let mut child = spawn("pipeholder", &[], 4096);
     pump_until(&mut child, |value| {

@@ -14,7 +14,7 @@ impl Store {
     pub fn replace_task_fixture(&self, fixture: &TaskFixture, deadline: Instant) -> Result<()> {
         validate(self, fixture, deadline)?;
         let mut connection = self.admit(deadline)?;
-        let _io = self.binding.io()?;
+        let _io = self.binding.io(deadline)?;
         connection::timeout(&connection, deadline)?;
         super::task_read::require_tables(&connection)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;

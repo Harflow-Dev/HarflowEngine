@@ -51,6 +51,7 @@ fn event_read_snapshot_child() {
         root,
         Limits::default(),
         Instant::now() + Duration::from_secs(10),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let query = EventQuery {
@@ -85,6 +86,7 @@ fn event_read_observes_one_snapshot_during_concurrent_fixture_replacement() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     writer
@@ -110,6 +112,7 @@ fn event_read_observes_one_snapshot_during_concurrent_fixture_replacement() {
         &root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     writer
@@ -174,6 +177,7 @@ fn seed_seek_store(root: &Path) -> Store {
         root,
         Limits::default(),
         Instant::now() + Duration::from_secs(2),
+        crate::tests::lease::lease_port(),
     )
     .unwrap();
     let task = task_id("seek-plan-task");

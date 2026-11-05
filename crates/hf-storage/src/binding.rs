@@ -1,10 +1,12 @@
 use crate::{Error, Result};
+use hf_application::lease::{LeaseGuard, LeaseMode, LeasePort};
 #[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
 use std::{
     fs::{self, Metadata},
     path::{Path, PathBuf},
 };
+use std::{sync::Arc, time::Instant};
 #[derive(Clone, PartialEq, Eq)]
 struct FileIdentity {
     device: u64,
@@ -38,6 +40,7 @@ fn identity(_: &Metadata) -> Result<FileIdentity> {
     Err(Error::InvalidRoot)
 }
 pub(crate) struct Binding {
+    leases: Arc<dyn LeasePort>,
     root: PathBuf,
     root_id: FileIdentity,
     database_id: Option<FileIdentity>,
@@ -74,7 +77,7 @@ impl Binding {
         }
         Ok(())
     }
-    pub(crate) fn capture(root: &Path, existing: bool) -> Result<Self> {
+    pub(crate) fn capture(root: &Path, existing: bool, leases: Arc<dyn LeasePort>) -> Result<Self> {
         // Reject symlinks in every supplied ancestor, including relative paths.
         let absolute = std::path::absolute(root)?;
         let mut prefix = PathBuf::new();
@@ -92,6 +95,7 @@ impl Binding {
             None
         };
         let binding = Self {
+            leases,
             root: absolute.clone(),
             root_id,
             database_id,
@@ -105,6 +109,8 @@ impl Binding {
         };
         if existing {
             binding.check()?;
+            crate::wal::marker(&binding)?;
+            crate::connection::qualify_header(&binding.database())?;
         }
         Ok(binding)
     }
@@ -129,11 +135,28 @@ impl Binding {
     pub(crate) fn root(&self) -> &Path {
         &self.root
     }
-    pub(crate) fn io(&self) -> Result<fs::File> {
-        let file = fs::File::open(self.root.join("io.lock"))?;
-        crate::connection::claim(&file, false)?;
+    pub(crate) fn claim(&self, mode: LeaseMode, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
+        let guard = self
+            .leases
+            .acquire(&self.root.join("store.lock"), mode, false, deadline)
+            .map_err(crate::lease_error)?;
         self.check()?;
-        Ok(file)
+        crate::wal::marker(self)?;
+        crate::connection::qualify_header(&self.database())?;
+        Ok(guard)
+    }
+    pub(crate) fn io(&self, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
+        let guard = self
+            .leases
+            .acquire(
+                &self.root.join("io.lock"),
+                LeaseMode::Exclusive,
+                false,
+                deadline,
+            )
+            .map_err(crate::lease_error)?;
+        self.check()?;
+        Ok(guard)
     }
     pub(crate) fn database(&self) -> PathBuf {
         self.root.join("store.sqlite3")

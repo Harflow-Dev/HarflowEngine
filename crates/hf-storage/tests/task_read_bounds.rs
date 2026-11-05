@@ -64,9 +64,13 @@ fn page(limit: usize, active_only: bool, session: Option<&str>) -> TaskQuery {
 #[test]
 fn fixture_payload_bounds_reject_oversized_fields_and_page_stops_at_byte_budget() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     let mut oversized = row("oversized", 0, Some(true), None);
     oversized.header = vec![b'h'; 2049];
     assert!(matches!(
@@ -120,9 +124,13 @@ fn fixture_payload_bounds_reject_oversized_fields_and_page_stops_at_byte_budget(
 #[test]
 fn incomplete_coverage_keeps_prefix_and_count_unknown() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     seed(
         &store,
         vec![row("task-prefix-1", 1, Some(false), None)],
@@ -159,6 +167,7 @@ fn page_cursor_binds_store_dataset_scope_and_filter_and_replacement_invalidates_
             max_bytes: 4096,
         },
         deadline(),
+        common::lease::lease_port(),
     )
     .unwrap();
     let rows = vec![
@@ -204,6 +213,7 @@ fn page_cursor_binds_store_dataset_scope_and_filter_and_replacement_invalidates_
         fixture.path().join("other-store"),
         default_limits(),
         deadline(),
+        common::lease::lease_port(),
     )
     .unwrap();
     seed(&other, rows.clone(), &[], complete());
@@ -221,9 +231,13 @@ fn page_cursor_binds_store_dataset_scope_and_filter_and_replacement_invalidates_
 #[test]
 fn expired_read_has_no_late_fixture_mutation() {
     let fixture = Fixture::new();
-    let store =
-        Store::initialize_fixture(fixture.path().join("store"), default_limits(), deadline())
-            .unwrap();
+    let store = Store::initialize_fixture(
+        fixture.path().join("store"),
+        default_limits(),
+        deadline(),
+        common::lease::lease_port(),
+    )
+    .unwrap();
     seed(
         &store,
         vec![row("stable-row", 1, Some(true), None)],
