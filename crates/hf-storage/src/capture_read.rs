@@ -2,6 +2,13 @@ use crate::{Error, Result, Store, capture_codec};
 use hf_domain::{capture::*, ownership::Id, process::ProcessExit};
 use rusqlite::{Connection, OptionalExtension};
 pub(crate) fn load(store: &Store, db: &Connection, id: &Id) -> Result<Option<CaptureSnapshot>> {
+    load_context(&store.read_context(), db, id)
+}
+pub(crate) fn load_context(
+    store: &crate::read_context::ReadContext<'_>,
+    db: &Connection,
+    id: &Id,
+) -> Result<Option<CaptureSnapshot>> {
     let valid: Option<(i64, i64)> = db.query_row("SELECT CASE WHEN typeof(binding)='text' AND length(CAST(binding AS BLOB)) BETWEEN 1 AND 512 AND typeof(operation)='text' AND length(CAST(operation AS BLOB))=32 AND typeof(revision)='integer' AND typeof(stdout)='integer' AND typeof(stderr)='integer' AND typeof(stdout_eof)='integer' AND typeof(stderr_eof)='integer' AND typeof(loss)='integer' AND typeof(exit_kind)='integer' AND typeof(exit_value)='integer' THEN 1 ELSE 0 END,length(CAST(binding AS BLOB)) FROM capture_records WHERE operation=?1", [id.as_str()], |r|Ok((r.get(0)?,r.get(1)?))).optional()?;
     match valid {
         None => return Ok(None),
@@ -31,7 +38,7 @@ pub(crate) fn load(store: &Store, db: &Connection, id: &Id) -> Result<Option<Cap
     };
     let binding = capture_codec::decode(&row.0)?;
     if binding.fence.operation != *id
-        || binding.fence.generation.as_str() != store.identity().generation
+        || binding.fence.generation.as_str() != store.identity.generation
         || (exit != ProcessExit::Unobserved && (row.4 != 1 || row.5 != 1 || row.6 != 0))
     {
         return Err(Error::InvalidOwnership);

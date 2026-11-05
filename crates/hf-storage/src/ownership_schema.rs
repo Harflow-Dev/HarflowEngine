@@ -1,6 +1,6 @@
 use crate::{Error, Result};
 use rusqlite::Connection;
-pub(crate) const META_SQL: &str = "SELECT version,CASE WHEN typeof(generation)='text' AND length(CAST(generation AS BLOB))=32 THEN generation END,(SELECT count(*) FROM ownership_meta) FROM ownership_meta WHERE singleton=1";
+pub(crate) const META_SQL: &str = "SELECT CASE WHEN typeof(version)='integer' THEN version END,CASE WHEN typeof(generation)='text' AND length(CAST(generation AS BLOB))=32 THEN generation END,(SELECT count(*) FROM (SELECT 1 FROM ownership_meta LIMIT 2)) FROM ownership_meta WHERE singleton=1";
 
 pub(crate) const SCHEMA: &str = "
 CREATE TABLE ownership_meta(singleton INTEGER PRIMARY KEY CHECK(singleton=1),version INTEGER NOT NULL,generation TEXT NOT NULL);

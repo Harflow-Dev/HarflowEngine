@@ -50,3 +50,8 @@ fixed owner with synced raw bytes, fenced private offset/events and terminal
 ordering. Current fresh roots use schema4; earlier schema3/2 descriptions record
 their owning stages. It retains reservations and Unknown containment, and adds no
 public runtime, restart adoption or R04 qualification.
+
+The [read-only recovery observation foundation](recovery-observation.md) inspects
+one explicit fixture operation using bounded private-copy snapshots and independent
+identity/raw evidence. It preserves schema4 and adds no recovery intent, source
+repair, process control, adoption, release or replacement authority.

@@ -123,6 +123,19 @@ fn copy(source: &Path, target: &Path, remaining: &mut u64, deadline: Instant) ->
     Ok(())
 }
 pub(crate) fn qualify(binding: &Binding, parent: &Path, deadline: Instant) -> Result<Identity> {
+    with_qualified_copy(
+        binding,
+        parent,
+        deadline,
+        |_, identity| Ok(identity.clone()),
+    )
+}
+pub(crate) fn with_qualified_copy<T>(
+    binding: &Binding,
+    parent: &Path,
+    deadline: Instant,
+    action: impl FnOnce(&rusqlite::Connection, &Identity) -> Result<T>,
+) -> Result<T> {
     connection::check_deadline(deadline)?;
     binding.check()?;
     let journal = binding.root().join("store.sqlite3-journal");
@@ -138,16 +151,17 @@ pub(crate) fn qualify(binding: &Binding, parent: &Path, deadline: Instant) -> Re
         return Err(Error::InvalidRoot);
     }
     let scratch = Scratch::create(&parent)?;
-    let result = qualify_copy(binding, &scratch, expected, deadline);
+    let result = qualify_copy(binding, &scratch, expected, deadline, action);
     scratch.cleanup()?;
     result
 }
-fn qualify_copy(
+fn qualify_copy<T>(
     binding: &Binding,
     scratch: &Scratch,
     expected: Identity,
     deadline: Instant,
-) -> Result<Identity> {
+    action: impl FnOnce(&rusqlite::Connection, &Identity) -> Result<T>,
+) -> Result<T> {
     let database = scratch.0.join("store.sqlite3");
     let mut remaining = CAP;
     copy(&binding.database(), &database, &mut remaining, deadline)?;
@@ -174,5 +188,11 @@ fn qualify_copy(
         return Err(Error::Incompatible);
     }
     connection::check_deadline(deadline)?;
-    Ok(observed)
+    let result = action(&connection, &observed)?;
+    binding.check()?;
+    if marker(binding)? != expected {
+        return Err(Error::Replaced);
+    }
+    connection::check_deadline(deadline)?;
+    Ok(result)
 }

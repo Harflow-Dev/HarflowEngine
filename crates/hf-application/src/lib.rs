@@ -23,3 +23,5 @@ pub mod fixture;
 mod fixture_tests;
 
 pub mod task_watch;
+
+pub mod recovery;

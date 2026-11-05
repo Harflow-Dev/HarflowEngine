@@ -35,6 +35,7 @@ mod event_seek_tests;
 mod event_snapshot_tests;
 mod ownership_atomicity_tests;
 mod ownership_tests;
+mod recovery_tests;
 mod task_read_snapshot_tests;
 mod task_watch_atomicity_tests;
 mod task_watch_tests;

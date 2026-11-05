@@ -15,6 +15,8 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+#[path = "../common/fixture_guard.rs"]
+mod fixture_guard;
 
 pub(super) const PYTHON: &str = "/usr/bin/python3";
 pub(super) const OP: &str = "11111111111111111111111111111111";
@@ -27,15 +29,22 @@ pub(super) const NONCE: &str = "77777777777777777777777777777777";
 pub(super) const EMPTY_DIGEST: &str =
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-pub(super) struct Scratch(pub(super) PathBuf);
+pub(super) struct Scratch(
+    pub(super) PathBuf,
+    #[allow(dead_code)] fixture_guard::FixtureGuard,
+);
 impl Scratch {
     pub(super) fn new() -> Self {
+        let guard = fixture_guard::acquire();
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path =
             PathBuf::from("/private/tmp").join(format!("hf-b2-{}-{sequence}", std::process::id()));
         fs::create_dir(&path).expect("create isolated test directory");
-        Self(fs::canonicalize(path).expect("canonical isolated test directory"))
+        Self(
+            fs::canonicalize(path).expect("canonical isolated test directory"),
+            guard,
+        )
     }
     pub(super) fn root(&self) -> PathBuf {
         self.0.join("store")

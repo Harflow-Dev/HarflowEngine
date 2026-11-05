@@ -108,6 +108,24 @@ impl Binding {
         }
         Ok(binding)
     }
+    pub(crate) fn source_stamp(
+        &self,
+        generation: hf_domain::ownership::Id,
+    ) -> Result<hf_domain::recovery::SourceStamp> {
+        let convert = |id: &FileIdentity| hf_domain::capture::FileIdentity {
+            device: id.device,
+            inode: id.inode,
+        };
+        self.check()?;
+        Ok(hf_domain::recovery::SourceStamp {
+            generation,
+            root: convert(&self.root_id),
+            database: convert(self.database_id.as_ref().ok_or(Error::Replaced)?),
+            marker: convert(self.marker_id.as_ref().ok_or(Error::Replaced)?),
+            store_lock: convert(&self.lock_id),
+            io_lock: convert(&self.io_id),
+        })
+    }
     pub(crate) fn root(&self) -> &Path {
         &self.root
     }

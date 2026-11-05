@@ -248,3 +248,8 @@ mod capture;
 mod capture_codec;
 mod capture_read;
 mod capture_schema;
+
+mod read_context;
+mod recovery;
+mod recovery_events;
+pub use recovery::RecoveryReadSession;

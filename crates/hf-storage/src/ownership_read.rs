@@ -8,6 +8,13 @@ pub(crate) fn load(
     connection: &Connection,
     operation: &Id,
 ) -> Result<Option<Snapshot>> {
+    load_context(&store.read_context(), connection, operation)
+}
+pub(crate) fn load_context(
+    store: &crate::read_context::ReadContext<'_>,
+    connection: &Connection,
+    operation: &Id,
+) -> Result<Option<Snapshot>> {
     let lengths: Option<(i64, i64, i64)> = connection
         .query_row(PREFLIGHT_SQL, [operation.as_str()], |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?))
@@ -27,7 +34,7 @@ pub(crate) fn load(
     let mut rows = statement.query([operation.as_str()])?;
     let row = rows.next()?.ok_or(Error::InvalidOwnership)?;
     let snapshot = decode(row)?;
-    if snapshot.request.generation.as_str() != store.identity().generation {
+    if snapshot.request.generation.as_str() != store.identity.generation {
         return Err(Error::InvalidOwnership);
     }
     codec::validate(&snapshot.request)?;

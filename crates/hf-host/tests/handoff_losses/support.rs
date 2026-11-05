@@ -11,6 +11,8 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+#[path = "../common/fixture_guard.rs"]
+mod fixture_guard;
 
 pub const OP: &str = "11111111111111111111111111111111";
 pub const SESSION: &str = "22222222222222222222222222222222";
@@ -22,9 +24,11 @@ pub struct Fixture {
     pub root: PathBuf,
     pub effects: PathBuf,
     ledger: QualifiedLedger,
+    _fixture_guard: fixture_guard::FixtureGuard,
 }
 impl Fixture {
     pub fn new() -> Self {
+        let guard = fixture_guard::acquire();
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path =
@@ -38,6 +42,7 @@ impl Fixture {
             scratch,
             effects,
             ledger,
+            _fixture_guard: guard,
         }
     }
     pub fn bind(&self, n: u8) -> (UnixListener, PathBuf) {
