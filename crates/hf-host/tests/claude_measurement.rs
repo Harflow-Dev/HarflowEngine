@@ -16,3 +16,9 @@ fn installed_claude_fixture_after_no_fork_read_and_network_preflight() {
 fn installed_claude_exact_os_banner_read_version_only() {
     claude_measurement::vendor_version_only_diagnostic();
 }
+
+#[test]
+#[ignore = "diagnostic only; explicit vendor selection and primary OS readiness required; stops after version query"]
+fn installed_claude_pagesize_read_version_only() {
+    claude_measurement::vendor_pagesize_version_only_diagnostic();
+}

@@ -43,7 +43,14 @@ pub(super) fn run(
     super::super::drain(&mut child);
     child.settle();
     let identity = child.identity_summary();
+    let stdout_eof = child.capture().stdout.eof;
+    let stderr_eof = child.capture().stderr.eof;
     let (stdout, stderr) = child.take_capture_bytes();
+    eprintln!(
+        "phase={phase} settled child identity={identity} exit={exit:?} stdout-eof={stdout_eof} stderr-eof={stderr_eof} stdout={} stderr={}",
+        super::super::bounded_summary(&stdout),
+        super::super::bounded_summary(&stderr)
+    );
     RunResult {
         exit,
         stdout,

@@ -83,11 +83,73 @@ Profile SHA-256:
 Helper source SHA-256:
 `8be1694f1d9a589d9fd781519a5b594515e088bb7cac60de641d082f8b3891b0`.
 
-No runtime policy was changed and Claude was not rerun in this diagnosis.
-An exact `hw.pagesize` read-only exception is the smallest candidate for a later
-version-only experiment, with the full safety preflight repeated. It has not
-been tested or adopted. Resolving this assertion does not establish that later
-startup, protocol, tools or production qualification will succeed.
+No runtime policy was changed and Claude was not rerun in that diagnosis.
+The recommended exact `hw.pagesize` diagnostic was subsequently authorized and
+measured below. No startup, protocol, tools or production qualification follows
+from localizing the assertion.
+
+### Exact modern page-size candidate
+
+The owner authorized a diagnostic profile containing only the unchanged base plus
+`(allow sysctl-read (sysctl-name "hw.pagesize"))`. This is separate from the
+OS-banner candidate and is not a production policy change. Original profiles and
+artifacts remain preserved.
+
+The same-root fixed C helper comparison found:
+
+| Operation | Outside positive control | Base | Exact candidate |
+| --- | --- | --- | --- |
+| `sysconf(_SC_PAGESIZE)` | 16384 | -1/EPERM | -1/EPERM |
+| Named `hw.pagesize` (quad buffer) | 16384 | EPERM | 16384 |
+| Numeric `{CTL_HW, HW_PAGESIZE}` (int buffer) | 16384 | EPERM | EPERM |
+| Named `hw.pagesize_compat` (int buffer) | 16384 | EPERM | EPERM |
+| `hw.ncpu`, `kern.osproductversion` | allowed | EPERM | EPERM |
+
+Returned buffer lengths were 8/4/4 for modern/numeric/compatibility page-size
+queries. All three original children exited zero, reached both EOFs and were
+reaped. No listener received a connection. The helper's successful-sysconf
+assertion remained failed; its failure was not waived or counted as a fix.
+
+Apple's [XNU registrations](https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/bsd/kern/kern_mib.c)
+separate modern `hw.pagesize` from numeric `HW_PAGESIZE`, which resolves to
+`hw.pagesize_compat`. libc uses the numeric node. Both independent read-only
+diagnoses corroborated this distinction. The modern-name allowance therefore
+does not satisfy the observed libc page-size requirement.
+
+Artifacts are under `/private/tmp/harflow-claude-pagesize/`; helper `result.json`
+SHA-256: `dbe460b43522425d36f96fd5be1531d5a4f6eebe83253c1057bcc4d06bac71e6`.
+Helper base/candidate profile SHA-256 values are respectively
+`0b87c0bbd8513e25087b319884a5669644094ac529cf95beccd2fdd71f210450` and
+`ae02439d89cd24c338eecbbfda6ae08ac7c8dbdbad3350d9d75974e4fe4082a8`.
+Source SHA-256: `decaf6a699c08d9c34a9589ac2342cce01fc08f47f55e61adfa0110ba1383fac`.
+
+The existing eight-case OS safety matrix passed again under unchanged policies.
+The final candidate run passed controlled spawn and the full existing
+no-fork/read/network preflight, then `--version` again exited SIGTRAP. The original
+child (PID 25025, boot UUID `0ed817ca-bca2-4d50-a012-e83a12e36b04`, start
+1793894005.012817) was reaped with both pipe EOFs and stable pinned binary
+bookends. The trace decodes locally to the same `0x5550377` page-size assertion.
+Before the unchanged failing version assertion, the harness recorded both
+listener witnesses quiet and server outcome `PreflightOnly`; no messages request
+or scripted provider response occurred. The failed root is retained.
+
+The final vendor base/candidate profile SHA-256 values are
+`c9c9e1953c42dcbf224f5dfc877103b532056c1e57cb8c8818f044586d53923b` and
+`fe2df64d24826c28968eeba717a34c0691cedda147ff44056330b1802a68f93d`.
+Final `vendor-version-only.log` SHA-256:
+`c0f70f99829ea9f0c58006342f77517508ed9d0977991c79d984c416349e421c`.
+The earlier pre-review run is preserved separately; final evidence supersedes its
+incomplete failure-path settlement reporting. The accepted review fix records
+these independent witnesses before enforcing the original failed version oracle.
+
+No provider/model/tools session is authorized. The candidate-specific server
+rejects any request except its single nonce preflight GET before sending a
+scripted provider response.
+
+A separate exact read-only `hw.pagesize_compat` candidate is the recommended next
+experiment, subject to an explicit owner decision. It is not included here;
+there is no wildcard, chained exception or assumption that later startup will
+succeed. All production backend gates remain unsupported.
 
 Exact generated OS profile texts and operation names are captured by the
 opt-in probe. Claude logs record root device/inode, base and selected profile
@@ -107,11 +169,17 @@ Local artifact SHA-256 values bind the observed runs:
 ## Verification boundary
 
 Ordinary offline verification and the actual opt-in probes are reported
-separately. The two installed-Claude probes remain ignored by default and their
-explicit runs failed. They are not waived or counted as successful qualification.
+separately. The original two installed-Claude probes remain ignored by default
+and their explicit runs failed. The additional page-size candidate is also
+ignored by default and its explicit run failed, as recorded above. They are not
+waived or counted as successful qualification.
 The eight OS probes remain opt-in and were explicitly run successfully.
-The locked workspace suite passed 362 tests with 13 ignored: three existing
+The original locked workspace suite passed 362 tests with 13 ignored: three existing
 opt-in probes, eight OS measurements and two installed-Claude measurements.
+After the candidate and review-driven settlement fix, the final locked suite
+passed 365 tests with 14 ignored (the additional version-only probe remains
+ignored). Three offline regressions cover exact profile selection and the
+preflight-only route guard. The eight explicit OS safety tests passed again.
 Rust formatting, locked workspace check, all-target Clippy with warnings denied,
 architecture/legacy-name/whitespace guards and 22 Python tests passed. The default
 scaffold still reports engine operations unsupported.

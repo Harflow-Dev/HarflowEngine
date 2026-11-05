@@ -37,6 +37,10 @@ pub(super) fn vendor_version_only_diagnostic() {
     measurement::run(measurement::MeasurementMode::VersionOnlySysctl);
 }
 
+pub(super) fn vendor_pagesize_version_only_diagnostic() {
+    measurement::run(measurement::MeasurementMode::PageSizeVersionOnly);
+}
+
 fn launch_preflight(
     root: &FixtureRoot,
     profile: &str,

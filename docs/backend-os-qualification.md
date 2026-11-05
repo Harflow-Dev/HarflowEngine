@@ -108,9 +108,13 @@ Claude, and no further permissions were broadened to obtain a passing result.
 A subsequent unchanged-profile helper diagnosis identifies the captured trap as
 WebKit's page-size assertion: `sysconf(_SC_PAGESIZE)` returns -1/EPERM while the
 outside-profile positive control returns 16384. The exact binary's assertion
-branch corroborates the failure chain. No policy fix or successful Claude
-startup is claimed; the receipt records the observations and smallest candidate
-for a later experiment.
+branch corroborates the failure chain. The subsequently authorized exact
+`hw.pagesize` version-only candidate still trapped: the modern named query became
+allowed, while libc's numeric `hw.pagesize_compat` query remained denied. Its
+security preflight passed, child/EOF settlement completed, and the server observed
+only the preflight GET. No production policy fix or successful startup is claimed.
+A separate compatibility-node exception requires an owner decision; the receipt
+records exact profiles, observations and the remaining boundary.
 
 See [the measured stage receipt](backend-os-qualification-receipt.md) for the
 verification boundary and remaining production gates.

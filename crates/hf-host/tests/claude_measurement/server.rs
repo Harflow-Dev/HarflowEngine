@@ -29,9 +29,15 @@ pub(super) struct FixtureServer {
 }
 impl FixtureServer {
     pub(super) fn start(nonce: String) -> io::Result<Self> {
+        Self::start_with_preflight_only(nonce, false)
+    }
+    pub(super) fn start_preflight_only(nonce: String) -> io::Result<Self> {
+        Self::start_with_preflight_only(nonce, true)
+    }
+    fn start_with_preflight_only(nonce: String, preflight_only: bool) -> io::Result<Self> {
         let (listener, ipv6_guard, port) = reserve_loopback_pair()?;
         let (stop, stopped) = mpsc::channel();
-        let worker = thread::spawn(move || serve(listener, stopped, nonce));
+        let worker = thread::spawn(move || serve(listener, stopped, nonce, preflight_only));
         Ok(Self {
             port,
             ipv6_guard,
@@ -49,7 +55,9 @@ impl FixtureServer {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
-        join_bounded(self.worker.take().expect("owned fixture worker"))
+        let result = join_bounded(self.worker.take().expect("owned fixture worker"));
+        eprintln!("phase=fixture-server-stop result={result:?}");
+        result
             .expect("fixture server thread completed within deadline")
             .expect("fixture server accepted only its bounded protocol")
     }
@@ -113,6 +121,7 @@ fn serve(
     listener: TcpListener,
     stop: Receiver<()>,
     nonce: String,
+    preflight_only: bool,
 ) -> Result<ServerOutcome, String> {
     let end = Instant::now() + EXCHANGE_LIMIT;
     let mut preflight = false;
@@ -130,19 +139,10 @@ fn serve(
                     .set_write_timeout(Some(Duration::from_secs(1)))
                     .map_err(show)?;
                 let request = http::read_request(&mut stream, end)?;
-                let route = format!("/{nonce}/preflight");
-                if !preflight
-                    && !completed
-                    && request.method == "GET"
-                    && request.path == route
-                    && request.body.is_empty()
-                {
+                if is_preflight_request(preflight, completed, &request, &nonce) {
                     http::reply(&mut stream, b"preflight-ok")?;
                     preflight = true;
-                } else if preflight
-                    && !completed
-                    && request.method == "POST"
-                    && request.path == format!("/{nonce}/v1/messages")
+                } else if is_fixture_request(preflight_only, preflight, completed, &request, &nonce)
                 {
                     if request.headers.get("x-api-key").map(String::as_str) != Some(FAKE_KEY) {
                         return Err("fixture POST lacks exact fake authentication".into());
@@ -176,6 +176,33 @@ fn serve(
     }
 }
 
+fn is_preflight_request(
+    preflight: bool,
+    completed: bool,
+    request: &http::Request,
+    nonce: &str,
+) -> bool {
+    !preflight
+        && !completed
+        && request.method == "GET"
+        && request.path == format!("/{nonce}/preflight")
+        && request.body.is_empty()
+}
+
+fn is_fixture_request(
+    preflight_only: bool,
+    preflight: bool,
+    completed: bool,
+    request: &http::Request,
+    nonce: &str,
+) -> bool {
+    !preflight_only
+        && preflight
+        && !completed
+        && request.method == "POST"
+        && request.path == format!("/{nonce}/v1/messages")
+}
+
 fn stopped(stop: &Receiver<()>) -> Result<bool, String> {
     match stop.try_recv() {
         Ok(()) | Err(TryRecvError::Disconnected) => Ok(true),
@@ -197,4 +224,28 @@ fn join_bounded<T: Send + 'static>(worker: JoinHandle<T>) -> Result<T, String> {
 }
 fn show(error: impl std::fmt::Display) -> String {
     error.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preflight_only_route_accepts_only_the_nonce_get_before_reply() {
+        let nonce = "offline-test-nonce";
+        let get = request("GET", format!("/{nonce}/preflight"));
+        let post = request("POST", format!("/{nonce}/v1/messages"));
+        assert!(is_preflight_request(false, false, &get, nonce));
+        assert!(!is_fixture_request(true, true, false, &post, nonce));
+        assert!(is_fixture_request(false, true, false, &post, nonce));
+    }
+
+    fn request(method: &str, path: String) -> http::Request {
+        http::Request {
+            method: method.into(),
+            path,
+            headers: Default::default(),
+            body: Vec::new(),
+        }
+    }
 }

@@ -12,6 +12,10 @@ use std::{
 #[path = "runner.rs"]
 mod runner;
 use runner::{require_protocol_witnesses, run};
+#[path = "invocation/version.rs"]
+mod version;
+pub(super) use version::{VersionObservation, capture_version_only};
+use version::{observe_version, verify_binary_bookend};
 
 pub(super) fn launch_vendor(
     root: &FixtureRoot,
@@ -38,7 +42,13 @@ pub(super) fn launch_vendor(
         .iter()
         .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
         .collect();
-    observe_version(root, profile, &command.executable, environment.clone());
+    observe_version(
+        root,
+        profile,
+        &command.executable,
+        environment.clone(),
+        selection,
+    );
     observe_fixture(
         root,
         profile,
@@ -65,47 +75,8 @@ pub(super) fn launch_version_only(
         .iter()
         .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
         .collect();
-    observe_version(root, profile, &command.executable, environment);
+    observe_version(root, profile, &command.executable, environment, selection);
     verify_binary_bookend(selection);
-}
-
-fn observe_version(
-    root: &FixtureRoot,
-    profile: &str,
-    executable: &str,
-    env: Vec<(OsString, OsString)>,
-) {
-    eprintln!("phase=claude-version begin");
-    let result = run(
-        root,
-        profile,
-        executable,
-        &["--version".into()],
-        env,
-        12_000,
-        "claude-version",
-    );
-    eprintln!(
-        "phase=claude-version complete exit={:?} child identity={}",
-        result.exit, result.identity
-    );
-    assert_eq!(
-        result.exit,
-        ProcessExit::Code(0),
-        "phase=claude-version child identity={}; unsupported version route; stdout={} stderr={}",
-        result.identity,
-        super::bounded_summary(&result.stdout),
-        super::bounded_summary(&result.stderr)
-    );
-    assert!(
-        result.stderr.is_empty(),
-        "phase=claude-version stderr={}",
-        super::bounded_summary(&result.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&result.stdout).contains("2.1.318"),
-        "observed version differs from pinned 2.1.318"
-    );
 }
 
 fn observe_fixture(
@@ -145,18 +116,6 @@ fn observe_fixture(
         super::bounded_summary(&result.stderr)
     );
     require_protocol_witnesses(&result.stdout, nonce);
-}
-
-fn verify_binary_bookend(selection: &super::identity::VendorSelection) {
-    let current = super::identity::selection();
-    assert_eq!(
-        current.logical, selection.logical,
-        "logical selection stayed stable around measurement"
-    );
-    assert_eq!(
-        current.expected_hash, selection.expected_hash,
-        "physical executable bytes stayed stable around measurement"
-    );
 }
 
 pub(super) fn prepare_private_dirs(root: &FixtureRoot) {
