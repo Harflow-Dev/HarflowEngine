@@ -133,3 +133,9 @@ Cross-root resource allocation, live owner adoption, detached orchestration,
 capture durability/offset ordering, backpressure, public serialization/authority,
 watcher adoption, scale and R04 fault families remain separate. B1's receipt records
 its original bounded stop; B2 has a separate assignment and receipt.
+
+## Current R02-W schema
+
+The schema2 description above records R03-B1 history. R02-W advances fresh roots
+to schema3 for atomic task-catalog watch revisions; existing schema2 roots refuse
+without migration or repair. See [task-list-watch](task-list-watch.md).

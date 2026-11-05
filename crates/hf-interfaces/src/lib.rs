@@ -14,3 +14,6 @@ pub fn describe(readiness: Readiness) -> &'static str {
 }
 
 pub mod fixture;
+
+pub mod watch_codec;
+pub mod watch_consumer;

@@ -58,8 +58,12 @@ Safe rusqlite configuration is used; no workspace unsafe or added runtime framew
 Use pinned Rust1.99.1/rustfmt/clippy and documented checks. No shell profile change
 is required; tests use isolated temporary fixture roots and owned processes only.
 
-R03-B1 deliberately initializes fresh schema2 roots and rejects older schema1 roots
+R03-B1 introduced fresh schema2 roots and rejected older schema1 roots
 without an automatic upgrade. It adds a separate internal ownership namespace and
 exact storage-only SHA-256 verification dependency; see the
 [ownership foundation](ownership-foundation.md). This does not make fixture task/
 event DML authoritative execution state or add a supported engine operation.
+
+R02-W deliberately advances fresh initialization to schema3 for atomic task-list
+revision metadata; schema2 roots now also refuse without upgrade. No public runtime
+is selected or advertised. See [task-list invalidation](task-list-watch.md).

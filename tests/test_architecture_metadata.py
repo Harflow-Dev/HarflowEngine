@@ -145,6 +145,38 @@ class ArchitectureMetadataTests(unittest.TestCase):
             with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
                 validate(self.metadata, self.root)
 
+    def test_interfaces_allows_only_exact_alloc_only_base64_dependency(self):
+        interfaces = next(package for package in self.packages if package["name"] == "hf-interfaces")
+        reviewed = {
+            "name": "base64", "kind": None, "req": "=0.22.1",
+            "uses_default_features": False, "features": ["alloc"],
+            "optional": False, "target": None, "rename": None,
+        }
+        interfaces["dependencies"] = [reviewed]
+        validate(self.metadata, self.root)
+
+        for owner in ("hf-domain", "hf-application", "hf-storage", "hf-backends", "hf-platform", "hf-host"):
+            package = next(item for item in self.packages if item["name"] == owner)
+            package["dependencies"] = [reviewed]
+            with self.subTest(owner=owner), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
+                validate(self.metadata, self.root)
+            package["dependencies"] = []
+
+        for change in (
+            {"req": "0.22.1"}, {"req": "=0.22.0"},
+            {"uses_default_features": True}, {"features": ["alloc", "std"]},
+            {"features": []}, {"optional": True}, {"target": 'cfg(unix)'},
+            {"rename": "b64"},
+        ):
+            interfaces["dependencies"] = [{**reviewed, **change}]
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "base64"):
+                validate(self.metadata, self.root)
+
+        for kind in ("dev", "build"):
+            interfaces["dependencies"] = [{**reviewed, "kind": kind}]
+            with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, "Forbidden dependency"):
+                validate(self.metadata, self.root)
+
     def test_rejects_missing_lint_inheritance_and_domain_build_script(self):
         manifest = Path(self.packages[0]["manifest_path"])
         manifest.write_text("[package]\nname = 'hf-domain'\n", encoding="utf-8")

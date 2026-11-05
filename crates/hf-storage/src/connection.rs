@@ -62,12 +62,17 @@ pub(crate) fn identity(connection: &Connection, deadline: Instant) -> Result<Ide
         return Err(Error::Incompatible);
     }
     timeout(connection, deadline)?;
-    let generation: String = connection.query_row(
-        "SELECT substr(generation,1,33) FROM store_identity WHERE singleton=1",
+    let generation: Option<String> = connection.query_row(
+        "SELECT CASE WHEN typeof(generation)='text' AND length(CAST(generation AS BLOB))=32 THEN generation ELSE NULL END FROM store_identity WHERE singleton=1",
         [],
         |row| row.get(0),
     )?;
-    if generation.len() != 32 || !generation.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    let generation = generation.ok_or(Error::Incompatible)?;
+    if generation.len() != 32
+        || !generation
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
         return Err(Error::Incompatible);
     }
     Ok(Identity {
@@ -113,6 +118,7 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
         CREATE TABLE fixture_records(key TEXT PRIMARY KEY NOT NULL,value BLOB NOT NULL);"))?;
     transaction.execute_batch(crate::ownership_schema::SCHEMA)?;
     transaction.execute_batch(crate::task_fixture::TASK_SCHEMA)?;
+    transaction.execute_batch(crate::watch_meta::SCHEMA)?;
     transaction.execute_batch(crate::event_fixture::EVENT_SCHEMA)?;
     timeout(&transaction, deadline)?;
     transaction

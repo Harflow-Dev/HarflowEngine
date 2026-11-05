@@ -53,11 +53,17 @@ impl Store {
             connection::timeout(&transaction, deadline)?;
             transaction.execute("INSERT INTO task_pending VALUES(?1)", [id.as_str()])?;
         }
+        crate::watch_meta::publish(&transaction)?;
         self.binding.check()?;
         connection::timeout(&transaction, deadline)?;
+        #[cfg(all(test, unix))]
+        crate::tests::stage("before_task_catalog_commit");
+        connection::check_deadline(deadline)?;
         transaction
             .commit()
             .map_err(|_| Error::CommitOutcomeUnknown)?;
+        #[cfg(all(test, unix))]
+        crate::tests::stage("after_task_catalog_commit");
         self.binding
             .check()
             .map_err(|_| Error::CommitOutcomeUnknown)

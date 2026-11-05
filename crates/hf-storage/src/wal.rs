@@ -66,7 +66,9 @@ pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
     }
     let generation = lines.next().ok_or(Error::Incompatible)?.to_owned();
     if generation.len() != 32
-        || !generation.bytes().all(|b| b.is_ascii_hexdigit())
+        || !generation
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         || lines.next().is_some()
         || text != format!("harflow-storage-2\n{version}\n{generation}\n")
     {

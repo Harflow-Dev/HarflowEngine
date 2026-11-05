@@ -37,10 +37,11 @@ use binding::Binding;
 use rusqlite::Connection;
 use std::{path::Path, sync::Mutex, time::Instant};
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
+    TaskWatchUnavailable,
     InvalidOwnership,
     OwnershipConflict,
     StaleOwnership,
@@ -234,3 +235,11 @@ pub fn probe_with_scratch(
     binding.check()?;
     Ok(Some(identity))
 }
+
+mod task_watch;
+mod watch_meta;
+pub use task_watch::WatchSession;
+mod watch_control;
+pub use watch_control::RealWatchControl;
+
+mod pending_fixture;

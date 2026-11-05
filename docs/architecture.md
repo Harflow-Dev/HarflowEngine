@@ -37,3 +37,9 @@ close every Store handle before spawn and preserve reservations after uncertaint
 They do not qualify a general concurrent launcher, detached runtime, backend,
 public lifecycle operation or durable capture/terminal ordering. No schema upgrade
 or public capability is introduced by these private modes.
+
+The [task-list invalidation foundation](task-list-watch.md) deliberately initializes
+fresh schema3 roots and joins admitted task metadata writes to the same atomic
+revision commit. It adds bounded waits and strict corrected0.0.10 consumer mappings;
+the full207-case bundle is now selected with exhaustive provenance. No watch CLI,
+production caller authority, task catalog lifecycle or public capability is added.

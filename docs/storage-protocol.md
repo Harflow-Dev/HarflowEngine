@@ -106,9 +106,20 @@ future engine process containment.
 
 ## R03-B1 fresh-schema evolution
 
-Current initialization uses SQLite schema2 and an actual schema2 marker. Schema1
+R03-B1 introduced SQLite schema2 and an actual schema2 marker. Schema1
 fixtures refuse without automatic upgrade. The new internal ownership namespace
 has its own version/generation checks and is separate from task/event fixture DML;
 see [ownership foundation](ownership-foundation.md). Lock hierarchy, WAL/FULL/FK,
 64MiB qualification, nonmutating probe/source-open distinction and explicit recovery
 remain unchanged. This is new-root initialization, not a schema-migration API.
+
+## R02-W fresh-schema evolution
+
+Current initialization uses schema3, with watcher metadata version1/revision0
+created in the exclusive initialization transaction. Schema1/2 and future roots
+refuse; no upgrade, reset or reader initialization occurs. Metadata publication and
+revision advancement share one SQLite commit. Reads inspect at most two scalar
+rows and never complete a publisher or repair state. Store generation qualification
+checks exact UTF8 byte length before allocation, including embedded-NUL refusal.
+See [task-list invalidation](task-list-watch.md). All prior lock, WAL/FULL/FK,
+manual-checkpoint and64MiB qualification limits remain unchanged.

@@ -7,14 +7,17 @@ command or implement the required watcher.
 
 ## Inputs and ownership
 
-The immutable SB1-A input is HarflowMCP
-`b0185be855fd13acc94cb2d2008400d285d15df2`, with S05 producer
-`b69b5754a7b6496aaf5e3106116e302ea7a10675`. The full vendored bundle remains
-199 fixtures, manifest SHA256
+The historical R02-C proof used SB1-A source
+`b0185be855fd13acc94cb2d2008400d285d15df2` and199 fixtures, manifest
 `383ecf7a9b234a1ece18eb15585398f08a77205c02a43cb2a928a2819f76fee0`.
-The Python source clarifies behavior absent from individual examples; no sibling
-runtime dependency is introduced. Neither 0.0.8 nor the in-progress 0.0.9 release
-is adopted by this change. Watcher adoption has its own immutable readiness gate.
+R02-W now deliberately selects the full207-fixture corrected0.0.10 bundle from
+`8a936de61b5f9f2fdff671b65b5384259267350b`, manifest
+`ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906`.
+[Consumer provenance](../tests/fixtures/contracts-v1.provenance.json) classifies every
+version, capability and opaque cursor/token regeneration. Historical event writer
+provenance remains producer-owned; adoption is not a rewrite of stored events or
+retroactive qualification of prior receipts. No sibling runtime dependency or
+public watcher host is introduced; see [watcher foundation](task-list-watch.md).
 
 Domain owns pure query/filter/cursor and observation values. Application owns
 constructor-injected authority and event-read ports. Storage owns optional SQLite

@@ -81,62 +81,36 @@ no domain serialization/derive dependency or guard wildcard is enabled.
 
 ## Immutable fixture adoption and separate deltas
 
-Complete201file bundle (199fixtures plus2manifests) is vendored under
-`tests/fixtures/contracts-v1`. Canonical source:
-b0185be855fd13acc94cb2d2008400d285d15df2; S05 fixture producer:
-b69b5754a7b6496aaf5e3106116e302ea7a10675; manifest SHA-256:
-383ecf7a9b234a1ece18eb15585398f08a77205c02a43cb2a928a2819f76fee0.
-Consumer tests/builds use repository-owned bytes, no sibling runtime or network
-fixture fetch. Independent hash verification of all199 files is adoption evidence,
-not199 task-read decoder or runtime executions. Selected fixtures and synthetic
-negative controls exercise only declared consumers.
+R02-W deliberately adopts the complete209file bundle (207fixtures plus2manifests)
+under `tests/fixtures/contracts-v1` from corrected HarflowMCP0.0.10 source
+`8a936de61b5f9f2fdff671b65b5384259267350b`. Manifest SHA256:
+`ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906`.
+[Consumer provenance](../tests/fixtures/contracts-v1.provenance.json) records every
+old/new file hash, field change and adoption classification. Tests/builds use only
+repository-owned bytes, without sibling lookup or network fixture fetching.
 
-Mac's separate0.0.8/f304a65 manifest
-6e742e1966d2b48afbfc80268b19f27da1e3f75f046f5683a35fc671228c7ce1
-is not adopted here. Any later delta pins exact producer spec/capability/full bundle
-and consumer evidence. Moving0.0.9 drafts are not inputs. HarflowMCP owns public
-contracts until accepted O04; no Rust-only wire semantics or app MCP fallback.
+The original R02-B/R02-C proofs used199 fixtures from SB1-A
+`b0185be855fd13acc94cb2d2008400d285d15df2`, manifest
+`383ecf7a9b234a1ece18eb15585398f08a77205c02a43cb2a928a2819f76fee0`.
+Those historical receipts are not relabelled as207-case runtime qualification.
+Full-bundle hash verification is provenance evidence, not execution of every
+operation. HarflowMCP remains the canonical contract owner until accepted O04.
+Neither0.0.9 nor moving producer drafts are selected inputs.
 
-## Required watcher handoff: proposed R02-W
+## Required watcher foundation and remaining integration
 
-The owner explicitly requires Rust to implement the new public watcher as migration
-scope. It is not optional and must be qualified before affected read/observation
-acceptance and Mac-on-Rust integration. R02-B remains independent of that unfinished
-producer contract; actual R02-W scheduling and immutable producer readiness remain
-prerequisites, not another request to approve watcher scope.
+[Task-list invalidation](task-list-watch.md) implements the assigned internal Rust
+store/publication/wait seam and strict consumer mappings against corrected0.0.10.
+A task metadata publication and its revision share one SQLite commit. Pending-only
+fixture updates, owner/claim state, event records and liveness observations do not
+publish task metadata invalidations. Watch responses remain hints, never task facts.
 
-Authorized coordination with the Mac M03 chat confirmed public polling is selected
-now (1s visible/busy/error/preparing;30s hidden idle) with a replaceable source.
-Mac supplied planning receipt at e15889c and the workspace Cursor handoff. No final
-watcher producer commit/capability/fixture digest was supplied. Proposed command
-`task-list-watch`/capability `task-list-watch.v1`, states,0–30s/2048byte/16KiB bounds
-are candidates, not ratified schemas. The handoff file's observed SHA-256 is
-cc7448820327aa1fd3c53906da6429fc5bdcdd8b3c606d7e0212064964a52f5c;
-it is an uncommitted workspace input, not canonical acceptance. No Cursor-owned
-Python code was edited or duplicated. The owner says Cursor owns that producer.
+The consumer foundation establishes a boundary before snapshot, retains the returned
+cursor before refresh, keeps one wait in flight, coalesces invalidations while busy
+and reconciles lifecycle deadlines even after timeout. Actual Mac/Web integration,
+fresh OS/runtime/authority qualification and public host operations remain separate;
+no app private persistence or agent-MCP fallback is introduced. See the
+[R02-W receipt](migration-receipts/R02-W.md) for immutable inputs and exact proof scope.
 
-Propose bounded R02-W1 input/adoption audit followed by assigned R02-W2 Rust
-implementation/conformance, retaining the following required questions until exact
-canonical decisions arrive:
-
-- Distinguish invalidation from authoritative task/status reads. Establish baseline
-  before snapshot, retain it through snapshot, and preserve next acknowledged cursor
-  through refresh; never obtain the first boundary only after reading.
-- Finalize continuity, gaps/reset/unavailable, malformed/wrong-scope refusal,
-  response loss, root/producer replacement, overflow/eviction, change-then-revert,
-  multi-file publication/crash windows and mixed old/new writer policy. Current
-  fixture dataset generation is not a durable watch journal or liveness oracle.
-- Retain invalidations arriving during busy refresh until consumed/coalesced follow-up;
-  never advance the cursor then discard its only refresh request. Reconcile owner
-  death without metadata writes on a deadline even after watcher timeout.
-- Finalize direct/managed/root qualification before disclosure, wait/cursor/document/
-  resource bounds, cancellation of observation only, one wait in flight, generation
-  fences, bounded demand/backoff and fresh compatibility per wait and public refresh.
-- Adopt exact accepted producer spec/capability/full fixture bundle and artifact
-  identity, then prove Rust behavior with independent publication/process/fault
-  oracles on each claimed platform. No private persistence or agent-MCP app fallback.
-
-Current internal store/read generation and I/O gates are architectural facts, not a
-speculative watcher API or proof of cross-process notification continuity. No watcher
-implementation began here. B10/B11/B17, R02-C events, R03 execution, scale/copy cost,
+B10/B11/B17, production catalog lifecycle, R03 capture/execution, scale/copy cost,
 WAL-growth/checkpoint scheduling and broader fault/R14 gates remain outstanding.

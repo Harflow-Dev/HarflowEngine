@@ -10,7 +10,7 @@ EDGES = {
     "hf-storage": ["hf-application", "hf-domain", "rusqlite", "sha2"],
     "hf-backends": ["hf-application", "hf-domain"],
     "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix"],
-    "hf-interfaces": ["hf-application", "hf-domain", "serde_json"],
+    "hf-interfaces": ["hf-application", "hf-domain", "serde_json", "base64"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
 }
@@ -25,6 +25,16 @@ def validate(metadata, root):
             if dependency["name"] not in EDGES[package["name"]] or dependency["kind"] is not None:
                 raise ValueError(f"Forbidden dependency: {package['name']} -> {dependency['name']}")
         for dependency in package["dependencies"]:
+            if dependency["name"] == "base64" and (
+                package["name"] != "hf-interfaces"
+                or dependency.get("req") != "=0.22.1"
+                or dependency.get("uses_default_features") is not False
+                or dependency.get("features") != ["alloc"]
+                or dependency.get("optional") is not False
+                or dependency.get("target") is not None
+                or dependency.get("rename") is not None
+            ):
+                raise ValueError("base64 requires interfaces-only exact alloc feature policy")
             if dependency["name"] == "sha2" and (
                 package["name"] != "hf-storage"
                 or dependency.get("req") != "=0.10.9"

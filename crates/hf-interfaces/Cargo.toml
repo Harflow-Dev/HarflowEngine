@@ -12,3 +12,4 @@ workspace = true
 hf-application = { path = "../hf-application" }
 hf-domain = { path = "../hf-domain" }
 serde_json = { version = "=1.0.154", default-features = false, features = ["std"] }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }

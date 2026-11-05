@@ -21,3 +21,5 @@ pub mod fixture;
 #[cfg(test)]
 #[path = "fixture_tests.rs"]
 mod fixture_tests;
+
+pub mod task_watch;

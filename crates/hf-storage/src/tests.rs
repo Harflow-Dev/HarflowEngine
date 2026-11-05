@@ -24,11 +24,17 @@ pub(crate) fn fixture_guard() -> std::sync::MutexGuard<'static, ()> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+pub(crate) fn select_stage(name: String) {
+    *STAGE.get_or_init(|| Mutex::new(None)).lock().unwrap() = Some(name);
+}
+
 mod event_seek_tests;
 mod event_snapshot_tests;
 mod ownership_atomicity_tests;
 mod ownership_tests;
 mod task_read_snapshot_tests;
+mod task_watch_atomicity_tests;
+mod task_watch_tests;
 
 struct StageChild(Child);
 impl Drop for StageChild {
