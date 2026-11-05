@@ -4,12 +4,14 @@ use super::MeasurementMode;
 
 const BANNER_RULE: &str = "(allow sysctl-read (sysctl-name \"kern.osproductversion\"))\n";
 const PAGE_SIZE_RULE: &str = "(allow sysctl-read (sysctl-name \"hw.pagesize\"))\n";
+const COMPAT_PAGE_SIZE_RULE: &str = "(allow sysctl-read (sysctl-name \"hw.pagesize_compat\"))\n";
 
 pub(super) fn select(mode: MeasurementMode, base: &str) -> String {
     let addition = match mode {
         MeasurementMode::FullFixture => "",
         MeasurementMode::VersionOnlySysctl => BANNER_RULE,
         MeasurementMode::PageSizeVersionOnly => PAGE_SIZE_RULE,
+        MeasurementMode::CompatPageSizeVersionOnly => COMPAT_PAGE_SIZE_RULE,
     };
     assert!(
         !base.contains("sysctl-read"),
@@ -26,6 +28,7 @@ pub(super) fn delta(mode: MeasurementMode) -> &'static str {
         MeasurementMode::FullFixture => "none",
         MeasurementMode::VersionOnlySysctl => BANNER_RULE.trim(),
         MeasurementMode::PageSizeVersionOnly => PAGE_SIZE_RULE.trim(),
+        MeasurementMode::CompatPageSizeVersionOnly => COMPAT_PAGE_SIZE_RULE.trim(),
     }
 }
 
@@ -59,6 +62,33 @@ mod tests {
         assert_eq!(
             select(MeasurementMode::VersionOnlySysctl, base),
             format!("{base}{BANNER_RULE}")
+        );
+    }
+
+    #[test]
+    fn compat_pagesize_candidate_is_exactly_the_single_authorized_rule() {
+        let base = "(version 1)\n";
+        let candidate = select(MeasurementMode::CompatPageSizeVersionOnly, base);
+        assert_eq!(candidate, format!("{base}{COMPAT_PAGE_SIZE_RULE}"));
+        assert_eq!(
+            &candidate[base.len()..],
+            "(allow sysctl-read (sysctl-name \"hw.pagesize_compat\"))\n"
+        );
+        assert!(!candidate.contains("hw.pagesize\""));
+        assert!(!candidate.contains("kern.osproductversion"));
+    }
+
+    #[test]
+    fn compat_candidate_preserves_all_older_profile_modes() {
+        let base = "(version 1)\n";
+        assert_eq!(select(MeasurementMode::FullFixture, base), base);
+        assert_eq!(
+            select(MeasurementMode::VersionOnlySysctl, base),
+            format!("{base}{BANNER_RULE}")
+        );
+        assert_eq!(
+            select(MeasurementMode::PageSizeVersionOnly, base),
+            format!("{base}{PAGE_SIZE_RULE}")
         );
     }
 }

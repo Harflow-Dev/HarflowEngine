@@ -113,8 +113,13 @@ branch corroborates the failure chain. The subsequently authorized exact
 allowed, while libc's numeric `hw.pagesize_compat` query remained denied. Its
 security preflight passed, child/EOF settlement completed, and the server observed
 only the preflight GET. No production policy fix or successful startup is claimed.
-A separate compatibility-node exception requires an owner decision; the receipt
-records exact profiles, observations and the remaining boundary.
+The subsequently authorized compatibility-only candidate passed `--version`
+with exit zero and the exact pinned version, after its full security preflight.
+Only that single compatibility selector was added; modern-name and neighboring
+queries remained denied in the independent helper. Child/pipe/server settlement,
+profile hashes and declared configuration binding were recorded. This qualifies
+only the measured version startup, with no provider or tools session and no
+production policy change. The receipt preserves both failures and this result.
 
 See [the measured stage receipt](backend-os-qualification-receipt.md) for the
 verification boundary and remaining production gates.

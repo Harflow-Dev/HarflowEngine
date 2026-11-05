@@ -41,6 +41,10 @@ pub(super) fn vendor_pagesize_version_only_diagnostic() {
     measurement::run(measurement::MeasurementMode::PageSizeVersionOnly);
 }
 
+pub(super) fn vendor_pagesize_compat_version_only_diagnostic() {
+    measurement::run(measurement::MeasurementMode::CompatPageSizeVersionOnly);
+}
+
 fn launch_preflight(
     root: &FixtureRoot,
     profile: &str,

@@ -146,10 +146,66 @@ No provider/model/tools session is authorized. The candidate-specific server
 rejects any request except its single nonce preflight GET before sending a
 scripted provider response.
 
-A separate exact read-only `hw.pagesize_compat` candidate is the recommended next
-experiment, subject to an explicit owner decision. It is not included here;
-there is no wildcard, chained exception or assumption that later startup will
-succeed. All production backend gates remain unsupported.
+At that checkpoint, a separate exact read-only compatibility-selector experiment
+required an owner decision. That decision and its bounded result follow; the
+modern-name failure above remains historical evidence.
+
+### Exact compatibility page-size candidate
+
+The owner subsequently authorized the separate read-only compatibility selector.
+This candidate adds only
+`(allow sysctl-read (sysctl-name "hw.pagesize_compat"))` to the unchanged base.
+It does not combine the modern-name or OS-banner exceptions. All prior modes,
+profiles and failed probes remain preserved as historical evidence.
+
+The independent same-root helper comparison measured base `sysconf`, numeric
+`{6,7}` and named compatibility queries as -1/EPERM. With this one exception all
+three returned 16384; the modern `hw.pagesize` name, `hw.ncpu` and
+`kern.osproductversion` remained denied. The outside-profile positive control
+returned 16384. Buffer widths and returned lengths were 8/4/4 for
+modern/numeric/compatibility queries. All helper processes exited zero, were
+reaped and reached both EOFs; no listener accepted a connection.
+
+The actual installed-Claude run repeated the full existing controlled-spawn and
+same-profile no-fork/read/network preflight before invoking only `--version`.
+It exited zero with stdout `2.1.318 (Claude Code)` and empty stderr. Original
+child PID 38050 (start 1793922107.755278, boot UUID
+`0ed817ca-bca2-4d50-a012-e83a12e36b04`) was reaped, both output pipes reached EOF,
+and pinned executable bookends matched. Both IPv6 and denied-port witnesses
+were quiet; the server explicitly settled as `PreflightOnly`. It permitted no
+messages response. The successful fixture and outside canary were removed only
+after complete settlement, and fixture absence was independently checked.
+
+This resolves the observed version-startup assertion for the exact measured
+binary/platform/profile. It establishes no provider protocol, authenticated or
+tool session, descendant behavior or production backend support. The normal
+runtime policy, public capabilities, client selection and all supported contract
+pins remain unchanged. No further selector was tested or adopted.
+
+Artifacts are under `/private/tmp/harflow-claude-pagesize-compat/`. Exact vendor
+base/candidate profile bytes were independently reconstructed and verified
+against their logged digests, and preserved separately from older artifacts.
+The declared configuration digest uses length-prefixed fields and counts for
+logical executable, actual `--version` argv, ordered explicit environment,
+source-profile description and workspace CWD. It binds only these declared
+inputs; unknown managed external settings are not claimed qualified. An
+independent reconstruction matched the logged configuration digest.
+
+| Binding | SHA-256 |
+| --- | --- |
+| Vendor base profile | `43f7bf899292abf9c6021733cf78ab459456d01139dcd730d38adc542e4b0f14` |
+| Vendor compatibility candidate | `e76a600633370c2eb9e1cb0137c8827e38da5e25ac46140b7f20d003fe4559d8` |
+| Declared version configuration | `27b12e4aceb09b0f32ccaabcc9ff0262725883543e67379eb7a078c27a98a1e5` |
+| `vendor-version-only.log` | `c328874dfe1b89961e2927379c360c03a5f126121b2fa9ffad03238e98b8c723` |
+| Helper `result.json` | `d59e92752c82ffc1e946d3bbbcddf40bcbaaa33b36ba943d56bdc5eee1b194e3` |
+| Helper base profile | `98d6238a27d93736eb9c99c49c95d2c7cbf34865c4492fb98710dd610842fc86` |
+| Helper compatibility profile | `50e7d2e17bb672f3432e2d343aa4c5e072ca0367a86224aaa2716fec41c1a4ff` |
+| Helper source | `decaf6a699c08d9c34a9589ac2342cce01fc08f47f55e61adfa0110ba1383fac` |
+
+The repeated eight-case OS safety matrix passed under unchanged policies.
+Final ordinary-suite counts are recorded below; a successful version-only probe
+never produces `QualificationState::Passed` or strict production admission.
+
 
 Exact generated OS profile texts and operation names are captured by the
 opt-in probe. Claude logs record root device/inode, base and selected profile
@@ -172,7 +228,8 @@ Ordinary offline verification and the actual opt-in probes are reported
 separately. The original two installed-Claude probes remain ignored by default
 and their explicit runs failed. The additional page-size candidate is also
 ignored by default and its explicit run failed, as recorded above. They are not
-waived or counted as successful qualification.
+waived or counted as successful qualification. The fourth, compatibility-only
+probe is ignored by default and explicitly passed version startup only.
 The eight OS probes remain opt-in and were explicitly run successfully.
 The original locked workspace suite passed 362 tests with 13 ignored: three existing
 opt-in probes, eight OS measurements and two installed-Claude measurements.
@@ -180,6 +237,11 @@ After the candidate and review-driven settlement fix, the final locked suite
 passed 365 tests with 14 ignored (the additional version-only probe remains
 ignored). Three offline regressions cover exact profile selection and the
 preflight-only route guard. The eight explicit OS safety tests passed again.
+After the compatibility-only candidate and declared-config regressions, the
+final locked workspace suite passed 368 tests with 15 ignored. The focused
+host target passed six offline tests; its four installed-Claude probes remained
+ignored in the ordinary run. The compatibility probe was separately run and
+passed as recorded above. No earlier failed probe was rerun or relabeled.
 Rust formatting, locked workspace check, all-target Clippy with warnings denied,
 architecture/legacy-name/whitespace guards and 22 Python tests passed. The default
 scaffold still reports engine operations unsupported.
@@ -197,8 +259,9 @@ Every stock strict backend route returns explicit unsupported with an actionable
 missing-qualification reason. No positive admission token or conversion to
 `QualificationState::Passed` is exposed.
 
-- Resolve exact installed-Claude startup under the bounded profile using evidence;
-  then separately measure the local provider protocol and tool-enabled behavior.
+- Version startup is now measured only for the compatibility-only diagnostic;
+  local provider protocol and tool-enabled behavior require separate authorization
+  and qualification. No such session was run here.
 - Establish authoritative caller/grant binding and complete runtime/config identity.
 - Establish exclusive production root ownership and stronger alias/race guarantees.
 - Qualify real descendant containment and production resource envelopes.

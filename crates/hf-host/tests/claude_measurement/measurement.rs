@@ -26,6 +26,7 @@ pub(super) enum MeasurementMode {
     FullFixture,
     VersionOnlySysctl,
     PageSizeVersionOnly,
+    CompatPageSizeVersionOnly,
 }
 
 struct Measurement {
@@ -44,7 +45,7 @@ struct Measurement {
 pub(super) fn run(mode: MeasurementMode) {
     let measurement = Measurement::create(mode);
     measurement.prove_preflight();
-    if mode == MeasurementMode::PageSizeVersionOnly {
+    if candidate_only(mode) {
         let observation = invocation::capture_version_only(
             &measurement.owned.fixture,
             &measurement.vendor_profile,
@@ -67,7 +68,7 @@ impl Measurement {
         let nonce = identity::nonce_from_root(root.root());
         let (canary, canary_identity, positive) = canaries(root, &nonce);
         invocation::prepare_private_dirs(root);
-        let server = if mode == MeasurementMode::PageSizeVersionOnly {
+        let server = if candidate_only(mode) {
             server::FixtureServer::start_preflight_only(nonce.clone())
         } else {
             server::FixtureServer::start(nonce.clone())
@@ -77,7 +78,9 @@ impl Measurement {
         let (controlled_profile, base_vendor) = profiles(root, &selection, server.port());
         let vendor_profile = profile::select(mode, &base_vendor);
         eprintln!(
-            "phase=profile-created mode={mode:?} root-identity={:?} base-profile-sha256={} selected-profile-sha256={} diagnostic-delta={}",
+            "phase=profile-created mode={mode:?} fixture-root={} fixture-port={} root-identity={:?} base-profile-sha256={} selected-profile-sha256={} diagnostic-delta={}",
+            root.root().display(),
+            server.port(),
             root.identity(),
             profile::hash(&base_vendor),
             profile::hash(&vendor_profile),
@@ -149,7 +152,7 @@ impl Measurement {
                     "phase=vendor-version-only-sysctl complete; messages route was not invoked"
                 );
             }
-            MeasurementMode::PageSizeVersionOnly => {
+            MeasurementMode::PageSizeVersionOnly | MeasurementMode::CompatPageSizeVersionOnly => {
                 unreachable!("candidate has deferred settlement")
             }
         }
@@ -171,9 +174,9 @@ impl Measurement {
         );
         let expected = match mode {
             MeasurementMode::FullFixture => server::ServerOutcome::Completed,
-            MeasurementMode::VersionOnlySysctl | MeasurementMode::PageSizeVersionOnly => {
-                server::ServerOutcome::PreflightOnly
-            }
+            MeasurementMode::VersionOnlySysctl
+            | MeasurementMode::PageSizeVersionOnly
+            | MeasurementMode::CompatPageSizeVersionOnly => server::ServerOutcome::PreflightOnly,
         };
         let Self {
             selection,
@@ -198,6 +201,13 @@ impl Measurement {
             selection.expected_hash
         );
     }
+}
+
+fn candidate_only(mode: MeasurementMode) -> bool {
+    matches!(
+        mode,
+        MeasurementMode::PageSizeVersionOnly | MeasurementMode::CompatPageSizeVersionOnly
+    )
 }
 
 fn canaries(root: &FixtureRoot, nonce: &str) -> (PathBuf, Metadata, PathBuf) {
