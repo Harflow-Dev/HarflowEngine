@@ -1,6 +1,6 @@
 # Architecture
 
-hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends remains a reserved adapter seam and hf-platform owns bounded process/channel adapters. hf-interfaces maps transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; its default invocation prints an unsupported diagnostic and reads/writes no engine state. Explicit private fixture modes described below operate only on caller-supplied isolated Rust fixture roots.
+hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends contains diagnostic fixture construction without a production runtime and hf-platform owns bounded process/channel adapters. hf-interfaces maps transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; its default invocation prints an unsupported diagnostic and reads/writes no engine state. Explicit private fixture modes described below operate only on caller-supplied isolated Rust fixture roots.
 
 Target files below 250 substantive lines and functions below 50 code lines. Enforced production maxima are 400 and 80. Changes must preserve constructor injection, explicit errors and bounded work. No compatibility or migration claim follows from a successful build.
 
@@ -80,3 +80,7 @@ Production caller/lifecycle budgets and later policy decisions remain separate g
 The [owner-runtime candidate](owner-runtime.md) records the approved production
 policies and private isolated-storage implementation boundaries. Synthetic model
 inputs and fixed-helper mechanics do not qualify public execution or OS enforcement.
+
+[Backend/OS measurements](backend-os-qualification.md) add only fresh-root
+measurement adapters and explicit stock-route refusals; their observations never
+become public execution authority.

@@ -92,3 +92,8 @@ fn binding(v: &Value) -> Checked<()> {
     }
     Ok(())
 }
+
+/// Shared bounded JSON grammar for private measurement fixtures; no model decision.
+pub(crate) fn decode_for_fixture(bytes: &[u8]) -> Result<Value, ()> {
+    decode::decode(bytes).map_err(|_| ())
+}

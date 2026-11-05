@@ -265,4 +265,4 @@ pub use root_hold::RootHold;
 mod participant;
 pub use participant::ParticipantIdentity;
 mod digest;
-pub use digest::Sha256Digest;
+pub use digest::{DigestSizeLimit, Sha256Digest, Sha256Stream};

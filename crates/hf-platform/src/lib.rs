@@ -9,3 +9,5 @@ pub mod fixture;
 pub mod recovery;
 
 pub mod lease;
+
+pub mod qualification;
