@@ -1,4 +1,4 @@
-//! Per-command storage adapter: no connection or lock handle escapes a method.
+//! Dispatcher-only per-command storage adapter.
 use super::*;
 use hf_domain::ownership::*;
 use hf_storage::{Limits, Store};
@@ -46,55 +46,5 @@ impl<'a> Commands<'a> {
     }
     pub(super) fn observe(&self, operation: &Id) -> io::Result<Snapshot> {
         map(self.open()?.ownership_observe(operation, self.until))?.ok_or_else(invalid)
-    }
-    pub(super) fn claim(&self, invitation: &Invitation) -> io::Result<ClaimResult> {
-        let owner = OwnerClaim {
-            owner: invitation.owner.clone(),
-            nonce: invitation.nonce.clone(),
-            process: invitation.process.clone(),
-        };
-        map(self.open()?.ownership_claim(
-            &invitation.operation,
-            &invitation.generation,
-            invitation.revision,
-            &owner,
-            self.until,
-        ))
-    }
-    pub(super) fn observed(&self, fence: &Fence, child: &ProcessIdentity) -> io::Result<Snapshot> {
-        map(self
-            .open()?
-            .ownership_record_spawn(fence, child, self.until))
-    }
-    pub(super) fn accept(&self, fence: &Fence) -> io::Result<Snapshot> {
-        map(self.open()?.ownership_record_acceptance(fence, self.until))
-    }
-}
-impl Commands<'_> {
-    pub(super) fn capture_begin(
-        &self,
-        binding: &hf_domain::capture::CaptureBinding,
-    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
-        map(self.open()?.capture_begin(binding, self.until))
-    }
-    pub(super) fn capture_publish(
-        &self,
-        binding: &hf_domain::capture::CaptureBinding,
-        revision: u64,
-        next: &hf_domain::capture::CaptureProgress,
-    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
-        map(self
-            .open()?
-            .capture_publish(binding, revision, next, self.until))
-    }
-    pub(super) fn capture_finish(
-        &self,
-        binding: &hf_domain::capture::CaptureBinding,
-        revision: u64,
-        exit: hf_domain::process::ProcessExit,
-    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
-        map(self
-            .open()?
-            .capture_finish(binding, revision, exit, self.until))
     }
 }

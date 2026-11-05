@@ -1,7 +1,7 @@
 use super::*;
 use hf_platform::fixture::{append_effect, qualify_ledger};
 use hf_storage::{Limits, Mutation, Store};
-pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
+pub(super) fn run(channel: PrivateIo, until: Instant, saturation: bool) -> io::Result<()> {
     let Frame::Start(start) = receive(&channel)? else {
         return Err(invalid());
     };
@@ -65,6 +65,9 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
             process: actual,
         },
     )?;
+    if saturation {
+        return saturated_output(until);
+    }
     hf_platform::fixture::write_all(
         &std::io::stdout(),
         hf_platform::fixture::FIXED_STDOUT,
@@ -75,4 +78,13 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
         hf_platform::fixture::FIXED_STDERR,
         until,
     )
+}
+
+fn saturated_output(until: Instant) -> io::Result<()> {
+    let bytes = [b'x'; 16384];
+    for length in [16384, 16384, 16384, 16384, 8192] {
+        hf_platform::fixture::write_all(&std::io::stdout(), &bytes[..length], until)?;
+        hf_platform::fixture::write_all(&std::io::stderr(), &bytes[..length], until)?;
+    }
+    Ok(())
 }

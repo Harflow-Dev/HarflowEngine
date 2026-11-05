@@ -156,6 +156,8 @@ impl Writer {
             FixtureFault::None => 0,
             FixtureFault::UnknownChildIdentity => 1,
             FixtureFault::UnusableChildPipe => 2,
+            FixtureFault::OwnerCapacityExhausted => 3,
+            FixtureFault::OutputSaturation => 4,
         });
     }
     fn gate(&mut self, gate: &Option<Gate>) -> Result<(), CodecError> {

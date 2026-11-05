@@ -1,6 +1,8 @@
 use super::*;
-use hf_domain::ownership::{ClaimResult, Snapshot};
+use hf_application::owner::OwnerSession;
+use hf_domain::ownership::OwnerClaim;
 use hf_platform::fixture::qualify_ledger;
+use hf_storage::{Limits, Store};
 pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     let actual = self_identity()?;
     send(&channel, &Frame::Hello(actual.clone()))?;
@@ -21,8 +23,13 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     if qualify_ledger(Path::new(&prepared.root))? != prepared.ledger {
         return Err(invalid());
     }
-    let commands = store::Commands::new(&prepared.root, until);
-    let stored = commands.observe(&invitation.operation)?;
+    let store = map(Store::open(
+        &prepared.root,
+        Limits::default(),
+        until,
+        hf_platform::lease::shared(),
+    ))?;
+    let stored = map(store.ownership_observe(&invitation.operation, until))?.ok_or_else(invalid)?;
     let fresh = self_identity()?;
     map(hf_application::fixture::validate_prepared(
         &invitation,
@@ -30,23 +37,42 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
         &fresh,
         &stored,
     ))?;
-    let ClaimResult::Granted(claimed) = commands.claim(&invitation)? else {
-        return Err(invalid());
+    let owner = OwnerClaim {
+        owner: invitation.owner.clone(),
+        nonce: invitation.nonce.clone(),
+        process: invitation.process.clone(),
     };
-    // Commands retains a path/deadline only. All Store handles are already closed.
+    let mut session =
+        OwnerSession::new(store, prepared.request.clone(), owner, invitation.revision);
+    // Keep the root lease alive until process death on uncertain admission.
+    if admission(&prepared, until).is_err() || session.claim(until).is_err() {
+        std::process::exit(2);
+    }
     gate.reach(
         Stage::OwnerAfterClaim,
         &invitation.operation,
         &invitation.nonce,
         until,
     )?;
-    let mut child = if prepared.fault == FixtureFault::UnknownChildIdentity {
-        spawn_with(EFFECT, &cwd, &UnknownIdentity, until)?
+    let mode = if prepared.fault == FixtureFault::OutputSaturation {
+        SATURATION
     } else {
-        spawn(EFFECT, &cwd, until)?
+        EFFECT
     };
-    let result = launch(&mut child, &channel, &prepared, &claimed, &gate, until);
+    let child = if prepared.fault == FixtureFault::UnknownChildIdentity {
+        spawn_with(mode, &cwd, &UnknownIdentity, until)
+    } else {
+        spawn(mode, &cwd, until)
+    };
+    let mut child = match child {
+        Ok(child) => child,
+        Err(_) => std::process::exit(2),
+    };
+    let result = launch(&mut child, &channel, &prepared, &mut session, &gate, until);
     let cleaned = cleanup(&mut child);
+    if cleaned.is_err() {
+        std::process::exit(2);
+    }
     match (result, cleaned) {
         (Ok(()), Ok(())) => Ok(()),
         _ => Err(invalid()),
@@ -56,7 +82,7 @@ fn launch(
     child: &mut RetainedOwnedChild,
     channel: &PrivateIo,
     prepared: &Prepared,
-    claimed: &Snapshot,
+    session: &mut OwnerSession<Store>,
     gate: &FixtureGate,
     until: Instant,
 ) -> io::Result<()> {
@@ -71,8 +97,7 @@ fn launch(
         &invitation.nonce,
         until,
     )?;
-    let fence = claimed.fence().ok_or_else(invalid)?;
-    let observed = store::Commands::new(&prepared.root, until).observed(&fence, &physical)?;
+    map(session.record_child(&physical, until))?;
     gate.reach(
         Stage::OwnerAfterObserved,
         &invitation.operation,
@@ -90,13 +115,12 @@ fn launch(
             operation: invitation.operation.clone(),
             root: prepared.root.clone(),
             ledger: prepared.ledger,
-            fence: observed.fence().ok_or_else(invalid)?,
+            fence: fence(session)?,
         }),
         until,
     )?;
     child.close_stdin();
-    // Independent fixed child open/probe/write has finished and closed its Store
-    // before the owner opens again. No storage handle waits for this response.
+    // No transaction or io.lock spans this fixed child protocol wait.
     if child_receive(child, until)?
         != (Frame::EffectDone {
             operation: invitation.operation.clone(),
@@ -105,19 +129,20 @@ fn launch(
     {
         return Err(invalid());
     }
-    let accepted = store::Commands::new(&prepared.root, until)
-        .accept(&observed.fence().ok_or_else(invalid)?)?;
+    map(session.accept(until))?;
+    let accepted = fence(session)?;
     let (stdout, stderr) = raw.identities();
     capture::complete(
         child,
         prepared,
         hf_domain::capture::CaptureBinding {
-            fence: accepted.fence().ok_or_else(invalid)?,
+            fence: accepted.clone(),
             child: physical.clone(),
             stdout,
             stderr,
         },
         &mut raw,
+        session,
         gate,
         until,
     )?;
@@ -131,7 +156,7 @@ fn launch(
         channel,
         &Frame::Accepted {
             invitation: invitation.clone(),
-            fence: accepted.fence().ok_or_else(invalid)?,
+            fence: accepted.clone(),
             child: physical,
         },
     )
@@ -141,4 +166,18 @@ impl IdentityPort for UnknownIdentity {
     fn identity(&self, _pid: u32) -> Option<ProcessIdentity> {
         None
     }
+}
+
+fn fence(session: &OwnerSession<Store>) -> io::Result<hf_domain::ownership::Fence> {
+    session
+        .snapshot()
+        .and_then(|value| value.fence())
+        .ok_or_else(invalid)
+}
+fn admission(prepared: &Prepared, until: Instant) -> io::Result<()> {
+    let root = Path::new(&prepared.root);
+    if prepared.fault == FixtureFault::OwnerCapacityExhausted {
+        hf_platform::fixture::RawCapture::exhaust_fixture_capacity(root, until)?;
+    }
+    hf_platform::fixture::RawCapture::prepare_sentinels(root, &prepared.invitation.operation, until)
 }

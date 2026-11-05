@@ -224,6 +224,8 @@ fn parent_and_prepared_frames_round_trip_deny_only_faults_and_reject_unknown_val
         FixtureFault::None,
         FixtureFault::UnknownChildIdentity,
         FixtureFault::UnusableChildPipe,
+        FixtureFault::OwnerCapacityExhausted,
+        FixtureFault::OutputSaturation,
     ] {
         let mut prepared = frames()[3].clone();
         let Frame::Prepared(value) = &mut prepared else {
@@ -241,10 +243,12 @@ fn parent_and_prepared_frames_round_trip_deny_only_faults_and_reject_unknown_val
         assert_eq!(super::fixture::decode(&encoded).unwrap(), parent);
     }
     for index in [3, 5] {
-        let mut encoded = super::fixture::encode(&frames()[index]).unwrap();
-        let last = encoded.len() - 1;
-        encoded[last] = 3;
-        assert!(super::fixture::decode(&encoded).is_err());
+        for unknown in [5, u8::MAX] {
+            let mut encoded = super::fixture::encode(&frames()[index]).unwrap();
+            let last = encoded.len() - 1;
+            encoded[last] = unknown;
+            assert!(super::fixture::decode(&encoded).is_err());
+        }
     }
 }
 

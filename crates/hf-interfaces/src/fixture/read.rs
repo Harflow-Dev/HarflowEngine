@@ -193,6 +193,8 @@ impl<'a> Reader<'a> {
             0 => Ok(FixtureFault::None),
             1 => Ok(FixtureFault::UnknownChildIdentity),
             2 => Ok(FixtureFault::UnusableChildPipe),
+            3 => Ok(FixtureFault::OwnerCapacityExhausted),
+            4 => Ok(FixtureFault::OutputSaturation),
             _ => Err(CodecError::Shape),
         }
     }

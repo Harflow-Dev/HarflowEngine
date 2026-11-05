@@ -64,3 +64,11 @@ can remain held across launch; historical fixture close-before-spawn rules are n
 longer the concurrent isolation mechanism. Requested differing CWD is refused by
 the safe seam. This remains internal qualification, not a production owner runtime
 or new public capability; R04-B's later policy recommendations are not accepted.
+
+The bounded [R04-D D1 owner foundation](migration-receipts/R04-D.md) retains a
+stateful application OwnerSession and its narrow injected Store port across the
+fixed helper lifecycle. Exact fenced transitions and permanent poisoning after
+uncertain writes do not grant public caller authority. Raw-sentinel prewarming
+respects R04-C's per-process descriptor cap. Capture remains synchronous with no
+pending queue or extra spool; independent drainage under storage stalls, production
+lifecycle/budgets and later policy decisions remain separate D2/D3 obligations.

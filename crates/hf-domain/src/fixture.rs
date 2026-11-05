@@ -49,6 +49,8 @@ pub enum FixtureFault {
     None,
     UnknownChildIdentity,
     UnusableChildPipe,
+    OwnerCapacityExhausted,
+    OutputSaturation,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct QualifiedLedger {

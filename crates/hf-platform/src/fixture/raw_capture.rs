@@ -29,6 +29,45 @@ pub struct RawCapture {
     poisoned: bool,
 }
 impl RawCapture {
+    /// Qualify both fixed sentinel slots before ownership claim or child launch.
+    pub fn prepare_sentinels(root: &Path, operation: &Id, deadline: Instant) -> io::Result<()> {
+        let parent = root.parent().ok_or_else(refused)?;
+        for stream in ["stdout", "stderr"] {
+            timely(deadline)?;
+            let path = parent.join(format!("r03-b2c.{}.{stream}.lock", operation.as_str()));
+            drop(
+                crate::lease::shared()
+                    .acquire(
+                        &path,
+                        hf_application::lease::LeaseMode::Exclusive,
+                        true,
+                        deadline,
+                    )
+                    .map_err(|_| refused())?,
+            );
+        }
+        timely(deadline)
+    }
+    /// Deny-only diagnostic fills the existing retained descriptor pool.
+    pub fn exhaust_fixture_capacity(root: &Path, deadline: Instant) -> io::Result<()> {
+        let parent = root.parent().ok_or_else(refused)?;
+        for index in 0..254 {
+            timely(deadline)?;
+            let path = parent.join(format!("r04-d.capacity.{index:03}.lock"));
+            drop(
+                crate::lease::shared()
+                    .acquire(
+                        &path,
+                        hf_application::lease::LeaseMode::Exclusive,
+                        true,
+                        deadline,
+                    )
+                    .map_err(|_| refused())?,
+            );
+        }
+        timely(deadline)
+    }
+
     pub fn create(root: &Path, operation: &Id, deadline: Instant) -> io::Result<Self> {
         timely(deadline)?;
         let parent = root.parent().ok_or_else(refused)?;

@@ -24,6 +24,7 @@ fn main() {
                 "--internal-parent-fixture-v1"
                     | "--internal-owner-fixture-v1"
                     | "--internal-effect-fixture-v1"
+                    | "--internal-effect-saturation-fixture-v1"
             )
         {
             if fixture::run(mode).is_err() {

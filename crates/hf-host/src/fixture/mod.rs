@@ -20,13 +20,14 @@ use std::{
 };
 const PARENT: &str = "--internal-parent-fixture-v1";
 const OWNER: &str = "--internal-owner-fixture-v1";
+const SATURATION: &str = "--internal-effect-saturation-fixture-v1";
 const EFFECT: &str = "--internal-effect-fixture-v1";
 pub(super) fn run(mode: &str) -> io::Result<()> {
     check_entry()?;
     let budget = match mode {
         PARENT => 10,
         OWNER => 8,
-        EFFECT => 4,
+        EFFECT | SATURATION => 4,
         _ => return Err(invalid()),
     };
     let deadline = Instant::now() + Duration::from_secs(budget);
@@ -34,7 +35,7 @@ pub(super) fn run(mode: &str) -> io::Result<()> {
     match mode {
         PARENT => parent::run(channel, deadline),
         OWNER => owner::run(channel, deadline),
-        EFFECT => effect::run(channel, deadline),
+        EFFECT | SATURATION => effect::run(channel, deadline, mode == SATURATION),
         _ => Err(invalid()),
     }
 }

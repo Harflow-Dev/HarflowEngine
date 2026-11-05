@@ -27,3 +27,9 @@ pub mod task_watch;
 pub mod recovery;
 
 pub mod lease;
+
+pub mod owner;
+
+#[cfg(test)]
+#[path = "owner_tests.rs"]
+mod owner_tests;
