@@ -200,6 +200,32 @@ impl RetainedOwnedChild {
             io::Error::other(format!("private capture startup pipe loss: {error}"))
         })
     }
+    /// Atomically transfers private protocol pipes; the original child remains sole waiter.
+    pub fn take_private_storage_io(
+        &mut self,
+        expected: &ProcessIdentity,
+    ) -> io::Result<super::PrivateStorageIo> {
+        if self.initialization != SpawnInitialization::Ready
+            || self.registered.as_ref() != Some(expected)
+            || self.reaped
+            || self.wait_authority_lost
+            || self.authority_unknown
+            || self.capture != Capture::default()
+            || self.capture_transferred
+            || self.stdin.is_none()
+            || self.stdout.is_none()
+            || self.stderr.is_none()
+        {
+            return Err(io::Error::other("storage handoff refused before transfer"));
+        }
+        let (Some(input), Some(output), Some(error)) =
+            (self.stdin.take(), self.stdout.take(), self.stderr.take())
+        else {
+            return Err(io::Error::other("storage handoff invariant violated"));
+        };
+        self.capture_transferred = true;
+        Ok(super::PrivateStorageIo::new(input, output, error))
+    }
     /// Exit-only observation after independent pipe ownership transfer.
     pub fn wait_exit_until(
         &mut self,

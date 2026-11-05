@@ -1,0 +1,26 @@
+{
+  "commit": "4f5b86d27d249094d7378c84029a94e2aaec966d",
+  "component_path": "contracts/candidates/owner-runtime-v1",
+  "manifest_sha256": "7df0c93a17b185620e35fcf0d0a3e060174ff0445318ed505dc7e4573a08c6d6",
+  "profile": "owner-runtime-v1",
+  "provenance": "synthetic_specification",
+  "python_runtime_support": false,
+  "repository": "Harflow-Dev/HarflowMCP",
+  "specifications": [
+    {
+      "path": "docs/decisions/owner-runtime-v1.md",
+      "sha256": "448c74da6acf5955de5114bdfee2ec149e20e43656c287f44b3c6300c3a53897"
+    },
+    {
+      "path": "docs/decisions/owner-runtime-v1-schema.md",
+      "sha256": "92ecc534085ccc27550a1377bbce4273906366792a3f4c313384bf2d808847de"
+    }
+  ],
+  "status": "specified_unimplemented",
+  "supported_baseline_unchanged": {
+    "cases": 207,
+    "commit": "8a936de61b5f9f2fdff671b65b5384259267350b",
+    "manifest_sha256": "ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906",
+    "version": "0.0.10"
+  }
+}

@@ -22,6 +22,14 @@ impl Id {
     }
 }
 impl Digest {
+    pub fn from_sha256_bytes(bytes: [u8; 32]) -> Self {
+        let mut text = String::with_capacity(64);
+        for byte in bytes {
+            text.push(char::from(b"0123456789abcdef"[usize::from(byte >> 4)]));
+            text.push(char::from(b"0123456789abcdef"[usize::from(byte & 15)]));
+        }
+        Self(text)
+    }
     pub fn new(value: String) -> Result<Self, InvalidValue> {
         if hex(&value, 64) {
             Ok(Self(value.to_ascii_lowercase()))

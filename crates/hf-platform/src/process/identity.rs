@@ -19,3 +19,16 @@ impl IdentityPort for MacIdentity {
         ProcessIdentity::new(pid, info.pbi_start_tvsec, info.pbi_start_tvusec, before).ok()
     }
 }
+
+/// Observes the direct parent with start/boot evidence, refusing reparenting races.
+/// A bare parent PID is never returned as authentication evidence.
+pub fn current_parent_identity() -> Option<ProcessIdentity> {
+    let before = nix::unistd::getppid().as_raw();
+    let pid = u32::try_from(before).ok().filter(|pid| *pid > 1)?;
+    let identity = MacIdentity.identity(pid)?;
+    if nix::unistd::getppid().as_raw() != before {
+        return None;
+    }
+    let confirmed = MacIdentity.identity(pid)?;
+    (confirmed == identity && nix::unistd::getppid().as_raw() == before).then_some(identity)
+}

@@ -6,7 +6,7 @@ mod owner;
 mod parent;
 mod store;
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 use hf_application::process::IdentityPort;
 use hf_domain::{fixture::*, ownership::Id, process::ProcessIdentity};
 use hf_interfaces::fixture::{decode, encode};

@@ -259,3 +259,10 @@ mod recovery_events;
 pub use recovery::RecoveryReadSession;
 
 mod owner_port;
+
+mod root_hold;
+pub use root_hold::RootHold;
+mod participant;
+pub use participant::ParticipantIdentity;
+mod digest;
+pub use digest::Sha256Digest;

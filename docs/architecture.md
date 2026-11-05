@@ -6,7 +6,7 @@ Target files below 250 substantive lines and functions below 50 code lines. Enfo
 
 The metadata guard enforces the exact member inventory, approved normal dependency edges (including tooling syn), no dev/build dependencies, inherited workspace lints and all crates/tools Rust file sizes. Clippy enforces 80 code lines per function.
 
-The domain guard parses every .rs file under hf-domain with syn. It rejects standard-library roots except the documented value-oriented modules option/result/cmp/clone/fmt/marker/string/vec/collections/iter/convert/default/mem/primitive. Direct and aliased fs/process/env/time/thread/OS imports are rejected before alias use. Root aliases, glob imports, extern crate, unsafe expressions, macros and attributes other than literal string documentation/built-in derives are rejected. This is conservative syntax enforcement, not semantic effect inference; adding external crates or macro expansion requires explicit policy revision. It does not claim whole-program purity for arbitrary future code.
+The domain guard parses every .rs file under hf-domain with syn. It rejects standard-library roots except the documented value-oriented modules option/result/cmp/clone/fmt/marker/string/vec/boxed/collections/iter/convert/default/mem/primitive. Direct and aliased fs/process/env/time/thread/OS imports are rejected before alias use. Root aliases, glob imports, extern crate, unsafe expressions, macros and attributes other than literal string documentation/built-in derives are rejected. This is conservative syntax enforcement, not semantic effect inference; adding external crates or macro expansion requires explicit policy revision. It does not claim whole-program purity for arbitrary future code.
 
 Future execution must specify detached ownership, crash recovery, mutation uncertainty, bounded work and capability negotiation before implementation. Platform effects stay in hf-platform. Never introduce a second writer for Python-owned engine state.
 
@@ -76,3 +76,7 @@ FIFO, sticky discard and immutable final observations preserve poison and termin
 ordering. Private cleanup settles reader and original child before root teardown;
 indefinitely blocked main-thread storage still has no bounded shutdown guarantee.
 Production caller/lifecycle budgets and later policy decisions remain separate gates.
+
+The [owner-runtime candidate](owner-runtime.md) records the approved production
+policies and private isolated-storage implementation boundaries. Synthetic model
+inputs and fixed-helper mechanics do not qualify public execution or OS enforcement.

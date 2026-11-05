@@ -5,7 +5,8 @@ use hf_domain::{
     process::{ProcessExit, ProcessIdentity},
 };
 use std::time::Instant;
-mod capture;
+pub(crate) mod capture;
+mod state;
 
 pub trait OwnerPort {
     type Error;
@@ -57,12 +58,58 @@ pub enum OwnerError<E> {
 
 pub struct OwnerSession<P> {
     port: P,
-    request: PreparedRequest,
-    owner: OwnerClaim,
-    expected_revision: u64,
-    snapshot: Option<Snapshot>,
-    capture: Option<CaptureSnapshot>,
-    poisoned: bool,
+    state: SharedOwnerState,
+}
+#[derive(Clone, Debug)]
+pub(crate) struct SharedOwnerState {
+    pub(crate) request: PreparedRequest,
+    pub(crate) owner: OwnerClaim,
+    pub(crate) expected_revision: u64,
+    pub(crate) snapshot: Option<Snapshot>,
+    pub(crate) capture: Option<CaptureSnapshot>,
+    pub(crate) poisoned: bool,
+}
+impl SharedOwnerState {
+    pub(crate) fn new(request: PreparedRequest, owner: OwnerClaim, expected_revision: u64) -> Self {
+        Self {
+            request,
+            owner,
+            expected_revision,
+            snapshot: None,
+            capture: None,
+            poisoned: false,
+        }
+    }
+    pub(crate) fn prepared(&self) -> Snapshot {
+        Snapshot {
+            request: self.request.clone(),
+            phase: Phase::Prepared,
+            revision: self.expected_revision,
+            cancelled: false,
+            owner: None,
+            child: None,
+        }
+    }
+    pub(crate) fn accept_snapshot(&mut self, actual: Snapshot, expected: Snapshot) -> bool {
+        if actual != expected {
+            self.poisoned = true;
+            return false;
+        }
+        self.snapshot = Some(actual);
+        true
+    }
+    pub(crate) fn accept_capture(
+        &mut self,
+        actual: CaptureSnapshot,
+        expected: CaptureSnapshot,
+    ) -> bool {
+        if actual != expected {
+            self.poisoned = true;
+            return false;
+        }
+        self.capture = Some(actual);
+        true
+    }
 }
 impl<P: OwnerPort> OwnerSession<P> {
     /// Holds the port before any I/O or claim; construction grants no authority.
@@ -74,32 +121,28 @@ impl<P: OwnerPort> OwnerSession<P> {
     ) -> Self {
         Self {
             port,
-            request,
-            owner,
-            expected_revision,
-            snapshot: None,
-            capture: None,
-            poisoned: false,
+            state: SharedOwnerState::new(request, owner, expected_revision),
         }
     }
+
     pub fn snapshot(&self) -> Option<&Snapshot> {
-        self.snapshot.as_ref()
+        self.state.snapshot.as_ref()
     }
     pub fn capture(&self) -> Option<&CaptureSnapshot> {
-        self.capture.as_ref()
+        self.state.capture.as_ref()
     }
     pub fn poison(&mut self) {
-        self.poisoned = true;
+        self.state.poisoned = true;
     }
     pub fn is_poisoned(&self) -> bool {
-        self.poisoned
+        self.state.poisoned
     }
     fn refuse<T>(&mut self, error: OwnerError<P::Error>) -> Result<T, OwnerError<P::Error>> {
         self.poison();
         Err(error)
     }
     fn healthy(&self) -> Result<(), OwnerError<P::Error>> {
-        if self.poisoned {
+        if self.state.poisoned {
             Err(OwnerError::Poisoned)
         } else {
             Ok(())
@@ -113,40 +156,35 @@ impl<P: OwnerPort> OwnerSession<P> {
     }
     pub fn claim(&mut self, deadline: Instant) -> Result<(), OwnerError<P::Error>> {
         self.healthy()?;
-        if self.snapshot.is_some()
-            || self.request.payload.len() > 16384
-            || self.expected_revision != 0
+        if self.state.snapshot.is_some()
+            || self.state.request.payload.len() > 16384
+            || self.state.expected_revision != 0
         {
             return self.refuse(OwnerError::InvalidState);
         }
-        let result = self.port.observe(&self.request.operation, deadline);
+        let result = self.port.observe(&self.state.request.operation, deadline);
         let observed = self.response(result)?;
-        let expected = Snapshot {
-            request: self.request.clone(),
-            phase: Phase::Prepared,
-            revision: self.expected_revision,
-            cancelled: false,
-            owner: None,
-            child: None,
-        };
+        let expected = self.state.prepared();
         if observed.as_ref() != Some(&expected) {
             return self.refuse(OwnerError::InvalidResponse);
         }
         let result = self.port.claim(
-            &self.request.operation,
-            &self.request.generation,
-            self.expected_revision,
-            &self.owner,
+            &self.state.request.operation,
+            &self.state.request.generation,
+            self.state.expected_revision,
+            &self.state.owner,
             deadline,
         );
         let granted = match self.response(result)? {
             ClaimResult::Granted(value) => value,
             ClaimResult::NoGrant(_) => return self.refuse(OwnerError::NoGrant),
         };
-        let mut expected = expected;
-        expected.owner = Some(self.owner.clone());
-        expected.phase = Phase::Claimed;
-        expected.revision += 1;
+        let Some(expected) = self
+            .state
+            .next_snapshot(&hf_domain::owner_runtime::StorageCommand::Claim)
+        else {
+            return self.refuse(OwnerError::InvalidState);
+        };
         self.save_snapshot(granted, expected)
     }
     fn save_snapshot(
@@ -154,16 +192,18 @@ impl<P: OwnerPort> OwnerSession<P> {
         actual: Snapshot,
         expected: Snapshot,
     ) -> Result<(), OwnerError<P::Error>> {
-        if actual != expected {
-            return self.refuse(OwnerError::InvalidResponse);
+        if !self.state.accept_snapshot(actual, expected) {
+            return Err(OwnerError::InvalidResponse);
         }
-        self.snapshot = Some(actual);
         Ok(())
     }
+
     fn current(&mut self, phase: Phase) -> Result<Snapshot, OwnerError<P::Error>> {
         self.healthy()?;
-        match self.snapshot.as_ref() {
-            Some(value) if value.phase == phase && self.capture.is_none() => Ok(value.clone()),
+        match self.state.snapshot.as_ref() {
+            Some(value) if value.phase == phase && self.state.capture.is_none() => {
+                Ok(value.clone())
+            }
             _ => self.refuse(OwnerError::InvalidState),
         }
     }
@@ -172,8 +212,8 @@ impl<P: OwnerPort> OwnerSession<P> {
         child: &ProcessIdentity,
         deadline: Instant,
     ) -> Result<(), OwnerError<P::Error>> {
-        let mut expected = self.current(Phase::Claimed)?;
-        if child == &self.owner.process {
+        let expected = self.current(Phase::Claimed)?;
+        if child == &self.state.owner.process {
             return self.refuse(OwnerError::InvalidState);
         }
         let Some(fence) = expected.fence() else {
@@ -181,20 +221,29 @@ impl<P: OwnerPort> OwnerSession<P> {
         };
         let result = self.port.record_spawn(&fence, child, deadline);
         let actual = self.response(result)?;
-        expected.phase = Phase::SpawnObserved;
-        expected.revision += 1;
-        expected.child = Some(child.clone());
+        let Some(expected) =
+            self.state
+                .next_snapshot(&hf_domain::owner_runtime::StorageCommand::RecordChild(
+                    child.clone(),
+                ))
+        else {
+            return self.refuse(OwnerError::InvalidState);
+        };
         self.save_snapshot(actual, expected)
     }
     pub fn accept(&mut self, deadline: Instant) -> Result<(), OwnerError<P::Error>> {
-        let mut expected = self.current(Phase::SpawnObserved)?;
+        let expected = self.current(Phase::SpawnObserved)?;
         let Some(fence) = expected.fence() else {
             return self.refuse(OwnerError::InvalidState);
         };
         let result = self.port.record_acceptance(&fence, deadline);
         let actual = self.response(result)?;
-        expected.phase = Phase::AcceptanceRecorded;
-        expected.revision += 1;
+        let Some(expected) = self
+            .state
+            .next_snapshot(&hf_domain::owner_runtime::StorageCommand::Accept)
+        else {
+            return self.refuse(OwnerError::InvalidState);
+        };
         self.save_snapshot(actual, expected)
     }
 }

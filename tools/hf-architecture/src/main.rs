@@ -11,6 +11,7 @@ const MODULES: &[&str] = &[
     "marker",
     "string",
     "vec",
+    "boxed",
     "collections",
     "iter",
     "convert",

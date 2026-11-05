@@ -40,6 +40,29 @@ class DomainGuardTests(unittest.TestCase):
         result = self.scan({"src/lib.rs": '/// A domain value.\n#[derive(Clone, Debug, Eq, PartialEq)]\npub struct Value(Option<u32>);\n'})
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_allows_boxed_value_types_but_rejects_effectful_inner_types(self):
+        allowed = self.scan({
+            "src/lib.rs": (
+                "use std::boxed::Box;\n"
+                "#[derive(Clone, Debug, Eq, PartialEq)]\n"
+                "pub struct Value(Box<Option<Vec<String>>>);\n"
+            )
+        })
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+
+        samples = {
+            "direct effectful inner type":
+                "pub struct Value(std::boxed::Box<std::fs::File>);",
+            "aliased effectful inner type":
+                "use std::boxed::Box as Heap; pub struct Value(Heap<std::process::Command>);",
+            "grouped effectful inner type":
+                "use std::{boxed::Box, fs::File}; pub struct Value(Box<File>);",
+        }
+        for name, source in samples.items():
+            with self.subTest(name=name):
+                result = self.scan({"src/lib.rs": source})
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_allows_inline_unit_test_modules_but_not_other_cfg_io(self):
         allowed = self.scan({
             "src/lib.rs": "#[cfg(test)] mod tests { #[test] fn value() { assert_eq!(1, 1); } }\n"

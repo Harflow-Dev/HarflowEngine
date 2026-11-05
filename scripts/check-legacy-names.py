@@ -6,5 +6,5 @@ allowed = json.loads((root / "scripts/legacy-name-allowlist.json").read_text(enc
 for path in root.rglob("*"):
     if any(part in {".git", "target", "__pycache__"} for part in path.relative_to(root).parts) or not path.is_file():
         continue
-    if ("poly" + "bridge") in path.read_text(encoding="utf-8").lower() and path.relative_to(root).as_posix() not in allowed:
+    if (b"poly" + b"bridge") in path.read_bytes().lower() and path.relative_to(root).as_posix() not in allowed:
         raise SystemExit(f"Legacy name: {path}")

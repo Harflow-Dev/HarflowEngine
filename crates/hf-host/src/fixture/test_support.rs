@@ -5,7 +5,7 @@ static FIXTURE_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Serializes only Store fixture setup/use across host unit tests. Each case's
 /// actual reader/owner concurrency remains governed by its explicit gates.
-pub(super) fn case_guard() -> MutexGuard<'static, ()> {
+pub(crate) fn case_guard() -> MutexGuard<'static, ()> {
     let until = Instant::now() + Duration::from_secs(5);
     loop {
         match FIXTURE_TEST_LOCK.try_lock() {

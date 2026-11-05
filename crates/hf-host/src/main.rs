@@ -4,6 +4,8 @@ use hf_application::{ReadinessPort, read_readiness};
 use hf_domain::Readiness;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod fixture;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod owner_runtime;
 struct UnsupportedRuntime;
 impl ReadinessPort for UnsupportedRuntime {
     fn readiness(&self) -> Readiness {
@@ -28,6 +30,18 @@ fn main() {
             )
         {
             if fixture::run(mode).is_err() {
+                private_refusal();
+            }
+            return;
+        }
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        if let Some(mode) = mode.to_str()
+            && matches!(
+                mode,
+                "--internal-storage-writer-fixture-v1" | "--internal-isolated-owner-fixture-v1"
+            )
+        {
+            if owner_runtime::run(mode).is_err() {
                 private_refusal();
             }
             return;
