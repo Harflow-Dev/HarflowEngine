@@ -53,7 +53,8 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
         &invitation.operation,
         &invitation.nonce,
         until,
-    )?;
+    )
+    .inspect_err(|_| session.poison())?;
     let mode = if prepared.fault == FixtureFault::OutputSaturation {
         SATURATION
     } else {
@@ -64,12 +65,16 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     } else {
         spawn(mode, &cwd, until)
     };
-    let mut child = match child {
+    let child = match child {
         Ok(child) => child,
         Err(_) => std::process::exit(2),
     };
+    let mut child = super::owned::OwnerChild::new(child, until);
     let result = launch(&mut child, &channel, &prepared, &mut session, &gate, until);
-    let cleaned = cleanup(&mut child);
+    if result.is_err() {
+        session.poison();
+    }
+    let cleaned = child.settle();
     if cleaned.is_err() {
         std::process::exit(2);
     }
@@ -79,13 +84,14 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     }
 }
 fn launch(
-    child: &mut RetainedOwnedChild,
+    owned: &mut super::owned::OwnerChild,
     channel: &PrivateIo,
     prepared: &Prepared,
     session: &mut OwnerSession<Store>,
     gate: &FixtureGate,
     until: Instant,
 ) -> io::Result<()> {
+    let child = &mut owned.child;
     if prepared.fault == FixtureFault::UnusableChildPipe {
         return Err(invalid());
     }
@@ -129,23 +135,7 @@ fn launch(
     {
         return Err(invalid());
     }
-    map(session.accept(until))?;
-    let accepted = fence(session)?;
-    let (stdout, stderr) = raw.identities();
-    capture::complete(
-        child,
-        prepared,
-        hf_domain::capture::CaptureBinding {
-            fence: accepted.clone(),
-            child: physical.clone(),
-            stdout,
-            stderr,
-        },
-        &mut raw,
-        session,
-        gate,
-        until,
-    )?;
+    let accepted = capture::complete(owned, prepared, &mut raw, session, gate, until)?;
     gate.reach(
         Stage::OwnerBeforeAck,
         &invitation.operation,

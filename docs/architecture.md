@@ -69,6 +69,10 @@ The bounded [R04-D D1 owner foundation](migration-receipts/R04-D.md) retains a
 stateful application OwnerSession and its narrow injected Store port across the
 fixed helper lifecycle. Exact fenced transitions and permanent poisoning after
 uncertain writes do not grant public caller authority. Raw-sentinel prewarming
-respects R04-C's per-process descriptor cap. Capture remains synchronous with no
-pending queue or extra spool; independent drainage under storage stalls, production
-lifecycle/budgets and later policy decisions remain separate D2/D3 obligations.
+respects R04-C's per-process descriptor cap. That stage used synchronous capture. The subsequent private
+[output-drain design](owner-output-drain.md) moves only stdout/stderr to one bounded
+reader while retaining persistence on the original owner main thread. Its finite
+FIFO, sticky discard and immutable final observations preserve poison and terminal
+ordering. Private cleanup settles reader and original child before root teardown;
+indefinitely blocked main-thread storage still has no bounded shutdown guarantee.
+Production caller/lifecycle budgets and later policy decisions remain separate gates.

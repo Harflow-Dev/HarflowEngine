@@ -33,3 +33,10 @@ pub use spec::SpawnSpec;
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod spawn;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod reader;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod reader_loop;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub use reader::*;

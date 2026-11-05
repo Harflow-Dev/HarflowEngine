@@ -1,9 +1,12 @@
 //! Source-controlled single-threaded fixed fixture composition, never a runtime launcher.
 mod capture;
 mod effect;
+mod owned;
 mod owner;
 mod parent;
 mod store;
+#[cfg(test)]
+mod test_support;
 use hf_application::process::IdentityPort;
 use hf_domain::{fixture::*, ownership::Id, process::ProcessIdentity};
 use hf_interfaces::fixture::{decode, encode};

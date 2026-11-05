@@ -163,10 +163,7 @@ fn assert_incomplete_progress(values: &[u64], capture: &str) {
         values[4], 0,
         "output EOF is not observed at the raw cap: {capture}"
     );
-    assert_eq!(
-        values[5], 0,
-        "unknown loss must not be fabricated: {capture}"
-    );
+    assert!(values[5] <= 1, "loss is a monotone boolean: {capture}");
     assert_eq!(values[6], 0, "no terminal exit may be invented: {capture}");
 }
 
@@ -188,13 +185,78 @@ fn assert_capture_events_and_raw(
     assert_eq!(
         event_rows.len() as u64,
         values[0],
-        "one event per revision: {capture}"
+        "every revision has one event: {capture}"
     );
+    assert_event_timeline(&event_rows, values, capture);
     assert_eq!(
         event_rows.last().unwrap(),
         &values,
         "last event matches durable progress: {capture}"
     );
+    assert_raw_extents(values, scratch);
+}
+
+fn assert_event_timeline(event_rows: &[Vec<u64>], values: &[u64], capture: &str) {
+    for (index, row) in event_rows.iter().enumerate() {
+        assert_eq!(row.len(), 8, "capture event shape: {capture}");
+        assert_eq!(
+            row[0],
+            index as u64 + 1,
+            "contiguous event revisions: {capture}"
+        );
+        assert!(
+            row[1] <= 65_536 && row[2] <= 65_536,
+            "raw cap per event: {capture}"
+        );
+        assert_eq!(row[3], 0, "stdout EOF must remain false: {capture}");
+        assert_eq!(row[4], 0, "stderr EOF must remain false: {capture}");
+        let final_loss = values[5] == 1 && index + 1 == event_rows.len();
+        assert_eq!(
+            row[5],
+            u64::from(final_loss),
+            "only final event may record known loss: {capture}"
+        );
+        assert_eq!(
+            row[6], 0,
+            "no terminal exit before complete drain: {capture}"
+        );
+        let previous = if index == 0 {
+            [0; 8].as_slice()
+        } else {
+            &event_rows[index - 1]
+        };
+        assert!(
+            row[1] >= previous[1] && row[2] >= previous[2],
+            "offsets are monotone: {capture}"
+        );
+        assert!(
+            row[1] - previous[1] <= 16_384 && row[2] - previous[2] <= 16_384,
+            "per-event append stays within reader batch bounds: {capture}"
+        );
+    }
+    if values[5] == 1 {
+        assert!(
+            event_rows.len() >= 2,
+            "known loss follows persisted prefix: {capture}"
+        );
+        let last = event_rows.last().unwrap();
+        let prior = &event_rows[event_rows.len() - 2];
+        assert_eq!(last[5], 1, "known queue loss is recorded once: {capture}");
+        assert_eq!(
+            (last[1], last[2]),
+            (prior[1], prior[2]),
+            "loss event adds no bytes: {capture}"
+        );
+        assert_eq!(
+            (last[3], last[4]),
+            (prior[3], prior[4]),
+            "loss event adds no EOF: {capture}"
+        );
+        assert_eq!(last[6], prior[6], "loss event adds no exit: {capture}");
+    }
+}
+
+fn assert_raw_extents(values: &[u64], scratch: &std::path::Path) {
     assert_eq!(
         fs::metadata(scratch.join(format!("r03-b2c.{OP}.stdout")))
             .unwrap()

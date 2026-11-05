@@ -48,6 +48,7 @@ pub struct RetainedOwnedChild {
     cap: usize,
     pipe_setup_error: Option<String>,
     initialization: SpawnInitialization,
+    capture_transferred: bool,
 }
 impl RetainedOwnedChild {
     /// OS spawn/probe calls are nonpreemptible. A late result retains ownership.
@@ -97,6 +98,7 @@ impl RetainedOwnedChild {
             cap: spec.capture_limit,
             pipe_setup_error: setup.err().map(|e| e.to_string()),
             initialization,
+            capture_transferred: false,
         })
     }
     /// Private fixture transport only; consumes stdout directly without capture
@@ -168,6 +170,58 @@ impl RetainedOwnedChild {
             read_budget.min(65536),
             deadline,
         )
+    }
+    /// Private fixed-helper handoff. Failure after FD transfer is classified as
+    /// pipe loss; no capture retry or fabricated EOF is permitted.
+    pub fn start_private_fixture_capture_reader(
+        &mut self,
+        origin: super::CaptureOrigin,
+        deadline: Instant,
+    ) -> io::Result<super::PrivateFixtureCaptureReader> {
+        if self.registered.as_ref() != Some(&origin.child)
+            || self.initialization != SpawnInitialization::Ready
+            || self.capture != Capture::default()
+            || self.stdout.is_none()
+            || self.stderr.is_none()
+            || Instant::now() >= deadline
+        {
+            return Err(io::Error::other("capture handoff refused before transfer"));
+        }
+        let out = self
+            .stdout
+            .take()
+            .ok_or_else(|| io::Error::other("stdout absent"))?;
+        let err = self
+            .stderr
+            .take()
+            .ok_or_else(|| io::Error::other("stderr absent"))?;
+        self.capture_transferred = true;
+        super::reader_loop::start(origin, out, err, deadline).map_err(|error| {
+            io::Error::other(format!("private capture startup pipe loss: {error}"))
+        })
+    }
+    /// Exit-only observation after independent pipe ownership transfer.
+    pub fn wait_exit_until(
+        &mut self,
+        deadline: Instant,
+        cancelled: impl Fn() -> bool,
+    ) -> io::Result<WaitOutcome> {
+        loop {
+            if cancelled() {
+                return Ok(WaitOutcome::Cancelled);
+            }
+            let exit = self.try_wait()?;
+            if exit != ProcessExit::Unobserved {
+                return Ok(WaitOutcome::Exited(exit));
+            }
+            if Instant::now() >= deadline {
+                return Ok(WaitOutcome::DeadlineExpired);
+            }
+            std::thread::sleep(
+                std::time::Duration::from_millis(1)
+                    .min(deadline.saturating_duration_since(Instant::now())),
+            );
+        }
     }
     /// Returns the bytes accepted in this call; callers retain any unsent suffix.
     pub fn write_stdin(&mut self, bytes: &[u8], deadline: Instant) -> io::Result<usize> {
@@ -263,6 +317,9 @@ impl RetainedOwnedChild {
         deadline: Instant,
         cancelled: impl Fn() -> bool,
     ) -> io::Result<WaitOutcome> {
+        if self.capture_transferred {
+            return self.wait_exit_until(deadline, cancelled);
+        }
         loop {
             if cancelled() {
                 return Ok(WaitOutcome::Cancelled);

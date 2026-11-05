@@ -10,15 +10,12 @@ use hf_application::{
     lease::{LeaseError, LeaseMode},
     process::IdentityPort,
 };
-use hf_domain::{
-    fixture::{Frame, Gate, Stage},
-    recovery::CaptureAssessment,
-};
+use hf_domain::fixture::{Frame, Gate, Stage};
 use hf_platform::process::MacIdentity;
 use std::fs;
 use support::{
-    assert_effect_for, assert_identity_consistency, assert_terminal_replay, base, deadline,
-    inspect, waiting_owner_child,
+    assert_identity_consistency, assert_terminal_replay, base, deadline, inspect,
+    waiting_owner_child,
 };
 
 #[test]
@@ -114,41 +111,5 @@ fn fresh_readonly_observer_restart_does_not_adopt_or_change_capture_evidence() {
     assert_identity_consistency(&original, true);
     observer::prove_readonly_restart(&fixture, &original);
 
-    base::kill_direct(&mut parent);
-    base::echo_gate(&mut owner_peer, stage, base::OP, base::NONCE);
-    base::wait_identity_gone(
-        original
-            .record
-            .ownership
-            .owner
-            .as_ref()
-            .unwrap()
-            .process
-            .pid(),
-    );
-    let terminal = inspect(&fixture);
-    assert_eq!(
-        terminal.capture,
-        CaptureAssessment::RecordedTerminalExtentObserved
-    );
-    let final_capture = terminal.record.capture.as_ref().unwrap();
-    assert!(final_capture.progress.stdout_eof && final_capture.progress.stderr_eof);
-    assert_eq!(final_capture.exit, hf_domain::process::ProcessExit::Code(0));
-    assert_eq!(
-        terminal.record.ownership.owner,
-        original.record.ownership.owner
-    );
-    assert_eq!(
-        terminal.record.ownership.child,
-        original.record.ownership.child
-    );
-    assert_eq!(
-        terminal.record.ownership.request.generation,
-        original.record.ownership.request.generation
-    );
-    assert_eq!(
-        terminal.record.events_count,
-        original.record.events_count + 1
-    );
-    assert_effect_for(&fixture, original.record.ownership.child.as_ref().unwrap());
+    support::finish_readonly_restart(&fixture, &original, &mut parent, &mut owner_peer, stage);
 }
