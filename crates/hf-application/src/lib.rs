@@ -15,3 +15,9 @@ pub mod event_read;
 pub mod process;
 
 pub mod ownership;
+
+pub mod fixture;
+
+#[cfg(test)]
+#[path = "fixture_tests.rs"]
+mod fixture_tests;

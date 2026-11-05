@@ -125,9 +125,11 @@ pins its small digest/CPU-dispatch closure. No assembly feature, workspace unsaf
 exception, domain dependency or public crypto/credential interface is added.
 Hashing is bounded content-consistency work; it is not request authentication.
 
-R03-B2 still needs the prepared private request, durable owner claim and observed
-spawn/acknowledgment protocol, qualified process/evidence adapters and ownership
-integration. Reservations cannot be released from R03-A direct-child exit alone.
+The [R03-B2 fixed fixture composition](owner-handoff.md) adds a bounded prepared
+request/claim/observed-spawn/acknowledgment protocol with actual process identity.
+It remains separate from a detached production owner and general-runtime launch.
+Reservations cannot be released from R03-A direct-child exit alone.
 Cross-root resource allocation, live owner adoption, detached orchestration,
 capture durability/offset ordering, backpressure, public serialization/authority,
-watcher adoption, scale and R04 fault families remain separate. Stop at B1.
+watcher adoption, scale and R04 fault families remain separate. B1's receipt records
+its original bounded stop; B2 has a separate assignment and receipt.

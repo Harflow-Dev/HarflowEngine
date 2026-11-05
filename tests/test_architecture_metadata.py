@@ -160,7 +160,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
         reviewed = {
             "libproc": ("=0.14.11", []),
             "sysctl": ("=0.7.1", []),
-            "nix": ("=0.31.3", ["fs", "poll", "process", "signal"]),
+            "nix": ("=0.31.3", ["fs", "poll", "process", "signal", "socket"]),
         }
         def dependency(name, version, features):
             return {
@@ -187,6 +187,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
             ]
             if name == "nix":
                 changes.append({"features": ["fs", "poll", "signal"]})
+                changes.append({"features": ["fs", "poll", "process", "signal"]})
             for change in changes:
                 platform["dependencies"] = [dict(accepted, **change)]
                 with self.subTest(name=name, change=change), self.assertRaisesRegex(ValueError, name):

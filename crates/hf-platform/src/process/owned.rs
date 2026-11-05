@@ -102,6 +102,32 @@ impl RetainedOwnedChild {
             initialization,
         })
     }
+    /// Private fixture transport only; consumes stdout directly without capture
+    /// buffering. Do not call `pump` or `wait_until` until the protocol is complete:
+    /// those methods also consume stdout. Protocol bytes do not enter capture;
+    /// stderr remains separate and must be drained by subsequent capture pumping.
+    pub fn read_fixture_frame(&self, deadline: Instant) -> io::Result<Vec<u8>> {
+        let stdout = self
+            .stdout
+            .as_ref()
+            .ok_or_else(|| io::Error::other("fixture stdout absent"))?;
+        crate::fixture::read_frame(stdout, deadline)
+    }
+    pub fn write_fixture_frame(&self, bytes: &[u8], deadline: Instant) -> io::Result<()> {
+        let input = self
+            .stdin
+            .as_ref()
+            .ok_or_else(|| io::Error::other("fixture stdin absent"))?;
+        crate::fixture::write_all(input, bytes, deadline)
+    }
+    /// Checks protocol EOF without changing capture EOF or exit evidence.
+    pub fn fixture_eof(&self, deadline: Instant) -> io::Result<()> {
+        let stdout = self
+            .stdout
+            .as_ref()
+            .ok_or_else(|| io::Error::other("fixture stdout absent"))?;
+        crate::fixture::require_eof(stdout, deadline)
+    }
     pub fn initialization(&self) -> SpawnInitialization {
         self.initialization
     }

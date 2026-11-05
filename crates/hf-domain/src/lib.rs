@@ -11,3 +11,5 @@ pub mod event_read;
 pub mod process;
 
 pub mod ownership;
+
+pub mod fixture;

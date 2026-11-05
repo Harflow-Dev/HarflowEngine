@@ -38,7 +38,7 @@ def validate(metadata, root):
             os_wrappers = {
                 "libproc": ("=0.14.11", []),
                 "sysctl": ("=0.7.1", []),
-                "nix": ("=0.31.3", ["fs", "poll", "process", "signal"]),
+                "nix": ("=0.31.3", ["fs", "poll", "process", "signal", "socket"]),
             }
             if dependency["name"] in os_wrappers:
                 version, features = os_wrappers[dependency["name"]]

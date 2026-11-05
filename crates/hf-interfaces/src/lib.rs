@@ -2,9 +2,15 @@
 //! Diagnostic formatting only; no CLI or MCP production protocol.
 pub mod event_consumer;
 pub mod task_consumer;
+
+#[cfg(test)]
+#[path = "fixture_tests.rs"]
+mod fixture_tests;
 use hf_domain::Readiness;
 pub fn describe(readiness: Readiness) -> &'static str {
     match readiness {
         Readiness::Unsupported => "experimental scaffold; engine operations unsupported",
     }
 }
+
+pub mod fixture;

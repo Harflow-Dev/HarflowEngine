@@ -99,6 +99,10 @@ accepted by repository policy:
 | sysctl0.7.1 | none | [source package](https://crates.io/crates/sysctl/0.7.1), MIT, edition2024 |
 | nix0.31.3 | fs,poll,process,signal | [source package](https://crates.io/crates/nix/0.31.3), MIT, declared MSRV1.69 |
 
+That table records R03-A's original boundary. [R03-B2](owner-handoff.md) narrowly
+adds nix's socket feature for deadline-aware nonblocking fixture gate connections;
+its receipt records the additional locked closure and qualification limits.
+
 Workspace source remains unsafe-forbidden. These wrappers contain dependency
 internal unsafe and are not a proof of whole-program memory safety. Only fixed
 libproc BSDInfo and sysctl boot UUID string access are used; generic value_as<T>

@@ -1,6 +1,6 @@
 # Architecture
 
-hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends/hf-platform remain reserved adapter seams. hf-interfaces maps future transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; it prints an unsupported diagnostic, reads no engine environment or user state, and writes no state.
+hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends remains a reserved adapter seam and hf-platform owns bounded process/channel adapters. hf-interfaces maps transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The only binary is harflow-engine-scaffold; its default invocation prints an unsupported diagnostic and reads/writes no engine state. Explicit private fixture modes described below operate only on caller-supplied isolated Rust fixture roots.
 
 Target files below 250 substantive lines and functions below 50 code lines. Enforced production maxima are 400 and 80. Changes must preserve constructor injection, explicit errors and bounded work. No compatibility or migration claim follows from a successful build.
 
@@ -29,3 +29,11 @@ detached owner, public execution capability or descendant-containment guarantee.
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
 intent/reservation/claim transactions and fenced observations. Fresh roots use
 schema2; no automatic upgrade, detached owner or public execution API is added.
+
+The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned
+fixture processes through bounded inherited channels. Fresh single-thread parent,
+owner and fixed effect modes reject ambient environment/unexpected descriptors,
+close every Store handle before spawn and preserve reservations after uncertainty.
+They do not qualify a general concurrent launcher, detached runtime, backend,
+public lifecycle operation or durable capture/terminal ordering. No schema upgrade
+or public capability is introduced by these private modes.
