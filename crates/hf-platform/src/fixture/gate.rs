@@ -63,6 +63,11 @@ pub fn gate_packet(stage: Stage, operation: &Id, nonce: &Id) -> Vec<u8> {
         Stage::OwnerAfterChildSpawn => 6,
         Stage::OwnerAfterObserved => 7,
         Stage::OwnerBeforeAck => 8,
+        Stage::CaptureBeforeSync => 9,
+        Stage::CaptureAfterSync => 10,
+        Stage::CaptureAfterPublish => 11,
+        Stage::CaptureBeforeTerminal => 12,
+        Stage::CaptureAfterTerminal => 13,
     });
     body.extend_from_slice(operation.as_str().as_bytes());
     body.extend_from_slice(nonce.as_str().as_bytes());

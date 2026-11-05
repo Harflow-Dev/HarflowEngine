@@ -37,7 +37,7 @@ use binding::Binding;
 use rusqlite::Connection;
 use std::{path::Path, sync::Mutex, time::Instant};
 
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
@@ -243,3 +243,8 @@ mod watch_control;
 pub use watch_control::RealWatchControl;
 
 mod pending_fixture;
+
+mod capture;
+mod capture_codec;
+mod capture_read;
+mod capture_schema;

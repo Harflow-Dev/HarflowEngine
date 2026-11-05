@@ -78,6 +78,11 @@ fn launch(
         &invitation.nonce,
         until,
     )?;
+    let mut raw = hf_platform::fixture::RawCapture::create(
+        Path::new(&prepared.root),
+        &invitation.operation,
+        until,
+    )?;
     child_send(
         child,
         &Frame::Start(EffectStart {
@@ -101,6 +106,20 @@ fn launch(
     }
     let accepted = store::Commands::new(&prepared.root, until)
         .accept(&observed.fence().ok_or_else(invalid)?)?;
+    let (stdout, stderr) = raw.identities();
+    capture::complete(
+        child,
+        prepared,
+        hf_domain::capture::CaptureBinding {
+            fence: accepted.fence().ok_or_else(invalid)?,
+            child: physical.clone(),
+            stdout,
+            stderr,
+        },
+        &mut raw,
+        gate,
+        until,
+    )?;
     gate.reach(
         Stage::OwnerBeforeAck,
         &invitation.operation,

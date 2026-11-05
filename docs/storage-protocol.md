@@ -123,3 +123,10 @@ rows and never complete a publisher or repair state. Store generation qualificat
 checks exact UTF8 byte length before allocation, including embedded-NUL refusal.
 See [task-list invalidation](task-list-watch.md). All prior lock, WAL/FULL/FK,
 manual-checkpoint and64MiB qualification limits remain unchanged.
+
+## Subsequent B2c schema
+
+Current fresh roots use schema4 for the separate [private capture/completion
+foundation](capture-completion.md). The schema3 watch foundation above is its
+historical entry stage; schema3 roots now refuse without upgrade or repair.
+Watcher publication and its current writer inventory are otherwise unchanged.

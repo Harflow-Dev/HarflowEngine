@@ -8,3 +8,6 @@ pub use gate::{FixtureGate, gate_packet};
 pub use policy::check_entry;
 
 pub use ledger::{LedgerIdentity, append_effect, qualify_ledger};
+
+mod raw_capture;
+pub use raw_capture::{FIXED_STDERR, FIXED_STDOUT, RawCapture, SyncedOffsets};

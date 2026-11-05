@@ -140,6 +140,13 @@ impl RetainedOwnedChild {
     pub fn capture(&self) -> &Capture {
         &self.capture
     }
+    /// Transfers buffered bytes only; EOF, overflow and error evidence is retained.
+    pub fn take_capture_bytes(&mut self) -> (Vec<u8>, Vec<u8>) {
+        (
+            std::mem::take(&mut self.capture.stdout.bytes),
+            std::mem::take(&mut self.capture.stderr.bytes),
+        )
+    }
     pub fn containment(&self) -> Containment {
         Containment::Unknown
     }

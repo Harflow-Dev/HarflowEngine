@@ -28,6 +28,9 @@ pub(crate) fn select_stage(name: String) {
     *STAGE.get_or_init(|| Mutex::new(None)).lock().unwrap() = Some(name);
 }
 
+mod capture_atomicity_tests;
+mod capture_refusal_tests;
+mod capture_tests;
 mod event_seek_tests;
 mod event_snapshot_tests;
 mod ownership_atomicity_tests;

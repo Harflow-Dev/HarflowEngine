@@ -183,5 +183,10 @@ fn stage(s: Stage) -> u8 {
         Stage::OwnerAfterChildSpawn => 6,
         Stage::OwnerAfterObserved => 7,
         Stage::OwnerBeforeAck => 8,
+        Stage::CaptureBeforeSync => 9,
+        Stage::CaptureAfterSync => 10,
+        Stage::CaptureAfterPublish => 11,
+        Stage::CaptureBeforeTerminal => 12,
+        Stage::CaptureAfterTerminal => 13,
     }
 }

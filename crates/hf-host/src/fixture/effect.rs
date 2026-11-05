@@ -54,5 +54,15 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
             operation: start.operation,
             process: actual,
         },
+    )?;
+    hf_platform::fixture::write_all(
+        &std::io::stdout(),
+        hf_platform::fixture::FIXED_STDOUT,
+        until,
+    )?;
+    hf_platform::fixture::write_all(
+        &std::io::stderr(),
+        hf_platform::fixture::FIXED_STDERR,
+        until,
     )
 }

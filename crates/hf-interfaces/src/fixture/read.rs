@@ -216,6 +216,11 @@ impl<'a> Reader<'a> {
             6 => Ok(Stage::OwnerAfterChildSpawn),
             7 => Ok(Stage::OwnerAfterObserved),
             8 => Ok(Stage::OwnerBeforeAck),
+            9 => Ok(Stage::CaptureBeforeSync),
+            10 => Ok(Stage::CaptureAfterSync),
+            11 => Ok(Stage::CaptureAfterPublish),
+            12 => Ok(Stage::CaptureBeforeTerminal),
+            13 => Ok(Stage::CaptureAfterTerminal),
             _ => Err(CodecError::Shape),
         }
     }

@@ -151,3 +151,10 @@ catalog writers and client adapters remain gates before capability advertising.
 B2c capture durability/lifecycle, R04 faults, B10/B11/B17 and R14 acceptance remain
 outstanding. Corrected Python's owner-accepted mixed-legacy-writer exclusion applies
 only to that temporary producer; it is not permission to weaken Rust continuity.
+
+## Subsequent B2c schema
+
+Current fresh roots use schema4 for the separate [private capture/completion
+foundation](capture-completion.md). The schema3 watch foundation above is its
+historical entry stage; schema3 roots now refuse without upgrade or repair.
+Watcher publication and its current writer inventory are otherwise unchanged.

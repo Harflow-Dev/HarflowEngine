@@ -20,15 +20,16 @@ production caller/lifecycle verification.
 
 Internal stored event paging and consumer-only mappings are described in
 [event reads](event-reads.md). They retain fixture authority and observation
-boundaries; no public host operation or watcher is implemented.
+boundaries; that stage added no public host operation or watcher.
 
 The macOS arm64 fixture-only [process primitives](process-primitives.md) retain
 qualified direct-child handles and independent capture/exit evidence. They add no
 detached owner, public execution capability or descendant-containment guarantee.
 
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
-intent/reservation/claim transactions and fenced observations. Fresh roots use
-schema2; no automatic upgrade, detached owner or public execution API is added.
+intent/reservation/claim transactions and fenced observations. The original B1 stage selected
+schema2; current fresh roots use schema4 as described below. No automatic upgrade,
+detached runtime or public execution API is added.
 
 The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned
 fixture processes through bounded inherited channels. Fresh single-thread parent,
@@ -38,8 +39,14 @@ They do not qualify a general concurrent launcher, detached runtime, backend,
 public lifecycle operation or durable capture/terminal ordering. No schema upgrade
 or public capability is introduced by these private modes.
 
-The [task-list invalidation foundation](task-list-watch.md) deliberately initializes
+The [task-list invalidation foundation](task-list-watch.md) introduced
 fresh schema3 roots and joins admitted task metadata writes to the same atomic
 revision commit. It adds bounded waits and strict corrected0.0.10 consumer mappings;
 the full207-case bundle is now selected with exhaustive provenance. No watch CLI,
 production caller authority, task catalog lifecycle or public capability is added.
+
+The [private capture/completion foundation](capture-completion.md) extends that
+fixed owner with synced raw bytes, fenced private offset/events and terminal
+ordering. Current fresh roots use schema4; earlier schema3/2 descriptions record
+their owning stages. It retains reservations and Unknown containment, and adds no
+public runtime, restart adoption or R04 qualification.

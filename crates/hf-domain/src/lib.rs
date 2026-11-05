@@ -15,3 +15,5 @@ pub mod ownership;
 pub mod fixture;
 
 pub mod task_watch;
+
+pub mod capture;

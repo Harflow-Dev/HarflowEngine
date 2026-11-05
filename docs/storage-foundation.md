@@ -67,3 +67,10 @@ event DML authoritative execution state or add a supported engine operation.
 R02-W deliberately advances fresh initialization to schema3 for atomic task-list
 revision metadata; schema2 roots now also refuse without upgrade. No public runtime
 is selected or advertised. See [task-list invalidation](task-list-watch.md).
+
+## Subsequent B2c schema
+
+Current fresh roots use schema4 for the separate [private capture/completion
+foundation](capture-completion.md). The schema3 watch foundation above is its
+historical entry stage; schema3 roots now refuse without upgrade or repair.
+Watcher publication and its current writer inventory are otherwise unchanged.

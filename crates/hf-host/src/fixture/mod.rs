@@ -1,4 +1,5 @@
 //! Source-controlled single-threaded fixed fixture composition, never a runtime launcher.
+mod capture;
 mod effect;
 mod owner;
 mod parent;

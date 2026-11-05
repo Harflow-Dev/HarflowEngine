@@ -13,6 +13,11 @@ pub enum Stage {
     OwnerAfterChildSpawn,
     OwnerAfterObserved,
     OwnerBeforeAck,
+    CaptureBeforeSync,
+    CaptureAfterSync,
+    CaptureAfterPublish,
+    CaptureBeforeTerminal,
+    CaptureAfterTerminal,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Gate {

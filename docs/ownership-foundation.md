@@ -139,3 +139,10 @@ its original bounded stop; B2 has a separate assignment and receipt.
 The schema2 description above records R03-B1 history. R02-W advances fresh roots
 to schema3 for atomic task-catalog watch revisions; existing schema2 roots refuse
 without migration or repair. See [task-list-watch](task-list-watch.md).
+
+## Subsequent B2c schema
+
+Current fresh roots use schema4 for the separate [private capture/completion
+foundation](capture-completion.md). The schema3 watch foundation above is its
+historical entry stage; schema3 roots now refuse without upgrade or repair.
+Watcher publication and its current writer inventory are otherwise unchanged.

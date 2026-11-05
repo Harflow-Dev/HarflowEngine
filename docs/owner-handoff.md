@@ -4,7 +4,8 @@ This is a fixed diagnostic composition, not a supported engine runtime, detached
 owner service, backend or run/resume/cancel interface. The default scaffold still
 reports unsupported. It uses the existing binary's exact private parent, owner and
 effect fixture modes on macOS arm64. No second executable or canonical capability
-is introduced. Original SB1-A public fixture selection remains unchanged.
+is introduced. Current public fixture selection follows [task reads](task-reads.md);
+this private protocol adds no canonical capability or contract delta.
 
 ## Scope and launch precondition
 
@@ -143,3 +144,10 @@ See the [B2 receipt](migration-receipts/R03-B2.md) for delivered evidence and li
 General multithreaded launch, detached owner longevity/adoption, reboot/PID reuse,
 owner-death recovery, arbitrary I/O/power faults, full containment, durable capture,
 public lifecycle and full R03/R04 acceptance remain outstanding.
+
+## Subsequent B2c delivery
+
+The separate [capture/completion foundation](capture-completion.md) now extends
+this handoff with a raw suffix after EffectDone, durable indexed capture and private
+terminal ordering. The original B2 limits above are historical; public lifecycle,
+reservation release, containment and R04 remain unqualified.

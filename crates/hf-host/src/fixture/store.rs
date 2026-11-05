@@ -63,3 +63,31 @@ impl<'a> Commands<'a> {
         map(self.open()?.ownership_record_acceptance(fence, self.until))
     }
 }
+impl Commands<'_> {
+    pub(super) fn capture_begin(
+        &self,
+        binding: &hf_domain::capture::CaptureBinding,
+    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
+        map(self.open()?.capture_begin(binding, self.until))
+    }
+    pub(super) fn capture_publish(
+        &self,
+        binding: &hf_domain::capture::CaptureBinding,
+        revision: u64,
+        next: &hf_domain::capture::CaptureProgress,
+    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
+        map(self
+            .open()?
+            .capture_publish(binding, revision, next, self.until))
+    }
+    pub(super) fn capture_finish(
+        &self,
+        binding: &hf_domain::capture::CaptureBinding,
+        revision: u64,
+        exit: hf_domain::process::ProcessExit,
+    ) -> io::Result<hf_domain::capture::CaptureSnapshot> {
+        map(self
+            .open()?
+            .capture_finish(binding, revision, exit, self.until))
+    }
+}
