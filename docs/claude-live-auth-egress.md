@@ -208,3 +208,69 @@ checks its distinct failure stage. No final-drain race test was added. Full
 all-target Clippy still encounters the unrelated concurrent ST04 lint noted above.
 Concurrent ST04 code and migration trackers were preserved; this is not a clean
 release build or hosted CI result. No push or release occurred.
+
+## Extra-connection timing diagnosis
+
+The next owner-authorized fake-only cycle at base `cb529f6` added only a sticky
+first-active-extra snapshot. Its time origin is entry to the tunnel after the
+CONNECT reply completed; it records proxy observation time, not client initiation.
+Directional counters record successful raw reads/writes, pending byte counts and
+current EOF/half-close flags. The extra socket remains closed unread before the
+snapshot and the existing poison action. No request contents, raw errors, grants,
+deadlines, pins or acceptance rules changed.
+
+One optimized run on 2026-11-06 failed the unchanged TLS predicate in **18.03
+seconds**. The first extra IPv4 acceptance was observed **27 microseconds after
+tunnel entry**. At that boundary, both directions had **zero bytes read, zero bytes
+forwarded, zero pending bytes, no EOF and no half-close**. Active-tunnel rejection
+was again the first proxy failure; outer and final-drain rejection counts were zero.
+The proxy had therefore not forwarded any TLS bytes to the helper or from the
+helper to Claude before it stopped the tunnel. This rules out a response from this
+fake TLS server as the trigger for the extra socket in this run. It does not claim
+there were no bytes queued in kernel sockets, or establish client initiation time.
+
+The supported diagnosis is transport overlap before first-tunnel relay progress,
+not a certificate-response-driven retry. Parallel independently initialized startup
+clients and runtime speculative connection creation remain possible. Because the
+extra socket is unread, its destination, HTTP purpose and precise vendor caller
+remain unknown. No extra connection was admitted to resolve that ambiguity.
+The strict TLS control is interrupted before a meaningful relayed handshake, so
+this experiment still establishes neither certificate rejection nor acceptance.
+
+Bounded read-only inspection of embedded source in the exact pinned binary also
+narrowed two hypotheses. Its explicit `/api/hello` preconnect path returns when a
+proxy or nonessential-traffic suppression is configured. An initially plausible
+OAuth-profile-fetch hypothesis was rejected after checking its scope gate: the
+environment-token constructor uses default `user:inference` scope without an
+explicit scopes override, while `If()` requires `user:profile` and `xks()` returns
+before fetching without it. No override is supplied by this fixture. Relevant
+zero-based binary byte offsets are `275356569` (preconnect gate), `261451230`
+(default scopes/token constructor), `261471668` (profile-scope predicate),
+`257941864` (profile-scope constant), `261205782` (profile initialization), and
+`275359629` (asynchronous startup call). Static code presence alone is not proof
+that a path executed; no particular alternative startup endpoint is attributed.
+
+Vendor capture again ended at its deadline with original exit unobserved, no pipe
+EOF and zero captured bytes; cleanup observed `Signal(9)`. The helper settled with
+zero exit and complete pipes, reporting TCP accepted, no explicit certificate alert
+and no application data after controller stop. Original/proxy/helper custody
+settled before the test returned. No credentials, broker, real upstream, paid call,
+second vendor run, production admission, push or release occurred in this cycle.
+
+Log: `/private/tmp/harflow-extra-connection/run.log`, SHA-256
+`a23e77744ee7ee73a8ccf3e3e353772899c8ff7d13f8cac0a0e41d7e8450ff4d`.
+Retained root: `/private/var/folders/cx/wx59rnx154n9dl6qp7nyl_sw0000gp/T/harflow-os-measurement-d63e885902309f2b7c16391129c03bf4`,
+device 16777230, inode 603957248, mode0700. Proxy/helper ports `60482`/`60481`.
+Profile SHA-256 `ded1f2c202bc4c9a13f0e9792268cbd8e6341ae96b315ac187e608154eded895`.
+Exact vendor/ICU hashes, metadata bookends and isolation preflight passed unchanged.
+
+Plan review and final source review approved the metadata limits. A final test-only
+helper extraction resolved the function-length lint without weakening assertions;
+the third and final review approved that delta. Primary post-fix formatting,
+architecture and legacy checks, locked workspace check, scoped platform/host Clippy,
+six optimized egress tests, two optimized native-input tests (two probes ignored),
+and 22 Python tests passed. The extended regression acknowledges exact fixture
+bytes in both directions before the extra connect and checks read/forward counts,
+empty buffers and open state. Concurrent ST04 work and tracker diffs were preserved;
+its unrelated all-target Clippy blocker remains as previously recorded. No hosted
+CI or clean-distribution qualification follows from these local results.

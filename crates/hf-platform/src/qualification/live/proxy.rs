@@ -10,7 +10,9 @@ use std::{
 };
 #[path = "diagnostics.rs"]
 mod diagnostics;
-pub use diagnostics::{ProxyFailure, ProxyFailureStage, RejectionCounts};
+pub use diagnostics::{
+    ExtraAcceptSnapshot, ProxyFailure, ProxyFailureStage, RejectionCounts, RelayDirectionSnapshot,
+};
 #[path = "relay.rs"]
 mod relay;
 #[derive(Clone, Copy, Debug)]
@@ -27,6 +29,7 @@ pub struct ProxyOutcome {
     pub rejected_connections: usize,
     pub rejection_counts: RejectionCounts,
     pub first_failure: Option<ProxyFailure>,
+    pub first_extra_accept: Option<ExtraAcceptSnapshot>,
     pub ipv6_connections: usize,
     pub client_eof: bool,
     pub remote_eof: bool,

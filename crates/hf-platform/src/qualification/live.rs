@@ -4,7 +4,10 @@ mod proxy;
 mod scan;
 use super::{FixtureRoot, recorded_vendor_profile};
 pub use broker::read_credential_record;
-pub use proxy::{Proxy, ProxyFailure, ProxyFailureStage, ProxyMode, ProxyOutcome, RejectionCounts};
+pub use proxy::{
+    ExtraAcceptSnapshot, Proxy, ProxyFailure, ProxyFailureStage, ProxyMode, ProxyOutcome,
+    RejectionCounts, RelayDirectionSnapshot,
+};
 pub use scan::{OriginalActorsSettled, SecretMatches, remove_matched_files, scan_secret};
 use std::io;
 /// Same recorded closure plus a denial, never an additional grant.

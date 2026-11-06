@@ -1,6 +1,28 @@
 use super::ProxyOutcome;
 use std::io;
 
+/// Opaque relay progress; buffered bytes have been read but not yet forwarded.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RelayDirectionSnapshot {
+    pub bytes_read: usize,
+    pub bytes_forwarded: usize,
+    pub buffered_bytes: usize,
+    pub eof: bool,
+    pub write_half_closed: bool,
+}
+
+/// First extra acceptance sampled immediately after closing the rejected socket.
+/// Timing describes proxy observation, not when the client initiated the socket.
+/// Opaque byte counts do not identify HTTP purpose, retry behavior or TLS state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ExtraAcceptSnapshot {
+    /// Origin is entry to the tunnel, after the CONNECT reply completed.
+    pub elapsed_since_tunnel_entry_micros: u128,
+    pub ipv6: bool,
+    pub client_to_upstream: RelayDirectionSnapshot,
+    pub upstream_to_client: RelayDirectionSnapshot,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProxyFailureStage {
     ServeAcceptanceGuard,

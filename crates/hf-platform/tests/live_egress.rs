@@ -4,8 +4,8 @@
 use hf_platform::qualification::{
     FixtureRoot,
     live::{
-        OriginalActorsSettled, Proxy, ProxyFailureStage, ProxyMode, live_profile,
-        remove_matched_files, scan_secret,
+        OriginalActorsSettled, Proxy, ProxyFailureStage, ProxyMode, RelayDirectionSnapshot,
+        live_profile, remove_matched_files, scan_secret,
     },
 };
 use std::{
@@ -18,6 +18,14 @@ use std::{
 };
 
 const NONCE: &str = "a1b2c3d4e5f60718";
+
+fn assert_relay_snapshot(snapshot: RelayDirectionSnapshot, expected: usize) {
+    assert_eq!(snapshot.bytes_read, expected);
+    assert_eq!(snapshot.bytes_forwarded, expected);
+    assert_eq!(snapshot.buffered_bytes, 0);
+    assert!(!snapshot.eof);
+    assert!(!snapshot.write_half_closed);
+}
 
 #[test]
 fn live_profile_adds_only_the_credentials_file_write_denial() {
@@ -165,11 +173,18 @@ fn proxy_classifies_an_extra_ipv4_connection_during_an_active_tunnel() {
     let upstream = TcpListener::bind(("127.0.0.1", 0)).unwrap();
     let address = upstream.local_addr().unwrap();
     let (accepted_tx, accepted_rx) = mpsc::channel();
+    let client_bytes = b"opaque-client-fixture-01";
+    let upstream_bytes = b"opaque-upstream-fixture-02";
+    let (received_tx, received_rx) = mpsc::channel();
     let server = thread::spawn(move || {
         let (mut socket, _) = upstream.accept().unwrap();
         accepted_tx.send(()).unwrap();
-        let mut received = Vec::new();
-        socket.read_to_end(&mut received).unwrap();
+        let mut received = vec![0; client_bytes.len()];
+        socket.read_exact(&mut received).unwrap();
+        received_tx.send(received).unwrap();
+        socket.write_all(upstream_bytes).unwrap();
+        let mut tail = Vec::new();
+        socket.read_to_end(&mut tail).unwrap();
     });
     let proxy = Proxy::start(
         ProxyMode::UntrustedTls(address),
@@ -197,6 +212,15 @@ fn proxy_classifies_an_extra_ipv4_connection_during_an_active_tunnel() {
     assert!(response.starts_with(b"HTTP/1.1 200 Connection Established"));
     accepted_rx.recv_timeout(Duration::from_secs(1)).unwrap();
 
+    client.write_all(client_bytes).unwrap();
+    assert_eq!(
+        received_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        client_bytes
+    );
+    let mut relayed_upstream = vec![0; upstream_bytes.len()];
+    client.read_exact(&mut relayed_upstream).unwrap();
+    assert_eq!(relayed_upstream, upstream_bytes);
+
     let mut extra = TcpStream::connect(("127.0.0.1", proxy.port())).unwrap();
     extra
         .set_read_timeout(Some(Duration::from_secs(1)))
@@ -207,6 +231,11 @@ fn proxy_classifies_an_extra_ipv4_connection_during_an_active_tunnel() {
     let outcome = proxy.stop_and_join().unwrap();
     server.join().unwrap();
     assert_eq!(outcome.rejection_counts.active_tunnel_extra_accept, 1);
+    let snapshot = outcome.first_extra_accept.unwrap();
+    assert!(!snapshot.ipv6);
+    assert!(snapshot.elapsed_since_tunnel_entry_micros > 0);
+    assert_relay_snapshot(snapshot.client_to_upstream, client_bytes.len());
+    assert_relay_snapshot(snapshot.upstream_to_client, upstream_bytes.len());
     assert_eq!(
         outcome.first_failure.unwrap().stage,
         ProxyFailureStage::ActiveTunnelExtraAccept

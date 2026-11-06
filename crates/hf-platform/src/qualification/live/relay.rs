@@ -1,4 +1,7 @@
-use super::{ProxyFailureStage as Stage, ProxyOutcome, diagnostics::observed};
+use super::{
+    ExtraAcceptSnapshot, ProxyFailureStage as Stage, ProxyOutcome, RelayDirectionSnapshot,
+    diagnostics::observed,
+};
 use std::{
     io::{self, Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
@@ -175,6 +178,7 @@ struct Direction {
     buffer: Vec<u8>,
     offset: usize,
     total: usize,
+    forwarded: usize,
     eof: bool,
     closed: bool,
 }
@@ -184,6 +188,7 @@ impl Direction {
             buffer: Vec::new(),
             offset: 0,
             total: 0,
+            forwarded: 0,
             eof: false,
             closed: false,
         }
@@ -192,7 +197,10 @@ impl Direction {
         if self.offset < self.buffer.len() {
             match target.write(&self.buffer[self.offset..]) {
                 Ok(0) => return Err(io::Error::other("tunnel write closed")),
-                Ok(n) => self.offset += n,
+                Ok(n) => {
+                    self.offset += n;
+                    self.forwarded += n;
+                }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
                 Err(e) => return Err(e),
             }
@@ -224,6 +232,15 @@ impl Direction {
         }
         Ok(())
     }
+    fn snapshot(&self) -> RelayDirectionSnapshot {
+        RelayDirectionSnapshot {
+            bytes_read: self.total,
+            bytes_forwarded: self.forwarded,
+            buffered_bytes: self.buffer.len() - self.offset,
+            eof: self.eof,
+            write_half_closed: self.closed,
+        }
+    }
 }
 fn tunnel(
     client: &mut TcpStream,
@@ -233,12 +250,21 @@ fn tunnel(
     outcome: &mut ProxyOutcome,
     listeners: (&TcpListener, &TcpListener, &AtomicBool),
 ) -> io::Result<()> {
+    let entered = Instant::now();
     let mut outgoing = Direction::new();
     let mut incoming = Direction::new();
     loop {
         for (listener, is6) in [(listeners.0, false), (listeners.1, true)] {
             if let Ok((stream, _)) = listener.accept() {
                 drop(stream);
+                if outcome.first_extra_accept.is_none() {
+                    outcome.first_extra_accept = Some(ExtraAcceptSnapshot {
+                        elapsed_since_tunnel_entry_micros: entered.elapsed().as_micros(),
+                        ipv6: is6,
+                        client_to_upstream: outgoing.snapshot(),
+                        upstream_to_client: incoming.snapshot(),
+                    });
+                }
                 outcome.reject(Stage::ActiveTunnelExtraAccept);
                 if is6 {
                     listeners.2.store(true, Ordering::SeqCst);
