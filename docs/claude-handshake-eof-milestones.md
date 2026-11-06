@@ -1,7 +1,7 @@
 # Repeated Claude handshake EOF: native milestone diagnosis
 
-Status: implemented; actual local milestone controls passed. No new installed-Claude
-run has occurred in this stage. The prior [four-total result](claude-replacement-wave-negative.md)
+Status: implemented and independently reviewed. One same-bound discriminating
+fake-only installed-Claude measurement completed; the strict gate remains failed. The prior [four-total result](claude-replacement-wave-negative.md)
 remains failed; no retrospective certificate classification is possible.
 
 ## Question and boundaries
@@ -76,6 +76,89 @@ echo. Cleared environments, fixed CLT interpreter, bounded original process
 capture/exit/physical EOF and nested helper wait/reader custody are retained.
 Unexpected test-driver failures emit fixed markers.
 
-Final original-mode regression/static checks and independent review precede one
-newly discriminating fake-only Claude measurement under the unchanged bounds.
-No unchanged rerun or larger allowance is selected.
+Final checks passed 13 scoped tests: three new milestone controls and ten
+original-mode codec/helper tests, including the unchanged 25-second partial
+coverage case. All three installed-vendor entries remained ignored during local
+verification. Formatting, scoped Clippy, workspace check, architecture/legacy
+checks and 22 Python tests passed. Independent final source review closed clean.
+All 17 protected peer/tracker files remain byte-identical. Native Sol low handled
+implementation and a dedicated Luna medium writer supplied controls; primary
+integration strengthened the closed metadata oracles. Kim's unchanged broad Bash
+allowlist prevented write preflight; no Vibe task or configuration change followed.
+
+## Single discriminating installed-Claude result
+
+At implementation `fb5fbfa`, the reviewed ignored entry ran once and failed in
+18.32 seconds. The four-total/two-active mode and all original clocks/budgets and
+pins remained in force. This was a new native-milestone discriminator, not an
+unchanged repeat or expanded allowance.
+
+Every one of the four tuple-bound sessions reported the same observations:
+
+| Witness | All four admitted sessions |
+| --- | --- |
+| ClientHello received by native library | observed |
+| SNI fixed comparison | matched |
+| ServerHello, Certificate, ServerKeyExchange, ServerHelloDone native write reports | observed |
+| ClientKeyExchange, client CCS/Finished, server CCS/Finished | not observed |
+| Inbound / outbound TLS alert | not observed / not observed |
+| Original helper classification | handshake / transport_eof, no certificate rejection, no application data |
+| Proxy transfer | 1,482 bytes forward and 1,132 reverse per session; both EOF/drained/half-closed |
+
+These native observations match the deliberate early-close control. They differ
+from the local explicit certificate-rejection control, where an inbound alert was
+observed. The failure is localized to **client abort during the initial server-auth
+flight, before any client key exchange was observed**. It is consistent with trust
+rejection or exact-runtime TLS policy/compatibility failure; it does not distinguish
+those causes or prove certificate verification occurred. Application-driven
+cancellation also remains possible. Outgoing native reports
+plus byte forwarding still do not prove which message the client consumed.
+
+The four proxy upstream-local/helper-peer bindings were `127.0.0.1:51004`,
+`:51005`, `:51008`, `:51010` for ordinals one through four; the frozen helper
+was `127.0.0.1:50994`. The proxy recorded one preflight, five accepted IPv4 sockets
+and four CONNECTs, peak active two and retired/closed four. The fifth socket
+caused `ExcessConnection` at 3,907,647 microseconds from worker start and stayed
+unread. No admitted EOF was manufactured by that poison or cleanup.
+
+The vendor produced no captured bytes and did not finish within the original
+15-second negative deadline. Original exit was unobserved and pipe EOF incomplete
+before identity-bound Signal(9) cleanup. Static certificate-refusal evidence and
+observation-within-deadline were false. The helper independently exited Code(0)
+with complete stdout/stderr EOF and valid complete milestone metadata. The proxy
+joined with all owned sockets closed. Denied listeners remained quiet, IPv6
+attempts were zero, canaries were unchanged and the bounded post-settlement
+fake-token scan completed with zero matches. Peak pending bytes were 1,482/1,132;
+aggregate raw bytes were 5,928/4,528, within the unchanged shared limits.
+
+## Disposition and remaining evidence
+
+The observation narrows where the handshake stops; it is not a supported
+transport behavior fix or a certificate-refusal qualification. Server-only
+milestones cannot establish the client's verification/error decision. The next
+needed evidence is a correlated **closed client-side TLS failure reason** under
+the same restrictions. No such witness is available from this run's empty CLI
+capture, so no trust-versus-compatibility claim is made. More identical retries or
+larger caps are not selected. No oracle, deadline, profile, trust store, pin or
+production mode was changed.
+
+The historical embedded banner identifies Bun 1.4.4 (424a542a9), whose exact source
+equivalence remains unverified. The [public Bun 1.4.4 release](https://github.com/oven-sh/bun/releases/tag/bun-v1.4.4)
+shows a different revision; its version label alone cannot attribute an upstream
+TLS bug to this embedded binary. No runtime substitution or upgrade was attempted.
+
+All settlement/controls and the bounded scan preceded the strict assertion.
+No real credentials, broker, real upstream/provider/model/tool calls, paid calls,
+production admission, install, registration, push or release occurred. No further
+run followed; failed roots remain retained.
+
+## Retained evidence
+
+- Log: `/private/tmp/harflow-eof-milestones/run.log`.
+- Log SHA-256: `e01e2cc7d5a8d63e66a73f36ae4ab60c833b288b6c141d48d451a3d19fb4258d`.
+- Root: `/private/var/folders/cx/wx59rnx154n9dl6qp7nyl_sw0000gp/T/harflow-os-measurement-81a919108523ce24c723842a35917470`.
+- Root device/inode/mode: `16777230 / 605337255 / 0700`.
+- Proxy port: `50995`; nonce is the root suffix above.
+- Profile SHA-256: `c897e576304ac7ba8089471fd9cbebb574c056e54c0dcf88ef5effb0131e96dc`.
+- Vendor SHA-256: `677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d`.
+- ICU SHA-256: `666a97d4dd1139f537290d74a661cc6b6da6cc58da24486b3cb282eacbcfa549`.
