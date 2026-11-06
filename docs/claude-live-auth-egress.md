@@ -274,3 +274,28 @@ bytes in both directions before the extra connect and checks read/forward counts
 empty buffers and open state. Concurrent ST04 work and tracker diffs were preserved;
 its unrelated all-target Clippy blocker remains as previously recorded. No hosted
 CI or clean-distribution qualification follows from these local results.
+
+## Offline boundary review and pending measurement decision
+
+At `24fafd8`, a read-only review confirmed that the one-CONNECT restriction is a
+binding constraint of this private experiment, rather than an accepted universal
+production socket policy. No further unchanged vendor probe was run. Existing
+transport/code-path evidence cannot identify the exact unread socket's caller.
+
+The [two-tunnel negative-control proposal](decisions/claude-two-tunnel-negative-proposal.md)
+is a concrete, separately gated owner decision: two total fake-only same-route
+connections, aggregate existing bounds, concurrent relay, identity-bound per-session
+TLS evidence and strict global poison. It expressly includes validation of the
+previously unread second CONNECT envelope and leaves decrypted requests opaque.
+It remains unimplemented and unauthorized for runtime selection. Its question is
+whether early controller poison masks TLS refusal, not exact request attribution.
+The existing cap, strict refusal, release freeze and production rejection remain.
+
+Independent final design review approved the proposal for an owner decision, not
+implementation or execution. Current-head offline verification passed **29 tests,
+zero failed, zero ignored** across backend command/reduction, stream decoding,
+HFCQ/prepared-launch and owner-preparation bindings, and synthetic host composition.
+No new code fix was justified by these results. The 17 inventoried peer/tracker
+files were byte-identical after the documentation-only stage. The previously noted
+unrelated full-all-target Clippy blocker remains; no new global or hosted pass is
+claimed. No runtime admission or release authorization was exercised.
