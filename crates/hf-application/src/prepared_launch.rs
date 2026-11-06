@@ -177,7 +177,7 @@ fn context_shape(c: &CaptureContext<'_>, hash: &impl DigestPort) -> Result<(), R
     let r = c.request;
     let i = c.invitation;
     if r.payload.len() > 16384
-        || !r.payload.starts_with(b"HFPL\x01")
+        || !(r.payload.starts_with(b"HFPL\x01") || r.payload.starts_with(b"HFCQ\x01"))
         || hash.digest_parts(&[&r.payload]) != r.digest
         || r.operation != i.operation
         || r.generation != i.generation

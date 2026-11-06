@@ -5,6 +5,7 @@ use std::{
     fs::{self, Metadata, OpenOptions},
     io::Write,
     path::PathBuf,
+    time::{Duration, Instant},
 };
 
 use super::{SettledRoot, canary, identity, invocation, server};
@@ -28,6 +29,7 @@ pub(super) enum MeasurementMode {
     PageSizeVersionOnly,
     CompatPageSizeVersionOnly,
     CompatProtocol,
+    OwnerQualification,
 }
 
 struct Measurement {
@@ -36,6 +38,7 @@ struct Measurement {
     nonce: String,
     canary: PathBuf,
     canary_identity: Metadata,
+    owner_control: Option<PathBuf>,
     positive: PathBuf,
     server: server::FixtureServer,
     denied_listener: server::DeniedListener,
@@ -44,7 +47,16 @@ struct Measurement {
 }
 
 pub(super) fn run(mode: MeasurementMode) {
+    let overall_until = (mode == MeasurementMode::OwnerQualification)
+        .then(|| Instant::now() + Duration::from_secs(130));
     let measurement = Measurement::create(mode);
+    if mode == MeasurementMode::OwnerQualification {
+        owner::run(
+            measurement,
+            overall_until.expect("owner qualification deadline"),
+        );
+        return;
+    }
     measurement.prove_preflight();
     if mode == MeasurementMode::CompatProtocol {
         let observation = invocation::capture_protocol(
@@ -70,15 +82,31 @@ pub(super) fn run(mode: MeasurementMode) {
     }
 }
 
+#[path = "measurement/owner.rs"]
+mod owner;
+
 impl Measurement {
     fn create(mode: MeasurementMode) -> Self {
-        let selection = identity::selection();
+        let selection = if mode == MeasurementMode::OwnerQualification {
+            identity::qualification_selection()
+        } else {
+            identity::selection()
+        };
         let owned = SettledRoot::create();
         let root = &owned.fixture;
         let nonce = identity::nonce_from_root(root.root());
         let (canary, canary_identity, positive) = canaries(root, &nonce);
+        let owner_control = if mode == MeasurementMode::OwnerQualification {
+            let path = root.root().join("owner-control-sentinel");
+            fs::write(&path, b"owner state is outside vendor write scope").unwrap();
+            Some(path)
+        } else {
+            None
+        };
         invocation::prepare_private_dirs(root);
-        let server = if candidate_only(mode) {
+        let server = if mode == MeasurementMode::OwnerQualification {
+            server::FixtureServer::start_owner_protocol(nonce.clone())
+        } else if candidate_only(mode) {
             server::FixtureServer::start_preflight_only(nonce.clone())
         } else {
             server::FixtureServer::start(nonce.clone())
@@ -86,7 +114,13 @@ impl Measurement {
         .expect("reserve same-port IPv4 and IPv6 loopback listeners");
         let denied_listener = server::DeniedListener::bind(server.port()).unwrap();
         let (controlled_profile, base_vendor) = profiles(root, &selection, server.port());
-        let vendor_profile = profile::select(mode, &base_vendor);
+        let vendor_profile = if mode == MeasurementMode::OwnerQualification {
+            let topology = root.recorded_topology().expect("recorded fixture topology");
+            hf_platform::qualification::recorded_vendor_profile(&topology, server.port())
+                .expect("exact recorded Claude profile")
+        } else {
+            profile::select(mode, &base_vendor)
+        };
         eprintln!(
             "phase=profile-created mode={mode:?} fixture-root={} fixture-port={} root-identity={:?} base-profile-sha256={} selected-profile-sha256={} diagnostic-delta={}",
             root.root().display(),
@@ -102,6 +136,7 @@ impl Measurement {
             nonce,
             canary,
             canary_identity,
+            owner_control,
             positive,
             server,
             denied_listener,
@@ -111,10 +146,18 @@ impl Measurement {
     }
 
     fn prove_preflight(&self) {
+        self.prove_preflight_with_deadline(None);
+    }
+
+    fn prove_preflight_until(&self, until: Instant) {
+        self.prove_preflight_with_deadline(Some(until));
+    }
+
+    fn prove_preflight_with_deadline(&self, until: Option<Instant>) {
         let root = &self.owned.fixture;
         eprintln!("phase=controlled-posix-spawn-positive begin");
         assert_eq!(
-            super::launch_spawn_control(root, &self.controlled_profile),
+            super::launch_spawn_control(root, &self.controlled_profile, until),
             "spawn-control=allowed"
         );
         eprintln!("phase=controlled-posix-spawn-positive complete");
@@ -124,14 +167,26 @@ impl Measurement {
             &self.vendor_profile,
             &self.canary,
             &self.positive,
-            self.server.port(),
-            self.denied_listener.port(),
-            &self.nonce,
+            super::PreflightContext {
+                allowed_port: self.server.port(),
+                denied_port: self.denied_listener.port(),
+                nonce: &self.nonce,
+                owner_control: self.owner_control.as_deref(),
+                phase_until: until,
+            },
         );
-        assert_eq!(
-            result,
+        let expected = if self.owner_control.is_some() {
+            "fork=1 posix_spawn=1 read=1 inside=1 allowed=1 denied_port=1 owner_write_denied=1"
+        } else {
             "fork=1 posix_spawn=1 read=1 inside=1 allowed=1 denied_port=1"
-        );
+        };
+        assert_eq!(result, expected);
+        if let Some(until) = until {
+            assert!(
+                Instant::now() < until,
+                "shared five second preflight deadline"
+            );
+        }
         eprintln!("phase=vendor-nofork-read-network-preflight complete");
     }
 
@@ -167,6 +222,9 @@ impl Measurement {
             | MeasurementMode::CompatProtocol => {
                 unreachable!("candidate has deferred settlement")
             }
+            MeasurementMode::OwnerQualification => {
+                unreachable!("owner mode uses its isolated harness")
+            }
         }
     }
 
@@ -185,9 +243,9 @@ impl Measurement {
             "unlisted IPv4 loopback port received no connection"
         );
         let expected = match mode {
-            MeasurementMode::FullFixture | MeasurementMode::CompatProtocol => {
-                server::ServerOutcome::Completed
-            }
+            MeasurementMode::FullFixture
+            | MeasurementMode::CompatProtocol
+            | MeasurementMode::OwnerQualification => server::ServerOutcome::Completed,
             MeasurementMode::VersionOnlySysctl
             | MeasurementMode::PageSizeVersionOnly
             | MeasurementMode::CompatPageSizeVersionOnly => server::ServerOutcome::PreflightOnly,
@@ -198,6 +256,7 @@ impl Measurement {
             nonce: _,
             canary,
             canary_identity,
+            owner_control: _,
             positive: _,
             mut server,
             denied_listener,

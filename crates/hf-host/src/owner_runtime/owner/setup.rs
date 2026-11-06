@@ -32,10 +32,7 @@ pub(super) fn handshake(channel: &PrivateIo) -> Result<Prepared, String> {
 fn validate(p: &Prepared) -> Result<(), String> {
     let decoded = hf_interfaces::prepared_launch::decode_preparation(&p.request, &Sha256Digest)
         .map_err(error)?;
-    let e = match &decoded {
-        hf_interfaces::prepared_launch::DecodedPreparation::Legacy(e) => e,
-        hf_interfaces::prepared_launch::DecodedPreparation::FixedProtocol(e) => &e.policy,
-    };
+    let e = decoded.policy();
     if current_parent_identity().as_ref() != Some(&e.authority.caller)
         || MacIdentity.identity(std::process::id()).as_ref() != Some(&p.invitation.process)
         || p.invitation.operation != p.request.operation
@@ -106,6 +103,7 @@ pub(super) fn start_at(
         closed: false,
         until,
         progress: Progress::default(),
+        vendor_until: None,
     })
 }
 fn actor(
@@ -116,7 +114,11 @@ fn actor(
     until: Instant,
 ) -> Result<Actor, String> {
     resources.writer = Some(spawn_at(
-        "--internal-storage-writer-fixture-v1",
+        if p.request.payload.starts_with(b"HFCQ\x01") {
+            hf_domain::claude_qualification::WRITER_MODE
+        } else {
+            "--internal-storage-writer-fixture-v1"
+        },
         cwd,
         executable,
         until,
@@ -128,13 +130,10 @@ fn actor(
         nonce: p.invitation.nonce.clone(),
         process: p.invitation.process.clone(),
     };
-    let envelope =
-        match hf_interfaces::prepared_launch::decode_preparation(&p.request, &Sha256Digest)
-            .map_err(error)?
-        {
-            hf_interfaces::prepared_launch::DecodedPreparation::Legacy(e) => *e,
-            hf_interfaces::prepared_launch::DecodedPreparation::FixedProtocol(e) => e.policy,
-        };
+    let envelope = hf_interfaces::prepared_launch::decode_preparation(&p.request, &Sha256Digest)
+        .map_err(error)?
+        .policy()
+        .clone();
     let participant = StorageParticipant {
         source: resources.hold.source_stamp().clone(),
         operation: p.request.operation.clone(),

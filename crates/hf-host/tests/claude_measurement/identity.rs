@@ -11,6 +11,7 @@ use std::{
 const BINARY_HASH_LIMIT: usize = 512 * 1024 * 1024;
 const CLAUDE_2_1_318_SHA256: &str =
     "677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d";
+const CLAUDE_2_1_318_PATH: &str = "/Users/nayanda/.local/share/claude/versions/2.1.318";
 
 pub(super) struct VendorSelection {
     pub(super) logical: PathBuf,
@@ -43,6 +44,13 @@ pub(super) fn selection() -> VendorSelection {
     VendorSelection {
         logical,
         expected_hash,
+    }
+}
+
+pub(super) fn qualification_selection() -> VendorSelection {
+    VendorSelection {
+        logical: PathBuf::from(CLAUDE_2_1_318_PATH),
+        expected_hash: CLAUDE_2_1_318_SHA256.to_owned(),
     }
 }
 

@@ -1,5 +1,7 @@
 //! Source-controlled single-threaded fixed fixture composition, never a runtime launcher.
+mod bridge_witness;
 mod capture;
+pub(crate) mod claude_bridge;
 mod effect;
 mod owned;
 mod owner;
@@ -31,6 +33,9 @@ pub(super) fn run(mode: &str) -> io::Result<()> {
     check_entry()?;
     let budget = match mode {
         PARENT => 10,
+        hf_domain::claude_qualification::PARENT_MODE => 130,
+        hf_domain::claude_qualification::BRIDGE_MODE => 90,
+        bridge_witness::BRIDGE | bridge_witness::IMAGE => 4,
         OWNER => 8,
         EFFECT | SATURATION | hf_domain::prepared_launch::FIXED_PROTOCOL_ARG => 4,
         _ => return Err(invalid()),
@@ -38,7 +43,12 @@ pub(super) fn run(mode: &str) -> io::Result<()> {
     let deadline = Instant::now() + Duration::from_secs(budget);
     let channel = PrivateIo::stdio(deadline);
     match mode {
-        PARENT => parent::run(channel, deadline),
+        PARENT => parent::run(channel, deadline, false),
+        hf_domain::claude_qualification::PARENT_MODE => parent::run(channel, deadline, true),
+        hf_domain::claude_qualification::BRIDGE_MODE => claude_bridge::run(channel, deadline),
+        bridge_witness::BRIDGE | bridge_witness::IMAGE => {
+            bridge_witness::run(channel, deadline, mode)
+        }
         OWNER => owner::run(channel, deadline),
         EFFECT | SATURATION => effect::run(channel, deadline, mode == SATURATION, false),
         hf_domain::prepared_launch::FIXED_PROTOCOL_ARG => {

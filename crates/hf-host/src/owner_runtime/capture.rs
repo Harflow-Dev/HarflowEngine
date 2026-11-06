@@ -10,6 +10,7 @@ use hf_platform::process::{CaptureBatch, PrivateFixtureCaptureReader, ReaderFina
 
 #[derive(Default)]
 pub(super) struct Capture {
+    launch_binding: Option<(hf_domain::ownership::Id, hf_domain::ownership::Digest)>,
     hashes: Option<(hf_storage::Sha256Stream, hf_storage::Sha256Stream)>,
     batch: Option<CaptureBatch>,
     awaiting: Option<(Stream, usize)>,
@@ -25,6 +26,14 @@ pub(super) struct Capture {
     pub(super) loss_sent: bool,
 }
 impl Capture {
+    pub(super) fn expect_launch_ready(
+        &mut self,
+        attempt: hf_domain::ownership::Id,
+        digest: hf_domain::ownership::Digest,
+    ) {
+        self.launch_binding = Some((attempt, digest));
+    }
+
     pub(super) fn enable_commitment(&mut self) -> Result<(), String> {
         self.hashes = Some((
             hf_storage::Sha256Stream::with_limit(65536).map_err(error)?,
@@ -149,13 +158,21 @@ impl Capture {
                 return Err("effect protocol length".into());
             }
             if self.protocol.len() == size {
-                if fixture::decode(&self.protocol).map_err(error)?
-                    != (Frame::EffectDone {
+                let expected = if let Some((attempt, digest)) = &self.launch_binding {
+                    Frame::LaunchReady {
+                        operation: operation.clone(),
+                        attempt: attempt.clone(),
+                        request_digest: digest.clone(),
+                        child: child.clone(),
+                    }
+                } else {
+                    Frame::EffectDone {
                         operation: operation.clone(),
                         process: child.clone(),
-                    })
-                {
-                    return Err("effect protocol identity".into());
+                    }
+                };
+                if fixture::decode(&self.protocol).map_err(error)? != expected {
+                    return Err("effect/launch protocol identity".into());
                 }
                 self.effect_done = true;
             }

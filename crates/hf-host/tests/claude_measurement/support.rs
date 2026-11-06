@@ -45,16 +45,29 @@ pub(super) fn vendor_pagesize_compat_version_only_diagnostic() {
     measurement::run(measurement::MeasurementMode::CompatPageSizeVersionOnly);
 }
 
+struct PreflightContext<'a> {
+    allowed_port: u16,
+    denied_port: u16,
+    nonce: &'a str,
+    owner_control: Option<&'a Path>,
+    phase_until: Option<Instant>,
+}
+
 fn launch_preflight(
     root: &FixtureRoot,
     profile: &str,
     canary: &Path,
     positive: &Path,
-    allowed_port: u16,
-    denied_port: u16,
-    nonce: &str,
+    context: PreflightContext<'_>,
 ) -> String {
-    let args = [
+    let PreflightContext {
+        allowed_port,
+        denied_port,
+        nonce,
+        owner_control,
+        phase_until,
+    } = context;
+    let mut args = Vec::from([
         "-I".into(),
         "-S".into(),
         HELPER.into(),
@@ -63,7 +76,16 @@ fn launch_preflight(
         allowed_port.to_string().into(),
         denied_port.to_string().into(),
         nonce.into(),
-    ];
+    ]);
+    if let Some(owner_control) = owner_control {
+        args.splice(
+            3..3,
+            [
+                "--owner-control-denial".into(),
+                owner_control.as_os_str().to_owned(),
+            ],
+        );
+    }
     let spec = root
         .spawn_spec(
             profile,
@@ -73,15 +95,18 @@ fn launch_preflight(
             4096,
         )
         .unwrap();
+    let spawn_until = phase_until
+        .map(|until| until.min(Instant::now() + Duration::from_secs(3)))
+        .unwrap_or_else(|| deadline(3000));
     let mut child = ChildGuard::new(
-        RetainedOwnedChild::spawn(spec, &MacIdentity, deadline(3000)).unwrap(),
+        RetainedOwnedChild::spawn(spec, &MacIdentity, spawn_until).unwrap(),
         "vendor-nofork-read-network-preflight",
     );
     if child.initialization() != SpawnInitialization::Ready {
         settle_or_abort(&mut child, WaitOutcome::DeadlineExpired);
     }
-    let exit = child.wait_until(deadline(10_000));
-    drain(&mut child);
+    let exit = child.wait_until(phase_until.unwrap_or_else(|| deadline(10_000)));
+    drain_until(&mut child, phase_until);
     child.settle();
     let (stdout, stderr) = child.take_capture_bytes();
     let identity = child.identity_summary();
@@ -100,7 +125,7 @@ fn launch_preflight(
     String::from_utf8(stdout).unwrap().trim().to_owned()
 }
 
-fn launch_spawn_control(root: &FixtureRoot, profile: &str) -> String {
+fn launch_spawn_control(root: &FixtureRoot, profile: &str, phase_until: Option<Instant>) -> String {
     let spec = root
         .spawn_spec(
             profile,
@@ -115,15 +140,18 @@ fn launch_spawn_control(root: &FixtureRoot, profile: &str) -> String {
             4096,
         )
         .unwrap();
+    let spawn_until = phase_until
+        .map(|until| until.min(Instant::now() + Duration::from_secs(3)))
+        .unwrap_or_else(|| deadline(3000));
     let mut child = ChildGuard::new(
-        RetainedOwnedChild::spawn(spec, &MacIdentity, deadline(3000)).unwrap(),
+        RetainedOwnedChild::spawn(spec, &MacIdentity, spawn_until).unwrap(),
         "controlled-posix-spawn-positive",
     );
     if child.initialization() != SpawnInitialization::Ready {
         settle_or_abort(&mut child, WaitOutcome::DeadlineExpired);
     }
-    let exit = child.wait_until(deadline(5000));
-    drain(&mut child);
+    let exit = child.wait_until(phase_until.unwrap_or_else(|| deadline(5000)));
+    drain_until(&mut child, phase_until);
     child.settle();
     let (stdout, stderr) = child.take_capture_bytes();
     let identity = child.identity_summary();
@@ -154,7 +182,10 @@ pub(super) fn bounded_summary(bytes: &[u8]) -> String {
 }
 
 fn drain(child: &mut RetainedOwnedChild) {
-    let end = deadline(1500);
+    drain_until(child, None);
+}
+pub(super) fn drain_until(child: &mut RetainedOwnedChild, phase_until: Option<Instant>) {
+    let end = phase_until.unwrap_or_else(|| deadline(1500));
     while (!child.capture().stdout.eof || !child.capture().stderr.eof) && Instant::now() < end {
         child.pump(end, 8192).unwrap();
     }
@@ -170,4 +201,8 @@ fn deadline(milliseconds: u64) -> Instant {
 
 pub(super) fn isolated_scripted_protocol() {
     measurement::run(measurement::MeasurementMode::CompatProtocol);
+}
+
+pub(super) fn isolated_owner_hosted_scripted_protocol() {
+    measurement::run(measurement::MeasurementMode::OwnerQualification);
 }

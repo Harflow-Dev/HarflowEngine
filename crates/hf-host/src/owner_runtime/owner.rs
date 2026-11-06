@@ -44,12 +44,16 @@ pub(super) struct OwnerLoop {
     closed: bool,
     until: Instant,
     progress: Progress,
+    vendor_until: Option<Instant>,
 }
-pub(super) fn run() -> Result<(), String> {
+pub(super) fn run(qualification: bool) -> Result<(), String> {
     check_entry().map_err(error)?;
-    let until = Instant::now() + Duration::from_secs(8);
+    let until = Instant::now() + Duration::from_secs(if qualification { 100 } else { 8 });
     let channel = PrivateIo::stdio(until);
     let prepared = setup::handshake(&channel)?;
+    if qualification != prepared.request.payload.starts_with(b"HFCQ") {
+        return Err("owner qualification mode mismatch".into());
+    }
     let mut owner = start(prepared, until)?;
     let result = owner.drive(|_| {});
     if result.is_err() {
@@ -105,6 +109,7 @@ impl OwnerLoop {
     /// Test observers run on the actual owner thread after a complete bounded step.
     pub(super) fn drive(&mut self, mut observe: impl FnMut(&Progress)) -> Result<(), String> {
         loop {
+            self.check_vendor_deadline()?;
             if Instant::now() >= self.until {
                 return Err("owner qualification expired".into());
             }
@@ -168,6 +173,14 @@ impl OwnerLoop {
         if !self.actor.idle() {
             return Ok(());
         }
+        if self.prepared.request.payload.starts_with(b"HFCQ\x01")
+            && exit != ProcessExit::Unobserved
+            && self.capture.final_value.is_some()
+            && self.capture.reconciled()
+            && !self.capture.effect_done
+        {
+            return Err("qualification bridge ended without a complete LaunchReady".into());
+        }
         if self.capture.effect_done && self.input_done && !self.accepted {
             self.actor.submit(StorageCommand::Accept)?;
         } else if self.capture_started && !self.closed {
@@ -176,21 +189,59 @@ impl OwnerLoop {
         }
         Ok(())
     }
+    fn check_vendor_deadline(&mut self) -> Result<(), String> {
+        if self.vendor_until.is_none_or(|until| Instant::now() < until) {
+            return Ok(());
+        }
+        self.vendor_until = None;
+        let child = self
+            .resources
+            .agent
+            .as_mut()
+            .ok_or("qualification child absent")?;
+        if child.try_wait().map_err(error)? != ProcessExit::Unobserved {
+            return Ok(());
+        }
+        {
+            let identity = child
+                .registered_identity()
+                .cloned()
+                .ok_or("qualification child identity unknown")?;
+            // Only this original diagnostic vendor may be signalled; never owner/writer.
+            let _ = child
+                .request_signal(
+                    &identity,
+                    &MacIdentity,
+                    OwnedSignal::Kill,
+                    Instant::now() + Duration::from_secs(2),
+                )
+                .map_err(error)?;
+        }
+        Err("qualification protocol observation expired; no receipt".into())
+    }
     fn spawn_agent(&mut self) -> Result<(), String> {
         let launch = super::launch::check(
             &self.prepared,
             Some(self.resources.hold.source_stamp()),
             self.until,
         )?;
-        let mode = if launch.is_some() {
-            hf_domain::prepared_launch::FIXED_PROTOCOL_ARG
-        } else {
-            let envelope = prep::decode(&self.prepared.request, &Sha256Digest).map_err(error)?;
-            match envelope.assignment {
-                FixtureAssignment::FixedEffect => "--internal-effect-fixture-v1",
-                FixtureAssignment::SaturatedEffect => "--internal-effect-saturation-fixture-v1",
+        let mode = match launch {
+            Some(hf_interfaces::prepared_launch::DecodedPreparation::ClaudeQualification(_)) => {
+                hf_domain::claude_qualification::BRIDGE_MODE
+            }
+            Some(_) => hf_domain::prepared_launch::FIXED_PROTOCOL_ARG,
+            None => {
+                let envelope =
+                    prep::decode(&self.prepared.request, &Sha256Digest).map_err(error)?;
+                match envelope.assignment {
+                    FixtureAssignment::FixedEffect => "--internal-effect-fixture-v1",
+                    FixtureAssignment::SaturatedEffect => "--internal-effect-saturation-fixture-v1",
+                }
             }
         };
+        if mode == hf_domain::claude_qualification::BRIDGE_MODE {
+            self.vendor_until = Some((Instant::now() + Duration::from_secs(90)).min(self.until));
+        }
         self.resources.agent = Some(setup::spawn_at(
             mode,
             &self.cwd,
@@ -207,6 +258,12 @@ impl OwnerLoop {
             .snapshot()
             .ok_or("spawn snapshot absent")?;
         let origin = CaptureOrigin::from_spawn_observed(snapshot).map_err(error)?;
+        if self.prepared.request.payload.starts_with(b"HFCQ\x01") {
+            self.capture.expect_launch_ready(
+                self.prepared.request.attempt.clone(),
+                self.prepared.request.digest.clone(),
+            );
+        }
         let start = Frame::Start(EffectStart {
             operation: self.prepared.request.operation.clone(),
             root: self.prepared.root.clone(),

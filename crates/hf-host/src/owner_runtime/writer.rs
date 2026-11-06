@@ -17,14 +17,17 @@ mod execute;
 mod state;
 use state::Writer;
 
-pub(super) fn run() -> Result<(), String> {
+pub(super) fn run(qualification: bool) -> Result<(), String> {
     check_entry().map_err(error)?;
-    let until = Instant::now() + Duration::from_secs(8);
+    let until = Instant::now() + Duration::from_secs(if qualification { 100 } else { 8 });
     let channel = PrivateIo::stdio(until);
     let first = receive(&channel)?;
     let Message::Command(StorageCommand::Bootstrap(bootstrap)) = first.message else {
         return Err("storage bootstrap required".into());
     };
+    if qualification != bootstrap.request.payload.starts_with(b"HFCQ") {
+        return Err("storage qualification mode mismatch".into());
+    }
     if first.identity.sequence != 1 {
         return Err("storage bootstrap sequence".into());
     }

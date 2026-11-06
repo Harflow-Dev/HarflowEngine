@@ -34,3 +34,9 @@ fn installed_claude_pagesize_compat_read_version_only() {
 fn installed_claude_isolated_scripted_protocol() {
     claude_measurement::isolated_scripted_protocol();
 }
+
+#[test]
+#[ignore = "authorized owner-hosted scripted diagnostic only; primary review and explicit execution required"]
+fn installed_claude_owner_hosted_scripted_protocol() {
+    claude_measurement::isolated_owner_hosted_scripted_protocol();
+}

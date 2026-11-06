@@ -4,3 +4,5 @@
 pub mod claude_measurement;
 
 pub mod claude_offline;
+
+pub mod claude_qualification;

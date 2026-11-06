@@ -32,3 +32,44 @@ pub fn current_parent_identity() -> Option<ProcessIdentity> {
     let confirmed = MacIdentity.identity(pid)?;
     (confirmed == identity && nix::unistd::getppid().as_raw() == before).then_some(identity)
 }
+
+/// Kernel executable-path observation bound to matching process identity bookends.
+/// This is neither a mapped-image digest nor ongoing identity authority.
+pub fn observed_executable_path(
+    expected: &ProcessIdentity,
+    deadline: std::time::Instant,
+) -> std::io::Result<std::path::PathBuf> {
+    let timely = || {
+        if std::time::Instant::now() >= deadline {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "executable observation deadline",
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    timely()?;
+    if MacIdentity.identity(expected.pid()).as_ref() != Some(expected) {
+        return Err(std::io::Error::other(
+            "executable observation identity unavailable or changed",
+        ));
+    }
+    timely()?;
+    let pid = i32::try_from(expected.pid())
+        .map_err(|_| std::io::Error::other("executable observation PID"))?;
+    let path = libproc::proc_pid::pidpath(pid)
+        .map_err(|_| std::io::Error::other("executable observation path unavailable"))?;
+    timely()?;
+    if MacIdentity.identity(expected.pid()).as_ref() != Some(expected) {
+        return Err(std::io::Error::other(
+            "executable observation identity unavailable or changed",
+        ));
+    }
+    timely()?;
+    let path = std::path::PathBuf::from(path);
+    if !path.is_absolute() || path.as_os_str().len() > 4096 {
+        return Err(std::io::Error::other("executable observation invalid path"));
+    }
+    Ok(path)
+}

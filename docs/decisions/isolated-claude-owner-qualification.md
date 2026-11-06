@@ -1,23 +1,26 @@
-# Proposed isolated Claude owner qualification
+# Isolated Claude owner qualification
 
-Status: ready for owner review; not authorized or executed by this stage.
-HarflowMCP remains the canonical contract owner. This proposal grants no public
+Status: bounded experiment authorized by the owner on 2026-11-06 and attempted.
+It refused during the post-version pin check before owner creation. See the
+[diagnostic receipt](../claude-owner-gated-exec.md). No owner-hosted qualification
+or production admission is established.
+HarflowMCP remains the canonical contract owner. This experiment grants no public
 Rust execution capability, production backend admission or client selection.
 
-## Decision requested and recommendation
+## Approved diagnostic scope
 
-Authorize one distinct private `IsolatedClaudeTextQualificationV1` assignment after
-reviewing its canonical ownership and enforcement semantics. Keep it separate from
+The owner authorized one distinct private `IsolatedClaudeTextQualificationV1`
+assignment with the ownership and enforcement semantics below. Keep it separate from
 HFPL1's source-owned fixed protocol helper. The new assignment would exercise the
 real owner/writer/capture path with the already measured disposable local scripted
 provider, without tools, real credentials, paid inference or external destinations.
 A successful experiment would qualify only that exact diagnostic composition.
 Production admission would remain refused.
 
-This is the recommended next experiment after the fixed-helper foundation passes.
+This is the approved next experiment after the fixed-helper foundation passes.
 Do not infer this authorization from approval of a parser, a stored preparation,
-a passing fixed helper, or the earlier direct-child protocol measurement. No code
-in the current stage dispatches this proposed assignment.
+a passing fixed helper, or the earlier direct-child protocol measurement. Only the
+explicitly selected ignored diagnostic harness may dispatch this assignment.
 
 ## Accepted semantics and producer-first deltas
 
@@ -41,8 +44,8 @@ The supported canonical reference is HarflowMCP 0.0.10, commit
 The selected owner-runtime-v1 candidate at
 `4f5b86d27d249094d7378c84029a94e2aaec966d` supplies conservative ownership,
 settlement and enforcement policies. Its synthetic specimens do not authorize a
-real backend. The following deltas require canonical-owner/security review before
-Rust implements the proposed assignment:
+real backend. The reviewed diagnostic implementation keeps these deltas private to this
+assignment; they do not transfer canonical contract ownership:
 
 1. A closed qualification-only backend assignment, explicit permission to launch
    the exact observed vendor binary through the fixed sandbox wrapper, and exact
@@ -55,7 +58,7 @@ Rust implements the proposed assignment:
    a declared logical path.
 2. A source-owned gated-exec bridge and explicit backend framing. A real vendor
    can initialize or act immediately after spawn; it cannot be allowed to bypass
-   the existing durable `RecordChild` before Start ordering. The proposed fresh
+   the existing durable `RecordChild` before Start ordering. The fresh
    single-thread bridge waits for the complete original private Start plus EOF,
    checks its exact stored spawn fence/self identity and frozen assignment, closes
    its store/control descriptors, and uses a reviewed no-fork exec seam for the
@@ -71,7 +74,7 @@ Rust implements the proposed assignment:
    observations. The private experiment returns a final qualification observation,
    not a public ctl launch-acceptance implementation.
 3. A qualification-only deadline envelope, stated below. The existing fixed-helper
-   10/8/4-second limits remain unchanged. These new numbers would not become
+   10/8/4-second limits remain unchanged. These new numbers do not become
    production defaults or guarantee bounded teardown under arbitrary OS I/O.
 4. Explicit acceptance of on-disk executable observations as a diagnostic limit.
    Path/hash bookends and `current_exe()` do not atomically prove the mapped image.
@@ -81,10 +84,10 @@ Rust implements the proposed assignment:
 No new public ctl operation is needed for this private experiment. Any later public
 admission/capability or qualification-proof contract starts in HarflowMCP, with
 identity/provenance, authority, bounds, unknown/refusal outcomes and canonical
-fixtures before Rust adaptation. This document is a proposal, not a fixture-pin
-update or authorization to edit the producer checkout.
+fixtures before Rust adaptation. This document is a diagnostic decision, not a fixture-pin update or authorization
+to edit the producer checkout.
 
-## Exact proposed assignment
+## Exact approved assignment
 
 | Item | Required declaration and independent checks |
 | --- | --- |
@@ -98,7 +101,7 @@ update or authorization to edit the producer checkout.
 | Sandbox | Generate and hash exact per-instance bytes from the already measured compatibility-only profile. Exact `hw.pagesize_compat` read remains the sole sysctl exception. No new filesystem/Mach/fork/process/network exception is proposed. Historical instance profile hashes cannot authorize a new root/port. |
 | Provider | Harness exclusively owns both loopback families at one nonce-bound port. Permit one preflight GET and one fake-authenticated messages POST at the exact `/nonce/v1/messages` or `?beta=true` target; no redirect, DNS, proxy, count-tokens or external fallback. Reply is fixed nonce text SSE, not model inference. |
 | Credentials/cost | Literal disposable fake fixture key only. No environment/keychain/user credential discovery and no paid call. CLI-reported model/cost metadata does not qualify a real service. |
-| Deadlines | Proposed diagnostic limits: 5-second safety preflight and 15-second version phase, both completed before owner creation; then a 90-second vendor protocol observation inside a shared 100-second owner/writer envelope, with a 130-second total dispatcher envelope. Existing bounded transport steps and 20-ms poll remain. Review these numbers explicitly; no silent enlargement of existing fixture budgets. |
+| Deadlines | Approved diagnostic limits: 5-second safety preflight and 15-second version phase, both completed before owner creation; then a 90-second vendor protocol observation inside a shared 100-second owner/writer envelope, with a 130-second total dispatcher envelope. Existing bounded transport steps and 20-ms poll remain. These are diagnostic limits; no silent enlargement of existing fixture budgets. |
 | Capture | Same raw per-stream cap 64 KiB, 128 events, bounded reader queue and append/frame/FD controls. Original owner's exact-byte commitment and full request/source/fence/child/raw-ID/final-capture binding must match exact current captured bytes and validated store snapshots. Truncation, loss, malformed protocol or missing receipt refuses qualification. |
 | Control | Original retained child handles own wait/signal authority. No PID-only fallback, detach/adoption, process-tree kill or inferred descendant containment. Vendor fork/spawn remains denied; owner/writer are separate harness actors outside the vendor profile. |
 

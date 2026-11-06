@@ -16,7 +16,7 @@ owner. Durable files cannot execute a task. Acknowledged launch acceptance does
 not mean completion, delivered output, settlement or retry permission. Unknown
 send/transport/acknowledgment never becomes proof that execution did not occur.
 The source references and the precise remaining decision are in
-[the proposed Claude experiment](decisions/isolated-claude-owner-qualification.md).
+[the bounded Claude experiment](decisions/isolated-claude-owner-qualification.md).
 No producer source or public contract is changed here.
 
 `HFPL1` embeds the unchanged `HFOP1` policy bytes in a distinct closed private

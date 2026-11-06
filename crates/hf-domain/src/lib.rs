@@ -29,3 +29,5 @@ pub mod backend_measurement;
 pub mod backend;
 
 pub mod prepared_launch;
+
+pub mod claude_qualification;

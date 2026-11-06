@@ -51,6 +51,18 @@ pub(super) fn encode(frame: &Frame) -> Result<Vec<u8>, CodecError> {
             w.ledger(v.ledger);
             w.fence(&v.fence);
         }
+        Frame::LaunchReady {
+            operation,
+            attempt,
+            request_digest,
+            child,
+        } => {
+            w.0.push(11);
+            w.id(operation);
+            w.id(attempt);
+            w.0.extend_from_slice(request_digest.as_str().as_bytes());
+            w.process(child);
+        }
         Frame::EffectDone { operation, process } => {
             w.0.push(8);
             w.id(operation);
@@ -60,17 +72,7 @@ pub(super) fn encode(frame: &Frame) -> Result<Vec<u8>, CodecError> {
             operation,
             generation,
             kind,
-        } => {
-            w.0.push(9);
-            w.id(operation);
-            w.id(generation);
-            w.0.push(match kind {
-                ReportKind::Prepared => 0,
-                ReportKind::Existing => 1,
-                ReportKind::Refused => 2,
-                ReportKind::Uncertain => 3,
-            });
-        }
+        } => w.report(operation, generation, *kind),
     }
     if w.0.len() + 4 > MAX_FRAME {
         return Err(CodecError::Length);
@@ -82,6 +84,17 @@ pub(super) fn encode(frame: &Frame) -> Result<Vec<u8>, CodecError> {
 }
 struct Writer(Vec<u8>);
 impl Writer {
+    fn report(&mut self, operation: &Id, generation: &Id, kind: ReportKind) {
+        self.0.push(9);
+        self.id(operation);
+        self.id(generation);
+        self.0.push(match kind {
+            ReportKind::Prepared => 0,
+            ReportKind::Existing => 1,
+            ReportKind::Refused => 2,
+            ReportKind::Uncertain => 3,
+        });
+    }
     fn receipt(
         &mut self,
         v: &hf_domain::prepared_launch::CaptureAccepted,

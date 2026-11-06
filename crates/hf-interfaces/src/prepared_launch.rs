@@ -7,16 +7,18 @@ use hf_domain::{
     ownership::*,
     prepared_launch::*,
 };
-mod wire;
+pub(crate) mod wire;
 #[derive(Clone, Debug, PartialEq)]
 pub enum DecodedPreparation {
     Legacy(Box<PreparationEnvelope>),
+    ClaudeQualification(Box<hf_domain::claude_qualification::ClaudeQualification>),
     FixedProtocol(Box<PreparedLaunch>),
 }
 impl DecodedPreparation {
     pub fn policy(&self) -> &PreparationEnvelope {
         match self {
             Self::Legacy(p) => p,
+            Self::ClaudeQualification(p) => &p.policy,
             Self::FixedProtocol(p) => &p.policy,
         }
     }
@@ -77,7 +79,10 @@ pub fn decode_preparation(
     request: &PreparedRequest,
     hash: &impl DigestPort,
 ) -> Result<DecodedPreparation, PreparationError> {
-    if request.payload.starts_with(b"HFPL\x01") {
+    if request.payload.starts_with(b"HFCQ\x01") {
+        crate::claude_qualification::decode(request, hash)
+            .map(|v| DecodedPreparation::ClaudeQualification(Box::new(v)))
+    } else if request.payload.starts_with(b"HFPL\x01") {
         decode(request, hash).map(|v| DecodedPreparation::FixedProtocol(Box::new(v)))
     } else {
         owner_preparation::decode(request, hash).map(|v| DecodedPreparation::Legacy(Box::new(v)))
@@ -100,6 +105,11 @@ pub fn validate(
         return Err(PreparationError::Binding);
     }
     if let DecodedPreparation::FixedProtocol(v) = &value
+        && v.source != p.source
+    {
+        return Err(PreparationError::Binding);
+    }
+    if let DecodedPreparation::ClaudeQualification(v) = &value
         && v.source != p.source
     {
         return Err(PreparationError::Binding);

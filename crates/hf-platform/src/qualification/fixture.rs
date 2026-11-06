@@ -21,7 +21,7 @@ impl PhysicalIdentity {
 pub struct FixtureRoot {
     root: PathBuf,
     identity: PhysicalIdentity,
-    roles: Vec<(PathBuf, PhysicalIdentity)>,
+    pub(super) roles: Vec<(PathBuf, PhysicalIdentity)>,
 }
 impl FixtureRoot {
     pub fn create() -> io::Result<Self> {
@@ -86,7 +86,7 @@ impl FixtureRoot {
         Ok(())
     }
 }
-fn validate_directory(path: &Path, identity: &PhysicalIdentity) -> io::Result<()> {
+pub(super) fn validate_directory(path: &Path, identity: &PhysicalIdentity) -> io::Result<()> {
     let meta = fs::symlink_metadata(path)?;
     if !meta.is_dir()
         || meta.file_type().is_symlink()
@@ -100,7 +100,7 @@ fn validate_directory(path: &Path, identity: &PhysicalIdentity) -> io::Result<()
     }
     Ok(())
 }
-fn inventory(path: &Path, depth: usize, remaining: &mut usize) -> io::Result<()> {
+pub(super) fn inventory(path: &Path, depth: usize, remaining: &mut usize) -> io::Result<()> {
     if depth > 16 || *remaining == 0 {
         return Err(io::Error::other("fixture topology budget exhausted"));
     }

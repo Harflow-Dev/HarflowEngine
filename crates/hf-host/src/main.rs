@@ -24,6 +24,10 @@ fn main() {
             && matches!(
                 mode,
                 "--fixture-fixed-protocol-helper"
+                    | hf_domain::claude_qualification::PARENT_MODE
+                    | hf_domain::claude_qualification::BRIDGE_MODE
+                    | "--fixture-exec-bridge-witness-v1"
+                    | "--fixture-exec-image-witness-v1"
                     | "--internal-parent-fixture-v1"
                     | "--internal-owner-fixture-v1"
                     | "--internal-effect-fixture-v1"
@@ -39,7 +43,10 @@ fn main() {
         if let Some(mode) = mode.to_str()
             && matches!(
                 mode,
-                "--internal-storage-writer-fixture-v1" | "--internal-isolated-owner-fixture-v1"
+                "--internal-storage-writer-fixture-v1"
+                    | "--internal-isolated-owner-fixture-v1"
+                    | hf_domain::claude_qualification::OWNER_MODE
+                    | hf_domain::claude_qualification::WRITER_MODE
             )
         {
             if owner_runtime::run(mode).is_err() {

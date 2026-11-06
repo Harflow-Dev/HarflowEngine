@@ -31,3 +31,6 @@ impl LeasePort for Adapter {
         }
     }
 }
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub use darwin::{ExecLeaseBarrier, check_exec_image, exec_barrier, restore_blocking_stdio};

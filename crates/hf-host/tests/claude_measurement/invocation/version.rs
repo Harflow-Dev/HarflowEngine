@@ -2,7 +2,7 @@ use super::{claude_fixture_command, request, runner};
 use hf_application::owner_runtime::DigestPort;
 use hf_domain::process::ProcessExit;
 use hf_platform::qualification::FixtureRoot;
-use runner::run;
+use runner::{run, run_until};
 use std::{ffi::OsString, path::Path};
 
 pub(in super::super) struct VersionObservation(runner::RunResult, bool);
@@ -48,6 +48,35 @@ pub(in super::super) fn capture_version_only(
         capture_version(root, profile, &command.executable, environment, selection),
         binary_matches(selection),
     )
+}
+
+pub(in crate::claude_measurement) fn capture_version_only_until(
+    root: &FixtureRoot,
+    profile: &str,
+    selection: &super::super::identity::VendorSelection,
+    port: u16,
+    nonce: &str,
+    until: std::time::Instant,
+) -> VersionObservation {
+    let request = request(root, selection, port, nonce);
+    let command = claude_fixture_command(&request).expect("isolated diagnostic command");
+    assert_eq!(command.executable, request.logical_executable);
+    let environment = command
+        .env
+        .iter()
+        .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
+        .collect();
+    eprintln!("phase=claude-version begin exact-deadline={until:?}");
+    let result = run_until(
+        root,
+        profile,
+        &command.executable,
+        &["--version".into()],
+        environment,
+        until,
+        "claude-version",
+    );
+    VersionObservation(result, true)
 }
 
 pub(super) fn declared_config_digest(

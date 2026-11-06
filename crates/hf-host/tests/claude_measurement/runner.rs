@@ -7,7 +7,7 @@ use hf_platform::{
     process::{MacIdentity, RetainedOwnedChild, SpawnInitialization, WaitOutcome},
     qualification::FixtureRoot,
 };
-use std::{ffi::OsString, path::Path};
+use std::{ffi::OsString, path::Path, time::Instant};
 
 pub(super) struct RunResult {
     pub(super) exit: ProcessExit,
@@ -22,6 +22,12 @@ pub(super) struct RunResult {
     pub(super) stderr_error: Option<String>,
 }
 
+struct PhaseDeadlines {
+    spawn: Instant,
+    wait: Instant,
+    drain: Option<Instant>,
+}
+
 pub(super) fn run(
     root: &FixtureRoot,
     profile: &str,
@@ -31,6 +37,60 @@ pub(super) fn run(
     milliseconds: u64,
     phase: &'static str,
 ) -> RunResult {
+    run_inner(
+        root,
+        profile,
+        executable,
+        args,
+        env,
+        PhaseDeadlines {
+            spawn: super::super::deadline(3000),
+            wait: super::super::deadline(milliseconds),
+            drain: None,
+        },
+        phase,
+    )
+}
+
+pub(super) fn run_until(
+    root: &FixtureRoot,
+    profile: &str,
+    executable: &str,
+    args: &[OsString],
+    env: Vec<(OsString, OsString)>,
+    until: Instant,
+    phase: &'static str,
+) -> RunResult {
+    let spawn_until = until.min(Instant::now() + std::time::Duration::from_secs(3));
+    run_inner(
+        root,
+        profile,
+        executable,
+        args,
+        env,
+        PhaseDeadlines {
+            spawn: spawn_until,
+            wait: until,
+            drain: Some(until),
+        },
+        phase,
+    )
+}
+
+fn run_inner(
+    root: &FixtureRoot,
+    profile: &str,
+    executable: &str,
+    args: &[OsString],
+    env: Vec<(OsString, OsString)>,
+    deadlines: PhaseDeadlines,
+    phase: &'static str,
+) -> RunResult {
+    let PhaseDeadlines {
+        spawn: spawn_until,
+        wait: wait_until,
+        drain: drain_until,
+    } = deadlines;
     let capture_limit = if phase == "claude-version" {
         8192
     } else {
@@ -40,7 +100,7 @@ pub(super) fn run(
         .spawn_spec(profile, Path::new(executable), args, env, capture_limit)
         .unwrap();
     let mut child = super::super::ChildGuard::new(
-        RetainedOwnedChild::spawn(spec, &MacIdentity, super::super::deadline(3000)).unwrap(),
+        RetainedOwnedChild::spawn(spec, &MacIdentity, spawn_until).unwrap(),
         phase,
     );
     if child.initialization() != SpawnInitialization::Ready {
@@ -51,8 +111,12 @@ pub(super) fn run(
         "phase={phase} child-ready identity={}",
         child.identity_summary()
     );
-    let exit = child.wait_until(super::super::deadline(milliseconds));
-    super::super::drain(&mut child);
+    let exit = child.wait_until(wait_until);
+    if drain_until.is_some() {
+        super::super::drain_until(&mut child, drain_until);
+    } else {
+        super::super::drain(&mut child);
+    }
     child.settle();
     let identity = child.identity_summary();
     let stdout_eof = child.capture().stdout.eof;
@@ -126,7 +190,7 @@ pub(super) fn protocol_witnesses(raw: &[u8], nonce: &str) -> Result<(), &'static
     }
 }
 
-pub(super) fn require_protocol_witnesses(raw: &[u8], nonce: &str) {
+pub(in crate::claude_measurement) fn require_protocol_witnesses(raw: &[u8], nonce: &str) {
     protocol_witnesses(raw, nonce).expect("ordered Claude protocol witnesses");
 }
 

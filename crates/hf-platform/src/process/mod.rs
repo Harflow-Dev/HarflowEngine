@@ -10,7 +10,7 @@ mod owned;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use capture::{Capture, StreamCapture};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub use identity::{MacIdentity, current_parent_identity};
+pub use identity::{MacIdentity, current_parent_identity, observed_executable_path};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use owned::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -241,3 +241,8 @@ impl Drop for Guard {
 #[cfg(test)]
 #[path = "darwin/tests.rs"]
 mod lease_tests;
+
+mod exec;
+pub use exec::{
+    ExecLeaseBarrier, barrier as exec_barrier, check_exec_image, restore_blocking_stdio,
+};

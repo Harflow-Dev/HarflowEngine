@@ -97,6 +97,12 @@ pub enum Frame {
     },
     Parent(ParentPlan),
     Start(EffectStart),
+    LaunchReady {
+        operation: Id,
+        attempt: Id,
+        request_digest: Digest,
+        child: ProcessIdentity,
+    },
     EffectDone {
         operation: Id,
         process: ProcessIdentity,

@@ -2,6 +2,7 @@
 
 use hf_application::owner_runtime::DigestPort;
 use hf_interfaces::backend_measurement::{anthropic_text_response, decode_anthropic_request};
+use hf_platform::process::RetainedOwnedChild;
 #[path = "http.rs"]
 mod http;
 use std::{
@@ -28,6 +29,8 @@ pub(super) struct FixtureServer {
     _ipv4_guard: TcpListener,
     stop: Option<Sender<()>>,
     worker: Option<JoinHandle<Result<ServerOutcome, String>>>,
+    post_seen: Option<Receiver<()>>,
+    post_release: Option<Sender<()>>,
 }
 impl FixtureServer {
     pub(super) fn start(nonce: String) -> io::Result<Self> {
@@ -36,12 +39,31 @@ impl FixtureServer {
     pub(super) fn start_preflight_only(nonce: String) -> io::Result<Self> {
         Self::start_with_preflight_only(nonce, true)
     }
+    pub(super) fn start_owner_protocol(nonce: String) -> io::Result<Self> {
+        Self::start_with_post_hold(nonce)
+    }
     fn start_with_preflight_only(nonce: String, preflight_only: bool) -> io::Result<Self> {
+        Self::start_mode(nonce, preflight_only, None)
+    }
+    fn start_with_post_hold(nonce: String) -> io::Result<Self> {
+        let (seen_tx, seen_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        Self::start_mode(nonce, false, Some((seen_tx, release_rx))).map(|mut server| {
+            server.post_seen = Some(seen_rx);
+            server.post_release = Some(release_tx);
+            server
+        })
+    }
+    fn start_mode(
+        nonce: String,
+        preflight_only: bool,
+        post_hold: Option<(Sender<()>, Receiver<()>)>,
+    ) -> io::Result<Self> {
         let (listener, ipv6_guard, port) = reserve_loopback_pair()?;
         let ipv4_guard = listener.try_clone()?;
         let (stop, stopped) = mpsc::channel();
         let worker = thread::spawn(move || {
-            let result = serve(listener, stopped, nonce, preflight_only);
+            let result = serve(listener, stopped, nonce, preflight_only, post_hold);
             eprintln!("phase=fixture-server-worker-return result={result:?}");
             result
         });
@@ -51,6 +73,8 @@ impl FixtureServer {
             _ipv4_guard: ipv4_guard,
             stop: Some(stop),
             worker: Some(worker),
+            post_seen: None,
+            post_release: None,
         })
     }
     pub(super) fn port(&self) -> u16 {
@@ -58,6 +82,39 @@ impl FixtureServer {
     }
     pub(super) fn no_ipv6_connection(&self) -> bool {
         matches!(self.ipv6_guard.accept(), Err(ref error) if error.kind() == io::ErrorKind::WouldBlock)
+    }
+    pub(super) fn wait_for_validated_post_or_parent_exit(
+        &mut self,
+        deadline: Instant,
+        parent: &mut RetainedOwnedChild,
+    ) -> Result<(), String> {
+        let receiver = self.post_seen.take().ok_or("POST hold is not enabled")?;
+        loop {
+            match receiver.try_recv() {
+                Ok(()) => return Ok(()),
+                Err(TryRecvError::Disconnected) => {
+                    return Err("validated POST observer disconnected".into());
+                }
+                Err(TryRecvError::Empty) => (),
+            }
+            let exit = parent.try_wait().map_err(show)?;
+            if exit != hf_domain::process::ProcessExit::Unobserved {
+                return Err(format!("parent settled before validated POST: {exit:?}"));
+            }
+            if Instant::now() >= deadline {
+                return Err("validated POST observation deadline expired".into());
+            }
+            thread::yield_now();
+        }
+    }
+    pub(super) fn release_post(&mut self) -> Result<(), String> {
+        let release = self
+            .post_release
+            .take()
+            .ok_or("POST hold already released")?;
+        release
+            .send(())
+            .map_err(|_| "POST release receiver exited".into())
     }
     pub(super) fn stop_and_join(&mut self) -> ServerOutcome {
         self.stop_and_join_result()
@@ -95,6 +152,9 @@ fn reserve_loopback_pair() -> io::Result<(TcpListener, TcpListener, u16)> {
 }
 impl Drop for FixtureServer {
     fn drop(&mut self) {
+        if let Some(release) = self.post_release.take() {
+            let _ = release.send(());
+        }
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
@@ -132,6 +192,7 @@ fn serve(
     stop: Receiver<()>,
     nonce: String,
     preflight_only: bool,
+    post_hold: Option<(Sender<()>, Receiver<()>)>,
 ) -> Result<ServerOutcome, String> {
     let end = Instant::now() + EXCHANGE_LIMIT;
     let mut preflight = false;
@@ -162,6 +223,14 @@ fn serve(
                         .map_err(|error| format!("fixture codec rejected request: {error:?}"))?;
                     let body = anthropic_text_response(&parsed.model, &nonce)
                         .map_err(|error| format!("fixture response refused: {error:?}"))?;
+                    if let Some((observed, release)) = &post_hold {
+                        observed.send(()).map_err(show)?;
+                        release
+                            .recv_timeout(end.saturating_duration_since(Instant::now()))
+                            .map_err(|error| {
+                                format!("validated POST hold release failed: {error}")
+                            })?;
+                    }
                     http::reply(&mut stream, &body)?;
                     completed = true;
                 } else {

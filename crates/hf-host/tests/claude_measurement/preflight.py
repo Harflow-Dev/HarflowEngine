@@ -42,7 +42,14 @@ def main():
         spawn_probe()
         print("spawn-control=allowed", flush=True)
         return 0
-    outside, inside, allowed_port, denied_port, nonce = sys.argv[1:6]
+    owner_control = None
+    args = sys.argv[1:]
+    if args and args[0] == "--owner-control-denial":
+        if len(args) != 7:
+            raise ValueError("owner control sentinel arguments")
+        owner_control = args[1]
+        args = args[2:]
+    outside, inside, allowed_port, denied_port, nonce = args[:5]
     fork_denied = denied(fork_probe)
     spawn_denied = denied(spawn_probe)
     read_denied = denied(lambda: open(outside, "rb").read(1))
@@ -53,7 +60,11 @@ def main():
         stream.sendall(request)
         allowed_ok = read_preflight_response(stream)
     denied_ok = denied(lambda: socket.create_connection(("127.0.0.1", int(denied_port)), timeout=1))
-    print(f"fork={int(fork_denied)} posix_spawn={int(spawn_denied)} read={int(read_denied)} inside={int(inside_ok)} allowed={int(allowed_ok)} denied_port={int(denied_ok)}", flush=True)
+    result = f"fork={int(fork_denied)} posix_spawn={int(spawn_denied)} read={int(read_denied)} inside={int(inside_ok)} allowed={int(allowed_ok)} denied_port={int(denied_ok)}"
+    if owner_control is not None:
+        owner_write_denied = denied(lambda: open(owner_control, "wb").write(b"x"))
+        result += f" owner_write_denied={int(owner_write_denied)}"
+    print(result, flush=True)
     return 0
 
 

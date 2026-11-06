@@ -11,13 +11,14 @@ use std::{
 
 #[path = "runner.rs"]
 mod runner;
-use runner::{require_protocol_witnesses, run};
+pub(super) use runner::require_protocol_witnesses;
+use runner::run;
 #[path = "invocation/protocol.rs"]
 mod protocol;
 pub(super) use protocol::{ProtocolObservation, capture_protocol};
 #[path = "invocation/version.rs"]
 mod version;
-pub(super) use version::{VersionObservation, capture_version_only};
+pub(super) use version::{VersionObservation, capture_version_only, capture_version_only_until};
 use version::{observe_version, verify_binary_bookend};
 
 pub(super) fn launch_vendor(

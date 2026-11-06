@@ -47,6 +47,12 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Frame, CodecError> {
             ledger: r.ledger()?,
             fence: r.fence()?,
         }),
+        11 => Frame::LaunchReady {
+            operation: r.id()?,
+            attempt: r.id()?,
+            request_digest: r.digest()?,
+            child: r.process()?,
+        },
         8 => Frame::EffectDone {
             operation: r.id()?,
             process: r.process()?,

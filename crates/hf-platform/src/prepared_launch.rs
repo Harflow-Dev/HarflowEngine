@@ -20,11 +20,27 @@ pub fn observe_binary(
     factory: &impl StreamingDigestFactory,
     deadline: Instant,
 ) -> Result<BinaryPin, RecoveryError> {
+    observe_with_limit(path, factory, deadline, 128 * 1024 * 1024)
+}
+/// Closed diagnostic vendor observation; fixed-helper default remains 128 MiB.
+pub fn observe_qualification_vendor(
+    path: &Path,
+    factory: &impl StreamingDigestFactory,
+    deadline: Instant,
+) -> Result<BinaryPin, RecoveryError> {
+    observe_with_limit(path, factory, deadline, 512 * 1024 * 1024)
+}
+fn observe_with_limit(
+    path: &Path,
+    factory: &impl StreamingDigestFactory,
+    deadline: Instant,
+    limit: u64,
+) -> Result<BinaryPin, RecoveryError> {
     timely(deadline)?;
     let physical = fs::canonicalize(path).map_err(unavailable)?;
     let before = fs::symlink_metadata(path).map_err(unavailable)?;
     let stamp = metadata(&before)?;
-    if stamp.length == 0 || stamp.length > 128 * 1024 * 1024 {
+    if stamp.length == 0 || stamp.length > limit {
         return Err(RecoveryError::Refused);
     }
     let mut file = OpenOptions::new()
@@ -35,7 +51,7 @@ pub fn observe_binary(
     if metadata(&file.metadata().map_err(unavailable)?)? != stamp {
         return Err(RecoveryError::Stale);
     }
-    let mut hash = factory.start(128 * 1024 * 1024)?;
+    let mut hash = factory.start(usize::try_from(limit).map_err(|_| RecoveryError::Invalid)?)?;
     let mut bytes = [0_u8; 16384];
     let mut count = 0_u64;
     loop {

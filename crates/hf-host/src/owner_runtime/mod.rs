@@ -7,8 +7,10 @@ mod retention;
 mod writer;
 pub(super) fn run(mode: &str) -> Result<(), String> {
     match mode {
-        "--internal-storage-writer-fixture-v1" => writer::run(),
-        "--internal-isolated-owner-fixture-v1" => owner::run(),
+        "--internal-storage-writer-fixture-v1" => writer::run(false),
+        "--internal-isolated-owner-fixture-v1" => owner::run(false),
+        hf_domain::claude_qualification::OWNER_MODE => owner::run(true),
+        hf_domain::claude_qualification::WRITER_MODE => writer::run(true),
         _ => Err("private owner runtime mode refused".into()),
     }
 }

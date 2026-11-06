@@ -43,14 +43,14 @@ pub(super) fn fields(v: &PreparedLaunch) -> Result<Vec<u8>, PreparationError> {
     text(&mut w, &v.source_profile)?;
     Ok(w)
 }
-fn number(w: &mut Vec<u8>, n: u64) {
+pub(crate) fn number(w: &mut Vec<u8>, n: u64) {
     w.extend_from_slice(&n.to_be_bytes());
 }
-fn identity(w: &mut Vec<u8>, i: &FileIdentity) {
+pub(crate) fn identity(w: &mut Vec<u8>, i: &FileIdentity) {
     number(w, i.device);
     number(w, i.inode);
 }
-fn text(w: &mut Vec<u8>, s: &str) -> Result<(), PreparationError> {
+pub(crate) fn text(w: &mut Vec<u8>, s: &str) -> Result<(), PreparationError> {
     if s.len() > 4096 || s.contains('\0') {
         return Err(PreparationError::Shape);
     }
@@ -127,12 +127,12 @@ pub(super) fn decode(
         source_profile,
     })
 }
-struct Reader<'a> {
-    bytes: &'a [u8],
-    at: usize,
+pub(crate) struct Reader<'a> {
+    pub(crate) bytes: &'a [u8],
+    pub(crate) at: usize,
 }
 impl<'a> Reader<'a> {
-    fn take(&mut self, n: usize) -> Result<&'a [u8], PreparationError> {
+    pub(crate) fn take(&mut self, n: usize) -> Result<&'a [u8], PreparationError> {
         let end = self.at.checked_add(n).ok_or(PreparationError::Shape)?;
         let b = self
             .bytes
@@ -141,28 +141,28 @@ impl<'a> Reader<'a> {
         self.at = end;
         Ok(b)
     }
-    fn u32(&mut self) -> Result<u32, PreparationError> {
+    pub(crate) fn u32(&mut self) -> Result<u32, PreparationError> {
         Ok(u32::from_be_bytes(
             self.take(4)?
                 .try_into()
                 .map_err(|_| PreparationError::Shape)?,
         ))
     }
-    fn number(&mut self) -> Result<u64, PreparationError> {
+    pub(crate) fn number(&mut self) -> Result<u64, PreparationError> {
         Ok(u64::from_be_bytes(
             self.take(8)?
                 .try_into()
                 .map_err(|_| PreparationError::Shape)?,
         ))
     }
-    fn text(&mut self) -> Result<String, PreparationError> {
+    pub(crate) fn text(&mut self) -> Result<String, PreparationError> {
         let n = self.u32()? as usize;
         if n > 4096 {
             return Err(PreparationError::Shape);
         }
         String::from_utf8(self.take(n)?.to_vec()).map_err(|_| PreparationError::Shape)
     }
-    fn fixed(&mut self, n: usize) -> Result<String, PreparationError> {
+    pub(crate) fn fixed(&mut self, n: usize) -> Result<String, PreparationError> {
         let s = String::from_utf8(self.take(n)?.to_vec()).map_err(|_| PreparationError::Shape)?;
         if !s
             .bytes()
@@ -172,13 +172,13 @@ impl<'a> Reader<'a> {
         }
         Ok(s)
     }
-    fn id(&mut self) -> Result<Id, PreparationError> {
+    pub(crate) fn id(&mut self) -> Result<Id, PreparationError> {
         Id::new(self.fixed(32)?).map_err(|_| PreparationError::Shape)
     }
-    fn digest(&mut self) -> Result<Digest, PreparationError> {
+    pub(crate) fn digest(&mut self) -> Result<Digest, PreparationError> {
         Digest::new(self.fixed(64)?).map_err(|_| PreparationError::Shape)
     }
-    fn identity(&mut self) -> Result<FileIdentity, PreparationError> {
+    pub(crate) fn identity(&mut self) -> Result<FileIdentity, PreparationError> {
         Ok(FileIdentity {
             device: self.number()?,
             inode: self.number()?,
