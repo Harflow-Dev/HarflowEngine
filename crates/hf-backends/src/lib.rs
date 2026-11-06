@@ -2,3 +2,5 @@
 //! Reserved backends adapter seam; no runtime implementation.
 
 pub mod claude_measurement;
+
+pub mod claude_offline;

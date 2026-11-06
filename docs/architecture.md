@@ -84,3 +84,8 @@ inputs and fixed-helper mechanics do not qualify public execution or OS enforcem
 [Backend/OS measurements](backend-os-qualification.md) add only fresh-root
 measurement adapters and explicit stock-route refusals; their observations never
 become public execution authority.
+
+The [offline Claude foundation](claude-offline-foundation.md) separates bounded
+JSONL transport decoding, pure backend reduction, declared context correlation and
+read-only owner observation. Synthetic completion evidence never admits a
+production route or changes the fixed-helper launch contract.

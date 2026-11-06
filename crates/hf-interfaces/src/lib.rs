@@ -25,3 +25,5 @@ pub mod owner_profile;
 pub mod owner_preparation;
 
 pub mod backend_measurement;
+
+pub mod claude_stream;
