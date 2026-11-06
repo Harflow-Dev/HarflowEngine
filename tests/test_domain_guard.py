@@ -23,7 +23,7 @@ class DomainGuardTests(unittest.TestCase):
         if cargo is None:
             raise RuntimeError("cargo is required for the domain guard tests")
         subprocess.run([cargo, "build", "--locked", "-p", "hf-architecture"], cwd=ROOT, env=cls.environment, check=True)
-        metadata = subprocess.check_output([cargo, "metadata", "--locked", "--format-version", "1"], cwd=ROOT, env=cls.environment, text=True)
+        metadata = subprocess.check_output([cargo, "metadata", "--locked", "--format-version", "1"], cwd=ROOT, env=cls.environment, encoding="utf-8")
         target = Path(json.loads(metadata)["target_directory"])
         cls.binary = target / "debug" / ("hf-architecture.exe" if os.name == "nt" else "hf-architecture")
 
@@ -34,7 +34,7 @@ class DomainGuardTests(unittest.TestCase):
                 path = root / filename
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(source, encoding="utf-8")
-            return subprocess.run([self.binary, root], capture_output=True, text=True)
+            return subprocess.run([self.binary, root], capture_output=True, encoding="utf-8")
 
     def test_accepts_pure_value_types_and_literal_documentation(self):
         result = self.scan({"src/lib.rs": '/// A domain value.\n#[derive(Clone, Debug, Eq, PartialEq)]\npub struct Value(Option<u32>);\n'})
