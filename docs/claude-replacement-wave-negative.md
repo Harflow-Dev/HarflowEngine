@@ -2,7 +2,8 @@
 
 Status: implemented; local verification complete. The owner authorized
 one installed-vendor measurement on 2026-11-06 under the
-[reviewed scope](decisions/claude-transport-replacement-wave.md). It has not run.
+[reviewed scope](decisions/claude-transport-replacement-wave.md). It ran once and
+failed the unchanged strict gate in 17.20 seconds.
 No production admission, public capability or selected contract pin changes.
 
 ## Implementation boundary
@@ -63,5 +64,62 @@ weakened. Kim's write preflight remained blocked by the unchanged broad command
 allowlist; native Sol low implemented the proxy/harness, a dedicated Luna medium
 writer supplied regressions, and primary integration completed helper custody.
 
-The independently reviewed single authorized measurement is pending. No R05
-acceptance or authentication qualification follows from this fixture.
+Independent final review closed clean before the single authorized measurement.
+No R05 acceptance or authentication qualification follows from this fixture.
+
+## Single installed-vendor result
+
+The optimized ignored entry ran exactly once at implementation `d652778` and
+failed. The closed mode witness confirms total four/active two. Preflight
+isolation, exact Claude/ICU version/hash checks and metadata bookends passed.
+
+| Witness | Observation |
+| --- | --- |
+| Preflight / accepted IPv4 / validated CONNECT | 1 / 5 / 4 |
+| Peak active slots / retired sockets closed | 2 / 4 |
+| First global failure | `ExcessConnection`, 3,761,725 microseconds since proxy worker start |
+| Helper phase/category for all four sessions | `handshake / transport_eof` |
+| Explicit certificate alerts / application data | none / none |
+| Each session forward read / forwarded | 1,482 / 1,482 bytes |
+| Each session reverse read / forwarded | 1,132 / 1,132 bytes |
+| Aggregate raw bytes forward / reverse | 5,928 / 4,528 bytes |
+| Peak pending bytes forward / reverse | 1,482 / 1,132 bytes |
+| Proxy custody | original worker joined, all sockets closed, all four sessions bidirectionally EOF/drained/half-closed |
+| Helper custody | original Code(0), complete stdout/stderr EOF, no capture loss/errors |
+| Vendor original observation | Ready, deadline expired, exit unobserved, zero captured bytes, no pipe EOF before cleanup |
+| Vendor cleanup exit | identity-bound Signal(9); incomplete observation remains failed |
+| Static CLI certificate-error witness / observation within negative deadline | false / false |
+| Denied listener / IPv6 attempts | quiet / zero |
+| Canaries / bounded post-settlement fake-token scan | unchanged / complete, zero matches |
+
+Recorded helper peers `127.0.0.1:62826`, `:62827`, `:62829`, `:62831` match
+proxy upstream-local tuples for ordinals one through four, respectively. The
+frozen helper address was `127.0.0.1:62817`. Every admitted session's EOF/drain
+and half-close evidence was already established before global poison; retirement
+closed the four original sockets. The fifth accepted socket stayed unread and
+was not forwarded. Its destination, contents and caller purpose remain unknown.
+
+Allowing one hypothetical replacement wave reproduced the same handshake EOF
+outcome. It did not produce a completed CLI certificate refusal or an explicit
+helper certificate alert. EOF is not promoted to certificate rejection; the
+strict control remains failed. This does not identify why Claude closes, prove
+an SDK retry, establish a universal startup connection allowance or qualify the
+embedded runtime. No larger cap, longer deadline, revised oracle or automatic
+rerun follows. Remaining qualification gates stay in the reviewed design.
+
+All settlement, controls and the bounded scan preceded the assertion. Failed
+roots remain retained. All 17 protected peer/tracker files remain byte-identical.
+No real credentials, broker, real upstream/provider/model/tool call, paid call,
+production admission, install, registration, push or release occurred.
+
+## Retained bindings
+
+- Root: `/private/var/folders/cx/wx59rnx154n9dl6qp7nyl_sw0000gp/T/harflow-os-measurement-74112ccae8038fffd3d592c40a2f39a1`.
+- Root device/inode/mode: `16777230 / 605183390 / 0700`.
+- Proxy port: `62818`; nonce is the root suffix above.
+- Profile SHA-256: `10d433e218df3e23bc484792cdcce4ba2f282ae53ea5af3fe902c44110f3b344`.
+- Vendor: `/Users/nayanda/.local/share/claude/versions/2.1.318`, 319598464 bytes;
+  SHA-256 `677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d`.
+- ICU SHA-256: `666a97d4dd1139f537290d74a661cc6b6da6cc58da24486b3cb282eacbcfa549`.
+- Log: `/private/tmp/harflow-wave/run.log`;
+  SHA-256 `cde29150279e514828b64a081dd710638520a20fe296f9c282504af4660c0eb2`.

@@ -1,8 +1,9 @@
 # Claude isolated transport: one replacement-wave candidate
 
 Status: owner approved implementation and one fake-only measurement on 2026-11-06.
-Implementation is under review; the authorized vendor measurement has not run.
-No production admission.
+Implemented at `d652778`; the authorized vendor measurement ran once and failed.
+See the [result and retained evidence](../claude-replacement-wave-negative.md).
+No production admission or further runtime run is authorized.
 Claude support remains required. R06 independent work is paused at a plan-only
 checkpoint while this transport blocker is investigated.
 
