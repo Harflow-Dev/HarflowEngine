@@ -112,3 +112,50 @@ still fails; even an identified non-certificate alert cannot qualify. No runtime
 run, live-auth transition, provider call, cap increase, install, registration,
 production admission, push or release is selected by this proposal. Additional
 experiments would require new discriminating evidence and separate authorization.
+
+## Authorized category/phase measurement — 2026-11-06
+
+The owner subsequently authorized exactly one same-bound two-tunnel fake-only
+measurement at `f2a43a5`. The optimized installed entry ran once and failed in
+17.03 seconds. No runtime or bound changes preceded it.
+
+| Witness | Observation |
+| --- | --- |
+| Helper sessions 1 and 2 | `handshake` / `transport_eof`; TLS error, certificate false, application data false, closed |
+| Session peer bindings | `127.0.0.1:64506` and `127.0.0.1:64507`, exactly matching proxy upstream-local tuples |
+| Frozen helper address | `127.0.0.1:64498` |
+| Proxy preflight / accepted / CONNECT | 1 / 3 / 2 |
+| First global failure | `ExcessConnection` at 1,956,253 microseconds since proxy worker start |
+| Each slot client-to-helper read / forwarded | 1,482 / 1,482 bytes |
+| Each slot reverse read / forwarded | 1,132 / 1,132 bytes |
+| Aggregate peak pending forward / reverse | 1,482 / 1,132 bytes |
+| Proxy custody | original worker joined, all owned sockets closed, both directions EOF/half-closed/flushed |
+| Helper custody | original Code(0), complete stdout/stderr EOF, no overflow/errors |
+| Vendor observation | original exit unobserved, deadline expired, zero captured bytes, no pipe EOF before cleanup |
+| Vendor cleanup | identity-bound Signal(9); incomplete observation remains failed |
+| Static certificate refusal / observation within negative deadline | false / false |
+| Denied listener / IPv6 attempts | quiet / zero |
+| Canaries / bounded fake-token scan | unchanged / complete, zero matches |
+
+Preflight isolation, exact vendor version/hash, ICU hash and metadata bookends
+passed. This is evidence of handshake transport EOF at the helper, not an explicit
+peer certificate alert. It does not establish why the client closed, its request
+purpose, or whether closure preceded or followed global poison. The third socket
+remained unread; its destination, content and caller are unknown. No retrospective
+reclassification of the earlier run follows. Strict qualification remains failed.
+
+The original vendor, helper and proxy custody settled before the final scan and
+assertion. All 17 protected peer/tracker files remain byte-identical. No real
+credentials, broker, real upstream/provider call, paid call, content logging,
+production admission, push or release occurred. No retry, cap increase or further
+runtime experiment is selected by this receipt.
+
+Retained evidence:
+
+- Log: `/private/tmp/harflow-two-tunnel-categories-run/run.log`.
+- Log SHA-256: `77134169551bbdf3f4d97a2229f1ad5ed55dbf8e1031140d323a789ebaeb569f`.
+- Root: `/private/var/folders/cx/wx59rnx154n9dl6qp7nyl_sw0000gp/T/harflow-os-measurement-3c3e696b6423438baa95bb988465d234`.
+- Root device/inode/mode: `16777230 / 604449042 / 0700`.
+- Proxy port: `64499`; profile SHA-256: `fea9ef04d3550c472af54fc80d817fda3ed7d8474f6727829696c7f4a63305d4`.
+- Claude 2.1.318 SHA-256: `677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d`.
+- ICU SHA-256: `666a97d4dd1139f537290d74a661cc6b6da6cc58da24486b3cb282eacbcfa549`.
