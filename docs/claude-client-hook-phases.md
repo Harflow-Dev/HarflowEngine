@@ -134,8 +134,8 @@ peer files remained unchanged. The failed root and its outside canary are retain
 
 The new observation is **no recorded hook entry**. It does not establish whether
 the TLS path bypassed the hook, a later global replacement occurred, or recording
-became unavailable after READY. No phase rows exercised this short-record path
-inside the pinned Bun process; offline Node controls do not fill that coverage
+became unavailable after READY. Successful short-record emission inside the pinned
+Bun process remains unproven; offline Node controls do not fill that coverage
 gap. The TLS failure reason remains unknown. No additional run, broader hook,
 content logging, credentials, provider calls, production admission, push or release
 followed. All original caps, isolation, deadlines, budgets and strict predicates
