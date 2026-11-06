@@ -1,6 +1,12 @@
 # Proposed pinned-Bun short-record control
 
-Date: 2026-11-06. Status: proposal; no implementation or vendor execution is
+**Cancelled on 2026-11-06 by owner decision D3** of the workspace
+`HARFLOW_ENGINE_COMPLETION_PLAN.md`. It was never implemented or run. The approval recorded in
+`docs/handoffs/2026-11-06-claude-r06-and-tls.md` stays unused, and the existing harnesses
+stay dormant. No slice's acceptance depended on this control.
+The text below is the historical record.
+
+Date: 2026-11-06. Status at the time: proposal; no implementation or vendor execution is
 selected by this document. The previous one-measurement authorization is spent.
 A new explicit approval is required for one additional pinned `--version` control.
 There is no authorization for another TLS capture, broader hook, trust change,

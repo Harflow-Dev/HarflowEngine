@@ -11,6 +11,10 @@ permission enforcement. The supported MCP 0.0.10/full207 baseline remains distin
 
 ## Approved policies
 
+Owner decision D5 of 2026-11-06 confirms that these approvals stand. Where the historical
+[R04-B](migration-receipts/R04-B.md) and [R04-D3](migration-receipts/R04-D3.md) receipts
+describe these policies as unaccepted or pending, this section supersedes them.
+
 Unresolved ownership, capture, containment or resource reconciliation retains the
 original actors and claims for attention. It does not authorize automatic
 adoption, replay, replacement, cancellation or release.

@@ -63,7 +63,8 @@ spawn with sole-wait authority. Schema4 roots refuse without conversion. Store l
 can remain held across launch; historical fixture close-before-spawn rules are no
 longer the concurrent isolation mechanism. Requested differing CWD is refused by
 the safe seam. This remains internal qualification, not a production owner runtime
-or new public capability; R04-B's later policy recommendations are not accepted.
+or new public capability. R04-B's policy recommendations were not accepted at that stage; see
+the [owner-runtime candidate](owner-runtime.md) for the approvals that now govern.
 
 The bounded [R04-D D1 owner foundation](migration-receipts/R04-D.md) retains a
 stateful application OwnerSession and its narrow injected Store port across the

@@ -1,6 +1,13 @@
 # Isolated live Claude authentication and egress
 
-Status: owner-authorized on 2026-11-06; implementation and source review completed.
+**Superseded on 2026-11-06.** The owner approved decision D1 of the workspace
+`HARFLOW_ENGINE_COMPLETION_PLAN.md`, which replaces this fake-TLS and CONNECT-proxy track
+for real Claude qualification. The new composition has no proxy, so its certificate-gate
+premise no longer applies. It provides no egress confinement or credential brokering,
+and it reports network as not controlled. The harness stays dormant and is not deleted.
+The text below is the historical record. It grants no current authority.
+
+Status at the time: owner-authorized on 2026-11-06; implementation and source review completed.
 The actual fake-token TLS control failed before the real-credential branch. See
 [the experiment receipt](../claude-live-auth-egress.md). No authenticated provider
 result or TLS rejection qualification is established. This is a private diagnostic,

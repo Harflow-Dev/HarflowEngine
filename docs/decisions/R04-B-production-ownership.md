@@ -1,5 +1,10 @@
 # R04-B — Production ownership and recovery policy
 
+**Status update, 2026-11-06:** owner decision D5 confirms that the four approvals in HarflowMCP
+`docs/decisions/owner-runtime-v1.md` stand, and they govern where this proposal differs. See
+[owner-runtime candidate](../owner-runtime.md). The receipts for R04-B and R04-D3 are
+historical and unchanged, so their "not accepted" and "pending" policy wording is superseded.
+
 2026-11-05. Proposed specification; no implementation or owner acceptance.
 See [receipt](../migration-receipts/R04-B.md), [R01 architecture](R01-architecture.md)
 and [R04-A evidence](../migration-receipts/R04-A.md).
