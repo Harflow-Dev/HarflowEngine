@@ -73,7 +73,7 @@ fn header(
     }
     Err(io::Error::other("proxy header budget"))
 }
-fn route(header: &str, nonce: &str) -> io::Result<bool> {
+pub(in crate::qualification::live) fn route(header: &str, nonce: &str) -> io::Result<bool> {
     let mut lines = header.split("\r\n");
     let first = lines.next().unwrap_or_default();
     let connect = first == "CONNECT api.anthropic.com:443 HTTP/1.1";

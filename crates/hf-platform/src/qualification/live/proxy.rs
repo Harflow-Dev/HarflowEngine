@@ -14,7 +14,7 @@ pub use diagnostics::{
     ExtraAcceptSnapshot, ProxyFailure, ProxyFailureStage, RejectionCounts, RelayDirectionSnapshot,
 };
 #[path = "relay.rs"]
-mod relay;
+pub(super) mod relay;
 #[derive(Clone, Copy, Debug)]
 pub enum ProxyMode {
     Live,

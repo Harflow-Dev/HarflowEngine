@@ -16,3 +16,6 @@ pub fn live_profile(root: &FixtureRoot, port: u16) -> io::Result<String> {
     profile.push_str("(deny file-write* (regex #\"(^|/)[.]credentials[.]json$\"))\n");
     Ok(profile)
 }
+
+mod two_tunnel;
+pub use two_tunnel::*;

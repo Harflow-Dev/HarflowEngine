@@ -102,3 +102,8 @@ It is a separate direct-child slice, not live-owner execution or a public backen
 route. Its fake-token TLS gate remains unqualified, so its real-credential branch
 has not run. The [decision](decisions/claude-live-auth-egress.md) records its bounds
 and explicitly unqualified retry, billing and production guarantees.
+
+The separate [two-tunnel fake-only TLS control](claude-two-tunnel-negative.md) is an
+owner-approved bounded diagnostic. It adds no real-provider route, credential
+access, public capability or production admission; its own receipt determines
+whether the stricter negative-control evidence is qualified.

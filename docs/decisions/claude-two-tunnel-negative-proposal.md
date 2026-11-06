@@ -1,7 +1,9 @@
 # Proposed two-tunnel fake-token TLS control
 
-Status: reviewed proposal pending explicit owner decision. Not implemented,
-selected or authorized for execution. The existing one-CONNECT mode remains
+Status: owner-approved on 2026-11-06 for implementation and one reviewed fake-only
+measurement. Implementation and review are complete; the single measurement failed.
+See [the receipt](../claude-two-tunnel-negative.md); strict TLS qualification remains
+unestablished. The existing one-CONNECT mode remains
 unchanged. No new public contract, capability or production grant is proposed.
 HarflowMCP remains the canonical public contract owner.
 

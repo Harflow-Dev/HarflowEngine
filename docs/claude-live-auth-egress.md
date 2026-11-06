@@ -299,3 +299,13 @@ No new code fix was justified by these results. The 17 inventoried peer/tracker
 files were byte-identical after the documentation-only stage. The previously noted
 unrelated full-all-target Clippy blocker remains; no new global or hosted pass is
 claimed. No runtime admission or release authorization was exercised.
+
+## Approved two-tunnel follow-up
+
+The owner subsequently approved the distinct two-tunnel fake-only implementation
+and one reviewed run. [Its separate receipt](claude-two-tunnel-negative.md) records
+two progressed, settled tunnels with generic TLS-error/no-application-data helper
+outcomes, followed by a refused third socket and the vendor deadline. No explicit
+certificate-rejection evidence was established. The original one-tunnel/live modes
+were not changed, no real-credential phase ran, and production admission remains
+refused. No further connection allowance or automatic retry was authorized.
