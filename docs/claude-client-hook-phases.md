@@ -1,7 +1,7 @@
 # Claude hook-entry and settlement diagnosis
 
-Status: implemented and offline-verified; final independent review pending.
-No measurement has run in this stage. The previous
+Status: implementation and independent review complete; the single fake-only
+measurement ran and remains unqualified. The previous
 [client-error observation](claude-client-tls-reason.md) remains unqualified:
 READY alone did not establish whether fetch was called, fulfilled, rejected or
 unsettled. This stage adds bounded phase metadata to that same diagnostic hook.
@@ -89,3 +89,54 @@ architecture/legacy guards and whitespace checks passed. UI is not applicable.
 The unrelated peer ST04 all-target Clippy limitation remains outside this scoped
 claim. Native Sol low implemented the adapters, a dedicated Luna medium writer
 owned regressions, and the primary independently verified the checks.
+
+## Single measurement receipt
+
+Implementation: `ac5e59a`. Independent plan review and fresh final source review
+closed clean before execution. On 2026-11-06 the one release-mode
+`fake_only_client_reason` measurement failed in 19.04 seconds. The metadata-only
+log SHA-256 is
+`98d85b3ee5afb2b9ce365a4dbf58c28beab8bc1e1513af5facda7bdad69dc5de`.
+
+The instrumented version phase qualified: original PID 68597, start
+1793968452.204219, Code(0), exact 22-byte version, empty stderr, complete physical
+EOFs and a healthy 94-byte protocol-2 report with zero recorded version calls.
+It was part of this measurement, not a separate repeated support probe.
+
+Negative PID 68625, start 1793968453.252158, wrote a valid nonce/PID-bound 43-byte
+`CR2` READY row only. No entry, native-return, synchronous-throw, fulfillment,
+error-category, attachment/classification-fault, overflow or final row was
+recorded. The strict parser returned no recorded calls or errors,
+`reported_calls: None`, and incomplete/unqualified health. This is not a positive
+observation of recorder failure or a proven zero-call total. The original CLI
+streams were empty; the original 15-second negative observation expired with no
+observed exit. Retained cleanup settled the original with Signal(9); its custody
+path requires original exit and physical EOFs before returning. Cleanup does not
+repair the expired observation into success.
+
+The four admitted sessions again reported Handshake/TransportEof. All had matched
+SNI and native server Certificate/ServerHelloDone write milestones, without
+observed client key exchange, CCS, Finished, alert or application data. Each
+forwarded 1482 bytes toward the helper and 1132 toward the client, with empty
+buffers, physical EOF/half-close and socket closure. Peak active slots remained
+two; all four retired normally. A fifth accept was rejected as ExcessConnection
+at 4,118,789 microseconds from proxy start, without upstream admission. The proxy
+joined and closed all owned sockets. The original strict gate failed at the
+negative proxy deadline; CLI refusal and per-session certificate-alert conditions
+also remain unsatisfied.
+
+The original helper PID 68507 exited Code(0), with complete observation and
+physical EOFs, 479 bytes stdout, empty stderr and no capture errors. All source,
+vendor/ICU bookends, canaries, denied IPv4/IPv6 listeners and bounded fake-token
+scan passed before assertions. Candidate source/test hashes and all 17 protected
+peer files remained unchanged. The failed root and its outside canary are retained:
+`harflow-os-measurement-709142dc8d423f6fc2931fb2fd91f227`.
+
+The new observation is **no recorded hook entry**. It does not establish whether
+the TLS path bypassed the hook, a later global replacement occurred, or recording
+became unavailable after READY. No phase rows exercised this short-record path
+inside the pinned Bun process; offline Node controls do not fill that coverage
+gap. The TLS failure reason remains unknown. No additional run, broader hook,
+content logging, credentials, provider calls, production admission, push or release
+followed. All original caps, isolation, deadlines, budgets and strict predicates
+remain unchanged.
