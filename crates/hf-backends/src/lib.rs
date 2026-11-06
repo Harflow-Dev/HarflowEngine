@@ -6,3 +6,5 @@ pub mod claude_measurement;
 pub mod claude_offline;
 
 pub mod claude_qualification;
+
+pub mod claude_live_probe;

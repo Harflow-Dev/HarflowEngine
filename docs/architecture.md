@@ -95,3 +95,10 @@ adds a distinct closed preparation and original-owner byte commitment, composed
 with exact current raw-source validation. It preserves one-use handoff, claim CAS
 and unknown-outcome boundaries. The linked real-Claude experiment is a proposal;
 no backend dispatch or production admission follows from these private mechanics.
+
+The private [live Claude authentication/egress probe](claude-live-auth-egress.md)
+adds memory-only credential handling and a destination-locked CONNECT diagnostic.
+It is a separate direct-child slice, not live-owner execution or a public backend
+route. Its fake-token TLS gate remains unqualified, so its real-credential branch
+has not run. The [decision](decisions/claude-live-auth-egress.md) records its bounds
+and explicitly unqualified retry, billing and production guarantees.

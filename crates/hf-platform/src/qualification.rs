@@ -25,3 +25,6 @@ pub fn require_support() -> std::io::Result<()> {
 mod recorded;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use recorded::{qualification_read_paths, recorded_vendor_profile, validate_recorded_topology};
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub mod live;
