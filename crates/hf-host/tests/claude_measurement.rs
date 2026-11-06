@@ -28,3 +28,9 @@ fn installed_claude_pagesize_read_version_only() {
 fn installed_claude_pagesize_compat_read_version_only() {
     claude_measurement::vendor_pagesize_compat_version_only_diagnostic();
 }
+
+#[test]
+#[ignore = "explicit local fake-provider measurement only; full same-profile security preflight required"]
+fn installed_claude_isolated_scripted_protocol() {
+    claude_measurement::isolated_scripted_protocol();
+}

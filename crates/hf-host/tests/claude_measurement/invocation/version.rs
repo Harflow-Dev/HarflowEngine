@@ -5,10 +5,15 @@ use hf_platform::qualification::FixtureRoot;
 use runner::run;
 use std::{ffi::OsString, path::Path};
 
-pub(in super::super) struct VersionObservation(runner::RunResult);
+pub(in super::super) struct VersionObservation(runner::RunResult, bool);
 
 impl VersionObservation {
+    pub(in super::super) fn is_supported(&self) -> bool {
+        self.1 && supported_version(&self.0)
+    }
+
     pub(in super::super) fn require_supported(&self) {
+        assert!(self.1, "binary bookend changed");
         require_version(&self.0);
     }
 }
@@ -39,16 +44,13 @@ pub(in super::super) fn capture_version_only(
         .iter()
         .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
         .collect();
-    VersionObservation(capture_version(
-        root,
-        profile,
-        &command.executable,
-        environment,
-        selection,
-    ))
+    VersionObservation(
+        capture_version(root, profile, &command.executable, environment, selection),
+        binary_matches(selection),
+    )
 }
 
-fn declared_config_digest(
+pub(super) fn declared_config_digest(
     executable: &str,
     args: &[String],
     env: &[(String, String)],
@@ -97,6 +99,7 @@ pub(super) fn observe_version(
     selection: &super::super::identity::VendorSelection,
 ) {
     let result = capture_version(root, profile, executable, env, selection);
+    verify_binary_bookend(selection);
     require_version(&result);
 }
 
@@ -105,7 +108,7 @@ fn capture_version(
     profile: &str,
     executable: &str,
     env: Vec<(OsString, OsString)>,
-    selection: &super::super::identity::VendorSelection,
+    _selection: &super::super::identity::VendorSelection,
 ) -> runner::RunResult {
     eprintln!("phase=claude-version begin");
     let result = run(
@@ -117,7 +120,6 @@ fn capture_version(
         12_000,
         "claude-version",
     );
-    verify_binary_bookend(selection);
     eprintln!(
         "phase=claude-version complete exit={:?} child identity={}",
         result.exit, result.identity
@@ -125,7 +127,18 @@ fn capture_version(
     result
 }
 
+fn supported_version(result: &runner::RunResult) -> bool {
+    result.capture_is_complete()
+        && result.exit == ProcessExit::Code(0)
+        && result.stderr.is_empty()
+        && String::from_utf8_lossy(&result.stdout).contains("2.1.318")
+}
+
 fn require_version(result: &runner::RunResult) {
+    assert!(
+        result.capture_is_complete(),
+        "complete untruncated version capture"
+    );
     assert_eq!(
         result.exit,
         ProcessExit::Code(0),
@@ -143,6 +156,11 @@ fn require_version(result: &runner::RunResult) {
         String::from_utf8_lossy(&result.stdout).contains("2.1.318"),
         "observed version differs from pinned 2.1.318"
     );
+}
+
+pub(super) fn binary_matches(selection: &super::super::identity::VendorSelection) -> bool {
+    let current = super::super::identity::selection();
+    current.logical == selection.logical && current.expected_hash == selection.expected_hash
 }
 
 pub(super) fn verify_binary_bookend(selection: &super::super::identity::VendorSelection) {

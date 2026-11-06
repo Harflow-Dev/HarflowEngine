@@ -167,3 +167,7 @@ fn drain(child: &mut RetainedOwnedChild) {
 fn deadline(milliseconds: u64) -> Instant {
     Instant::now() + Duration::from_millis(milliseconds)
 }
+
+pub(super) fn isolated_scripted_protocol() {
+    measurement::run(measurement::MeasurementMode::CompatProtocol);
+}

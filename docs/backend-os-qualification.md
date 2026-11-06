@@ -121,6 +121,11 @@ profile hashes and declared configuration binding were recorded. This qualifies
 only the measured version startup, with no provider or tools session and no
 production policy change. The receipt preserves both failures and this result.
 
+The subsequent [isolated scripted protocol measurement](claude-scripted-protocol.md)
+passed the one-shot local text exchange under the same profile, with an explicit
+bundled-ICU data selection and exact SDK query handling. It adds no production
+admission, real-provider authentication or tool qualification.
+
 See [the measured stage receipt](backend-os-qualification-receipt.md) for the
 verification boundary and remaining production gates.
 

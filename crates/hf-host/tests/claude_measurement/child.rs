@@ -34,6 +34,20 @@ impl ChildGuard {
         format!("{:?}", self.child.registered_identity())
     }
     fn unknown(&self, reason: &str) -> ! {
+        for (stream, capture) in [
+            ("stdout", &self.child.capture().stdout),
+            ("stderr", &self.child.capture().stderr),
+        ] {
+            eprintln!(
+                "phase={} uncertain-capture stream={stream} length={} eof={} overflow={} error={:?} buffered={}",
+                self.phase,
+                capture.bytes.len(),
+                capture.eof,
+                capture.overflow,
+                capture.error,
+                super::bounded_summary(&capture.bytes)
+            );
+        }
         eprintln!(
             "phase={} child identity={} remains uncertain: {reason}; aborting and retaining fixture",
             self.phase,

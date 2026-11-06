@@ -1,5 +1,6 @@
 #![allow(clippy::expect_used, clippy::panic, clippy::unwrap_used)]
 
+use hf_application::owner_runtime::DigestPort;
 use hf_interfaces::backend_measurement::{anthropic_text_response, decode_anthropic_request};
 #[path = "http.rs"]
 mod http;
@@ -24,6 +25,7 @@ pub(super) enum ServerOutcome {
 pub(super) struct FixtureServer {
     port: u16,
     ipv6_guard: TcpListener,
+    _ipv4_guard: TcpListener,
     stop: Option<Sender<()>>,
     worker: Option<JoinHandle<Result<ServerOutcome, String>>>,
 }
@@ -36,11 +38,17 @@ impl FixtureServer {
     }
     fn start_with_preflight_only(nonce: String, preflight_only: bool) -> io::Result<Self> {
         let (listener, ipv6_guard, port) = reserve_loopback_pair()?;
+        let ipv4_guard = listener.try_clone()?;
         let (stop, stopped) = mpsc::channel();
-        let worker = thread::spawn(move || serve(listener, stopped, nonce, preflight_only));
+        let worker = thread::spawn(move || {
+            let result = serve(listener, stopped, nonce, preflight_only);
+            eprintln!("phase=fixture-server-worker-return result={result:?}");
+            result
+        });
         Ok(Self {
             port,
             ipv6_guard,
+            _ipv4_guard: ipv4_guard,
             stop: Some(stop),
             worker: Some(worker),
         })
@@ -52,14 +60,17 @@ impl FixtureServer {
         matches!(self.ipv6_guard.accept(), Err(ref error) if error.kind() == io::ErrorKind::WouldBlock)
     }
     pub(super) fn stop_and_join(&mut self) -> ServerOutcome {
+        self.stop_and_join_result()
+            .expect("fixture server accepted only its bounded protocol")
+    }
+    pub(super) fn stop_and_join_result(&mut self) -> Result<ServerOutcome, String> {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
-        let result = join_bounded(self.worker.take().expect("owned fixture worker"));
+        let worker = self.worker.take().ok_or("fixture worker already joined")?;
+        let result = join_bounded(worker).and_then(|outcome| outcome);
         eprintln!("phase=fixture-server-stop result={result:?}");
         result
-            .expect("fixture server thread completed within deadline")
-            .expect("fixture server accepted only its bounded protocol")
     }
 }
 
@@ -87,10 +98,9 @@ impl Drop for FixtureServer {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
-        if let Some(worker) = self.worker.take()
-            && join_bounded(worker).is_err()
-        {
-            eprintln!("fixture server thread panicked");
+        if let Some(worker) = self.worker.take() {
+            let result = join_bounded(worker).and_then(|outcome| outcome);
+            eprintln!("phase=fixture-server-drop result={result:?}");
         }
     }
 }
@@ -139,6 +149,7 @@ fn serve(
                     .set_write_timeout(Some(Duration::from_secs(1)))
                     .map_err(show)?;
                 let request = http::read_request(&mut stream, end)?;
+                log_request(&request);
                 if is_preflight_request(preflight, completed, &request, &nonce) {
                     http::reply(&mut stream, b"preflight-ok")?;
                     preflight = true;
@@ -176,6 +187,18 @@ fn serve(
     }
 }
 
+fn log_request(request: &http::Request) {
+    let digest = hf_storage::Sha256Digest.digest_parts(&[&request.body]);
+    let method: String = request.method.chars().take(512).collect();
+    let path: String = request.path.chars().take(512).collect();
+    let fake_auth_match = request.headers.get("x-api-key").map(String::as_str) == Some(FAKE_KEY);
+    eprintln!(
+        "phase=fixture-request method={method:?} path={path:?} body-length={} body-sha256={} fake-auth-match={fake_auth_match}",
+        request.body.len(),
+        digest.as_str()
+    );
+}
+
 fn is_preflight_request(
     preflight: bool,
     completed: bool,
@@ -200,7 +223,8 @@ fn is_fixture_request(
         && preflight
         && !completed
         && request.method == "POST"
-        && request.path == format!("/{nonce}/v1/messages")
+        && (request.path == format!("/{nonce}/v1/messages")
+            || request.path == format!("/{nonce}/v1/messages?beta=true"))
 }
 
 fn stopped(stop: &Receiver<()>) -> Result<bool, String> {
@@ -249,3 +273,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "server/ownership_tests.rs"]
+mod ownership_tests;

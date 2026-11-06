@@ -11,7 +11,9 @@ pub(super) fn select(mode: MeasurementMode, base: &str) -> String {
         MeasurementMode::FullFixture => "",
         MeasurementMode::VersionOnlySysctl => BANNER_RULE,
         MeasurementMode::PageSizeVersionOnly => PAGE_SIZE_RULE,
-        MeasurementMode::CompatPageSizeVersionOnly => COMPAT_PAGE_SIZE_RULE,
+        MeasurementMode::CompatPageSizeVersionOnly | MeasurementMode::CompatProtocol => {
+            COMPAT_PAGE_SIZE_RULE
+        }
     };
     assert!(
         !base.contains("sysctl-read"),
@@ -28,7 +30,9 @@ pub(super) fn delta(mode: MeasurementMode) -> &'static str {
         MeasurementMode::FullFixture => "none",
         MeasurementMode::VersionOnlySysctl => BANNER_RULE.trim(),
         MeasurementMode::PageSizeVersionOnly => PAGE_SIZE_RULE.trim(),
-        MeasurementMode::CompatPageSizeVersionOnly => COMPAT_PAGE_SIZE_RULE.trim(),
+        MeasurementMode::CompatPageSizeVersionOnly | MeasurementMode::CompatProtocol => {
+            COMPAT_PAGE_SIZE_RULE.trim()
+        }
     }
 }
 

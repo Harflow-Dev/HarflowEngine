@@ -25,3 +25,24 @@ impl Measurement {
         eprintln!("phase=vendor-version-only-pagesize complete; messages route was not invoked");
     }
 }
+
+impl Measurement {
+    pub(super) fn finish_protocol(mut self, observation: invocation::ProtocolObservation) {
+        let ipv6_quiet = self.server.no_ipv6_connection();
+        let denied_port_quiet = self.denied_listener.no_connection();
+        eprintln!(
+            "phase=protocol-settlement ipv6-quiet={ipv6_quiet} denied-port-quiet={denied_port_quiet}"
+        );
+        let server_outcome = self.server.stop_and_join_result();
+        eprintln!("phase=protocol-settlement server-outcome={server_outcome:?}");
+        assert!(ipv6_quiet, "IPv6 endpoint received a connection");
+        assert!(denied_port_quiet, "unlisted port received a connection");
+        observation.require_supported(&self.nonce);
+        assert_eq!(server_outcome, Ok(server::ServerOutcome::Completed));
+        canary::verify_and_remove(&self.canary, &self.canary_identity);
+        self.owned.settle();
+        eprintln!(
+            "phase=isolated-scripted-protocol measurement settled; production remains unsupported"
+        );
+    }
+}

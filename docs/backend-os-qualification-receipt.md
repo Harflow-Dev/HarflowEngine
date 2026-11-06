@@ -253,15 +253,19 @@ known startup/helper-only roots were removed only after positive original-child
 settlement and exact bounded, non-following inventories. Retention does not imply
 a live child; it prevents uncertain teardown from being treated as safe cleanup.
 
+The later [scripted local protocol receipt](claude-scripted-protocol.md) records
+the separately authorized bounded exchange, its initialization/wire failures and
+final post-fix pass. This does not change any historical outcome above.
+
 ## Remaining production gates
 
 Every stock strict backend route returns explicit unsupported with an actionable
 missing-qualification reason. No positive admission token or conversion to
 `QualificationState::Passed` is exposed.
 
-- Version startup is now measured only for the compatibility-only diagnostic;
-  local provider protocol and tool-enabled behavior require separate authorization
-  and qualification. No such session was run here.
+- Compatibility-only version startup and the separately authorized isolated
+  scripted local text protocol are measured. Real-provider authentication and
+  tool-enabled behavior remain separate unqualified gates; neither was run.
 - Establish authoritative caller/grant binding and complete runtime/config identity.
 - Establish exclusive production root ownership and stronger alias/race guarantees.
 - Qualify real descendant containment and production resource envelopes.

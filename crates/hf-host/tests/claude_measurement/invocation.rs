@@ -12,6 +12,9 @@ use std::{
 #[path = "runner.rs"]
 mod runner;
 use runner::{require_protocol_witnesses, run};
+#[path = "invocation/protocol.rs"]
+mod protocol;
+pub(super) use protocol::{ProtocolObservation, capture_protocol};
 #[path = "invocation/version.rs"]
 mod version;
 pub(super) use version::{VersionObservation, capture_version_only};
@@ -114,6 +117,10 @@ fn observe_fixture(
         result.stderr.is_empty(),
         "phase=claude-fixture stderr={}",
         super::bounded_summary(&result.stderr)
+    );
+    assert!(
+        result.capture_is_complete(),
+        "complete untruncated fixture capture"
     );
     require_protocol_witnesses(&result.stdout, nonce);
 }

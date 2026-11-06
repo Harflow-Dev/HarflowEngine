@@ -32,6 +32,7 @@ pub fn decode_anthropic_request(
         return Err(FixtureCodecError::Nonce);
     }
     let value = bounded_json(raw)?;
+    reject_tools(&value)?;
     let model = value["model"]
         .as_str()
         .filter(|s| !s.is_empty() && s.len() <= 256)
@@ -113,6 +114,7 @@ pub fn decode_claude_event(raw: &[u8], nonce: &str) -> Result<ClaudeEvent, Fixtu
     }
     let marker = format!("HARFLOW_FIXTURE_OK:{nonce}");
     let value = bounded_json(raw)?;
+    reject_tools(&value)?;
     if !value.is_object() || !value["type"].is_string() {
         return Err(FixtureCodecError::Shape);
     }
@@ -138,4 +140,31 @@ fn bounded_json(raw: &[u8]) -> Result<Value, FixtureCodecError> {
         return Err(FixtureCodecError::Budget);
     }
     crate::owner_profile::decode_for_fixture(raw).map_err(|_| FixtureCodecError::Shape)
+}
+
+fn reject_tools(value: &Value) -> Result<(), FixtureCodecError> {
+    match value {
+        Value::Object(fields) => {
+            if fields
+                .get("type")
+                .and_then(Value::as_str)
+                .is_some_and(|kind| kind.contains("tool") || kind == "input_json_delta")
+                || fields.get("tools").is_some_and(|tools| {
+                    !tools.is_null() && tools.as_array().is_none_or(|items| !items.is_empty())
+                })
+            {
+                return Err(FixtureCodecError::Tools);
+            }
+            for child in fields.values() {
+                reject_tools(child)?;
+            }
+        }
+        Value::Array(items) => {
+            for child in items {
+                reject_tools(child)?;
+            }
+        }
+        _ => (),
+    }
+    Ok(())
 }

@@ -27,6 +27,7 @@ pub(super) enum MeasurementMode {
     VersionOnlySysctl,
     PageSizeVersionOnly,
     CompatPageSizeVersionOnly,
+    CompatProtocol,
 }
 
 struct Measurement {
@@ -45,7 +46,16 @@ struct Measurement {
 pub(super) fn run(mode: MeasurementMode) {
     let measurement = Measurement::create(mode);
     measurement.prove_preflight();
-    if candidate_only(mode) {
+    if mode == MeasurementMode::CompatProtocol {
+        let observation = invocation::capture_protocol(
+            &measurement.owned.fixture,
+            &measurement.vendor_profile,
+            &measurement.selection,
+            measurement.server.port(),
+            &measurement.nonce,
+        );
+        measurement.finish_protocol(observation);
+    } else if candidate_only(mode) {
         let observation = invocation::capture_version_only(
             &measurement.owned.fixture,
             &measurement.vendor_profile,
@@ -152,7 +162,9 @@ impl Measurement {
                     "phase=vendor-version-only-sysctl complete; messages route was not invoked"
                 );
             }
-            MeasurementMode::PageSizeVersionOnly | MeasurementMode::CompatPageSizeVersionOnly => {
+            MeasurementMode::PageSizeVersionOnly
+            | MeasurementMode::CompatPageSizeVersionOnly
+            | MeasurementMode::CompatProtocol => {
                 unreachable!("candidate has deferred settlement")
             }
         }
@@ -173,7 +185,9 @@ impl Measurement {
             "unlisted IPv4 loopback port received no connection"
         );
         let expected = match mode {
-            MeasurementMode::FullFixture => server::ServerOutcome::Completed,
+            MeasurementMode::FullFixture | MeasurementMode::CompatProtocol => {
+                server::ServerOutcome::Completed
+            }
             MeasurementMode::VersionOnlySysctl
             | MeasurementMode::PageSizeVersionOnly
             | MeasurementMode::CompatPageSizeVersionOnly => server::ServerOutcome::PreflightOnly,
