@@ -12,6 +12,8 @@ use std::{
 
 #[path = "two_tunnel_support/budgets.rs"]
 mod budgets;
+#[path = "two_tunnel_support/chronology.rs"]
+mod chronology;
 #[path = "two_tunnel_support/protocol.rs"]
 mod protocol;
 mod two_tunnel_support;

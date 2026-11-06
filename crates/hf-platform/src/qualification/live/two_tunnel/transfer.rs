@@ -3,13 +3,15 @@ use std::{
     io::{self, Read, Write},
     net::Shutdown,
 };
+type Failure = (Reason, Option<io::ErrorKind>);
+
 pub(super) fn step(
     slots: &mut [Slot],
     index: usize,
     outgoing: bool,
     scratch: &mut [u8; 16384],
     outcome: &mut TwoTunnelOutcome,
-) -> Result<(), Reason> {
+) -> Result<(), Failure> {
     let result = advance(slots, index, outgoing, scratch);
     let (_, pending) = totals(slots, outgoing);
     let peak = if outgoing {
@@ -25,7 +27,7 @@ fn advance(
     index: usize,
     outgoing: bool,
     scratch: &mut [u8; 16384],
-) -> Result<(), Reason> {
+) -> Result<(), Failure> {
     let (total, pending) = totals(slots, outgoing);
     let slot = &mut slots[index];
     if slot.finished || slot.reply.is_empty() || slot.reply_offset != slot.reply.len() {
@@ -52,20 +54,22 @@ fn advance(
     // One operation per step keeps the caller's poison check before each write.
     if !buffer.is_empty() {
         match target.write(buffer) {
-            Ok(0) => return Err(Reason::Io),
+            Ok(0) => return Err((Reason::Io, None)),
             Ok(n) => {
                 buffer.drain(..n);
                 stats.bytes_forwarded += n;
                 stats.buffered_bytes = buffer.len();
             }
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
-            Err(_) => return Err(Reason::Io),
+            Err(e) => return Err((Reason::Io, Some(e.kind()))),
         }
         return Ok(());
     }
     if stats.eof {
         if !stats.write_half_closed {
-            target.shutdown(Shutdown::Write).map_err(|_| Reason::Io)?;
+            target
+                .shutdown(Shutdown::Write)
+                .map_err(|e| (Reason::Io, Some(e.kind())))?;
             stats.write_half_closed = true;
         }
         slot.finished = slot.observation.client_to_upstream.write_half_closed
@@ -73,7 +77,7 @@ fn advance(
         return Ok(());
     }
     if total >= 262144 {
-        return Err(Reason::ByteBudget);
+        return Err((Reason::ByteBudget, None));
     }
     // Fixed 8 KiB partitions bound retained storage across both slots.
     let count = (262144 - total).min(16384 - pending).min(8192);
@@ -91,7 +95,7 @@ fn advance(
             stats.buffered_bytes = buffer.len();
         }
         Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
-        Err(_) => return Err(Reason::Io),
+        Err(e) => return Err((Reason::Io, Some(e.kind()))),
     }
     Ok(())
 }

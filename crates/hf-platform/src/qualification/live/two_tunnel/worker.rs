@@ -217,10 +217,10 @@ pub(super) fn serve(
                 if !context.check(&mut out) {
                     break;
                 }
-                if let Err(reason) =
+                if let Err((reason, io_kind)) =
                     transfer::step(&mut slots, index, outgoing, &mut scratch, &mut out)
                 {
-                    out.fail(reason, None, context.began);
+                    out.fail(reason, io_kind, context.began);
                 }
             }
         }
