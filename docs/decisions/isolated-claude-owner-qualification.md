@@ -1,9 +1,10 @@
 # Isolated Claude owner qualification
 
-Status: bounded experiment authorized by the owner on 2026-11-06 and attempted.
-It refused during the post-version pin check before owner creation. See the
-[diagnostic receipt](../claude-owner-gated-exec.md). No owner-hosted qualification
-or production admission is established.
+Status: bounded experiment authorized by the owner on 2026-11-06. The debug
+attempt refused before owner creation; a newly authorized optimized local attempt
+passed with unchanged limits, grants and vendor pin. See the
+[diagnostic receipt](../claude-owner-gated-exec.md). Only that exact isolated
+scripted-provider composition is qualified; production admission remains refused.
 HarflowMCP remains the canonical contract owner. This experiment grants no public
 Rust execution capability, production backend admission or client selection.
 
@@ -146,3 +147,13 @@ A successful result still would not qualify real-provider authentication, tools,
 live input/resume, arbitrary caller/grants, complete runtime closure, descendant
 containment, production numeric envelopes, another backend/platform, publication
 or production launch. Those remain separate material gates.
+
+## Subsequent authorization and fixed assignment boundary
+
+The owner also permits experiments with real installed Codex, Claude, Antigravity,
+Cursor and Vibe, including existing credentials and billable calls. That does not
+change this assignment's fixed fake-key/local-provider reconstruction. The
+optimized successful result exercised the installed Claude CLI with no real
+credential or paid call. Live-provider secret handling and minimal egress require
+a distinct reviewed composition; production admission, public capability and
+push/release remain outside the authorization.

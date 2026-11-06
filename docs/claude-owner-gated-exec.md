@@ -1,8 +1,8 @@
 # Claude owner gated-exec diagnostic
 
-Status: implemented and independently reviewed; the single bounded attempt on
-2026-11-06 refused before owner creation. No owner-hosted vendor qualification is
-established. This receipt concerns only the owner-authorized local scripted
+Status: the optimized local owner-hosted scripted-provider experiment passed on
+2026-11-06. The earlier debug attempt refused before owner creation and remains
+recorded below. This qualifies only the exact isolated diagnostic composition. This receipt concerns only the owner-authorized local scripted
 provider experiment described in [the decision](decisions/isolated-claude-owner-qualification.md).
 HarflowMCP remains the canonical engine and public contract owner. Production
 admission, supported/candidate pins and client runtime selection remain unchanged.
@@ -75,7 +75,7 @@ concurrent ST04 test `tests/st04_helpers/support/case.rs:209` (`unbuffered_bytes
 its owner was notified and those files were left untouched. No hosted CI result
 is asserted.
 
-### Actual single attempt
+### Earlier debug attempt
 
 The exact ignored `installed_claude_owner_hosted_scripted_protocol` test ran once:
 one failed measurement, zero passed, 18 filtered out, **15.24 seconds**. No retry,
@@ -115,10 +115,109 @@ that `store` does not exist. Failed qualification evidence was not deleted.
 | Probe log | `/private/tmp/harflow-gated-claude/owner-probe.log` |
 | Probe log SHA-256 | `c06dd2f78e1793a1a424fc697360a4699d6506bcd18790c9f41c76bdc12549de` |
 
-A fresh experiment needs review of bounded hashing cost and phase accounting first.
-The current deadline and refusal remain intact; no successful owner-hosted receipt,
-production admission, push or release is claimed.
+The earlier refusal is preserved. A later owner-authorized optimized attempt is
+recorded below; its success does not retroactively complete this failed attempt.
 An independent fixed exec-witness run observed one unexplained no-EOF timeout at
 six seconds. The revised readiness handshake passed all three witness tests in an
 independent run (4.45 seconds); this does not establish the earlier failure's cause.
 No assertion or deadline was weakened in response.
+
+## Optimized local continuation
+
+The owner subsequently authorized real installed Codex, Claude, Antigravity, Cursor
+and Vibe experiments, including existing account credentials and billable calls.
+That permission is recorded; this particular attempt still used only the closed
+fake-provider assignment. It used no real credential or paid call. Existing
+no-tools/no-fork isolation, production refusal and the no-push/no-release boundary
+remain intact. No engine source, dependency, pin, profile grant or deadline changed.
+
+### Diagnosis and preparation
+
+A temporary read-only harness called the same bounded vendor observer. After all
+builds finished, its debug-linked single-vendor observation reached
+`DeadlineExceeded` at 15.000315292 seconds. The fully optimized dependencies
+(`sha2`, hf-storage and hf-platform at opt3 rather than opt0) completed a
+representative four-file hash workload in **2.827683 seconds**: ICU-before
+0.164807, vendor-before 1.162788, vendor-after 1.357457 and ICU-after 0.142477.
+All expected hashes matched. The ICU timing used the generic binary observer,
+while the actual harness retains its dedicated ICU observer. This workload
+represents hashing cost, not the full version phase; it excludes platform/version
+commands and cannot recover the earlier run's unlogged phase durations.
+An initial debug timing overlapped compilation and was discarded as confounded.
+
+Two independent read-only diagnoses supported cumulative debug hashing cost as
+the leading explanation. Plan review required optimized dependencies, an explicit
+optimized scaffold build, fresh binding of that scaffold pin and optimized fixed
+witness tests before another vendor attempt. Those tests passed: digest 3/3,
+HFCQ codec 5/5 and fixed exec witnesses 3/3 (4.57 seconds). No debug-assertion-only
+security gate or hardcoded debug-profile path was found in the scoped source.
+The local Cargo optimized profile is a build mode, not a published release.
+The measured scaffold was built in the primary workspace at `ce999b8` with the
+preserved concurrent ST04 sources/export still present. Its exact observed binary
+hash is recorded below; this is not a clean-commit distribution artifact or a
+claim of reproducible publication.
+
+### Actual optimized result
+
+Exactly one fresh optimized ignored owner-hosted test passed: **1 passed, zero
+failed, 18 filtered out, 12.19 seconds**. The 5/15/90/100/130-second limits and
+all payload/capture/FD bounds stayed unchanged. Per-instance root/port profile
+bytes and the optimized scaffold pin were freshly observed and bound into the
+configuration/request; security grants and the physical vendor pin stayed fixed.
+
+Same-profile controlled-spawn positive, read/fork/posix_spawn/network/owner-control
+write-denial preflight and version pin bookends passed before owner creation.
+The private parent was PID 85007/start1793935999.555383; the owner was
+PID 85053/start1793936000.820536. The bridge/vendor child was
+**PID 85264/start1793936004.503972**, boot
+`0ed817ca-bca2-4d50-a012-e83a12e36b04`. The held validated POST observed that
+source-bound original child at kernel executable path
+`/Users/nayanda/.local/share/claude/versions/2.1.318`. The final live receipt bound
+the same identity, generation `98d9718579424eaaeecf52293d40b084`, attempt
+`44444444444444444444444444444444` and current source/fence/raw extent.
+
+The original owner's byte commitment matched the exact current persisted capture:
+**4,417 stdout bytes, zero stderr bytes**, both EOFs, no loss and Code(0). The
+strict existing oracle required nonce text before exactly one successful terminal
+record, with no tools or later activity. The original parent/owner/writer/vendor
+wait and channel/reader settlement checks passed before successful cleanup. The
+provider worker joined with `Ok(Completed)` after exactly the preflight GET and
+one fake-authenticated messages POST. IPv6 and denied-port listeners were quiet;
+control sentinel/canary identity and bytes and final vendor/ICU/gate bookends matched.
+
+Post-test read-only inspection confirmed the successful root
+`harflow-os-measurement-becca7801684cb267437488bd2c98ee3` and its outside canary
+are absent. The earlier failed `7205393ccda8e63ce291202ce558c572` root/canary remain
+retained. Successful cleanup does not erase prior refusal evidence.
+
+| Optimized binding | SHA-256 or observation |
+| --- | --- |
+| Nonce / exclusive loopback port | `becca7801684cb267437488bd2c98ee3` / `51213` |
+| Profile | `bb4ca807e5452228196eb9f454b99ebc71717572cf6381dbf84477f55662b76c` |
+| Configuration | `6e1f3582d1b7a7fe74698281f0ecf849f69322689dfcc93471c426aef566ae45` |
+| Prepared request | `e0793bf6b64f51b75021cdb0666e958b9e8aaf68371e60e5dfd70dc72acac931` |
+| Optimized scaffold | `9ecec2cdfb32abd988f63629663a12b0d7bfd6dd20a2b15351b70e74c1b18ae2` |
+| Raw stdout | `4484a8fe7764185c61994d8ec8e40a935214595e1215c5107c29750d95b47e7a` |
+| Raw stderr | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Framed raw capture | `bd202b583988b0c3f719125e11de62d496c65a601c203a22d49bc29ce2441fd0` |
+| Optimized probe log | `/private/tmp/harflow-hash-phase/owner-optimized.log` |
+| Optimized probe log hash | `59d77ed571b309b877db208efc0e4f9f7b69ad2dcd14d8db895d48a700032ac5` |
+| Representative hash workload log hash | `5856d112e19ce20f6a83f07091c58db50bbc8554a56c388862eb5d984fba1707` |
+
+Independent continuation plan/evidence review closed in two rounds without a
+blocking finding. No source fix followed this successful run. Prior local suite
+and static results above remain source-identical; concurrent ST04 Clippy caveat
+is not converted into a green check. No hosted CI or other backend is qualified.
+
+## Remaining live-provider gate
+
+Live credentials and billing are owner-authorized, but current `HFCQ1` deliberately
+reconstructs the exact fake key, private HOME and nonce-bound localhost endpoint.
+An environment swap fails semantic validation. Its profile denies user keychain
+access/Mach lookup and external egress. A live-provider diagnostic therefore needs
+a distinct reviewed authentication/egress composition: secret handling separate
+from persisted preparation bytes/logs, minimal explicit credential access, bounded
+provider destination/input/cost, the same original ownership/capture/settlement
+witnesses and no ambient HOME or tool/fork fallback. Public capability or production
+admission still requires canonical HarflowMCP-first contracts and acceptance.
+This successful local-provider composition supplies none of those missing proofs.
