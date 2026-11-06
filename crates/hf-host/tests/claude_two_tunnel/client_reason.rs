@@ -178,7 +178,12 @@ fn version_valid(capture: &actors::Captured, sources: &Sources, attempt: &Attemp
         && capture.stdout == b"2.1.318 (Claude Code)\n"
         && capture.stderr.is_empty()
         && observed.is_some_and(|o| {
-            o.complete && o.healthy && o.calls == 0 && o.records.is_empty() && !o.overflow
+            o.complete
+                && o.healthy
+                && o.reported_calls == Some(0)
+                && o.calls.is_empty()
+                && o.records.is_empty()
+                && !o.overflow
         })
 }
 

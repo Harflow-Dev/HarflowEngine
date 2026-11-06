@@ -12,24 +12,29 @@ function install(native, writer) {
     try {
       const c = classify(error);
       records++;
-      emit(['CE1', id, c.outer, c.cause]);
-    } catch (_) { healthy = false; }
+      emit(['CE2', id, c.outer, c.cause]);
+    } catch (_) { healthy = false; emit(['CU2', id]); }
   }
   const proxy = new ProxyCtor(native, {
     apply(target, receiver, args) {
       if (calls === 4) {
-        if (!overflow) { overflow = true; emit(['CO1']); }
+        if (!overflow) { overflow = true; emit(['CO2']); }
         return apply(target, receiver, args);
       }
       const id = ++calls;
+      emit(['CI2', id]);
       let result;
       try { result = apply(target, receiver, args); }
-      catch (error) { observe(error, id); throw error; }
+      catch (error) { emit(['CS2', id]); observe(error, id); throw error; }
+      emit(['CN2', id]);
       try {
-        return apply(then, result, [undefined, error => { observe(error, id); throw error; }]);
-      } catch (_) { healthy = false; return result; }
+        return apply(then, result, [
+          value => { emit(['CF2', id]); return value; },
+          error => { observe(error, id); throw error; }
+        ]);
+      } catch (_) { healthy = false; emit(['CA2', id]); return result; }
     }
   });
-  return { proxy, finish() { emit(['CX1', calls, records, overflow ? 1 : 0, healthy ? 1 : 0]); } };
+  return { proxy, finish() { emit(['CX2', calls, records, overflow ? 1 : 0, healthy ? 1 : 0]); } };
 }
 module.exports = { install };

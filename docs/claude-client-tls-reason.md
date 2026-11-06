@@ -165,3 +165,7 @@ No fallback, rerun, broader observer, gate relaxation or production admission
 followed. The closed category observer is not proven to cover the failing native
 TLS path. A future observation would first need a separately reviewed way to
 distinguish hook invocation from pending completion within the same budget.
+
+The separately authorized [hook-entry and settlement stage](claude-client-hook-phases.md)
+adds bounded phase markers; its receipt records its own outcome and does not
+retroactively qualify this measurement.

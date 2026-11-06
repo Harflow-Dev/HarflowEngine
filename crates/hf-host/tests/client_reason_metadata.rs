@@ -11,171 +11,395 @@ fn identity(pid: u32) -> ProcessIdentity {
     ProcessIdentity::new(pid, 1, 0, "abcdef01-2345-6789-abcd-ef0123456789".into()).unwrap()
 }
 
-fn prefix(nonce: &str, pid: u32) -> Vec<u8> {
-    format!("CR1\t{nonce}\t{pid}\n").into_bytes()
+fn row(tag: &str, pid: u32, fields: &str) -> String {
+    format!("{tag}\t{NONCE}\t{pid}{fields}\n")
 }
 
-fn complete(nonce: &str, pid: u32) -> Vec<u8> {
-    format!(
-        "CR1\t{nonce}\t{pid}\nCE1\t{nonce}\t{pid}\t1\tverify\tissuer\nCX1\t{nonce}\t{pid}\t1\t1\t0\t1\n"
+fn prefix(pid: u32) -> String {
+    row("CR2", pid, "")
+}
+
+fn terminal(tag: &str, call: usize) -> String {
+    format!("{tag}\t{call}\n")
+}
+
+fn end(pid: u32, calls: usize, errors: usize, overflow: usize, healthy: usize) -> String {
+    row(
+        "CX2",
+        pid,
+        &format!("\t{calls}\t{errors}\t{overflow}\t{healthy}"),
     )
-    .into_bytes()
+}
+
+fn entry(call: usize) -> String {
+    terminal("CI2", call)
+}
+fn returned(call: usize) -> String {
+    terminal("CN2", call)
+}
+fn threw(call: usize) -> String {
+    terminal("CS2", call)
+}
+fn resolved(call: usize, tag: &str) -> String {
+    terminal(tag, call)
+}
+
+fn error(pid: u32, call: usize) -> String {
+    row("CE2", pid, &format!("\t{call}\tverify\tissuer"))
+}
+
+fn parse(
+    text: &str,
+    nonce: &str,
+    pid: u32,
+) -> Result<client_reason_metadata::Observation, &'static str> {
+    client_reason_metadata::parse(text.as_bytes(), nonce, &identity(pid))
 }
 
 #[test]
-fn accepts_bound_complete_and_incomplete_prefixes() {
-    let process = identity(42);
-    let partial = client_reason_metadata::parse(&prefix(NONCE, 42), NONCE, &process).unwrap();
-    assert!(!partial.complete && !partial.healthy);
-    assert!(partial.records.is_empty());
-
-    let observation = client_reason_metadata::parse(&complete(NONCE, 42), NONCE, &process).unwrap();
-    assert!(observation.complete && observation.healthy);
-    assert_eq!(observation.calls, 1);
-    assert_eq!(observation.records.len(), 1);
-}
-
-#[test]
-fn rejects_malformed_or_unbound_metadata_with_static_error() {
-    let process = identity(42);
-    let valid = complete(NONCE, 42);
-    let rows = [
-        b"CR2\t0123456789abcdef0123456789abcdef\n".to_vec(),
-        valid
-            .iter()
-            .map(|b| b.to_ascii_uppercase())
-            .collect::<Vec<_>>(),
-        [prefix(NONCE, 42), prefix(NONCE, 42)].concat(),
-        [prefix(NONCE, 42), b"CE1\tbad\n".to_vec()].concat(),
-        [prefix(NONCE, 42), b"NOISE\tsecret\n".to_vec()].concat(),
-        [
-            prefix(NONCE, 42),
-            b"CE1\t0123456789abcdef0123456789abcdef\t42\t1\tprivate-text\tmissing\n".to_vec(),
-        ]
-        .concat(),
-        [
-            prefix(NONCE, 42),
-            b"CX1\t0123456789abcdef0123456789abcdef\t42\t4\t0\t1\t1\n".to_vec(),
-        ]
-        .concat(),
-        vec![b'x'; 513],
-    ];
-    for bytes in rows {
-        let error = client_reason_metadata::parse(&bytes, NONCE, &process).unwrap_err();
-        assert_eq!(error, "unavailable");
-        assert!(!error.contains("private-text"));
-        assert!(!error.contains(NONCE));
-    }
-    assert_eq!(
-        client_reason_metadata::parse(&valid, "short", &process),
-        Err("unavailable")
-    );
-    assert_eq!(
-        client_reason_metadata::parse(&valid, NONCE, &identity(43)),
-        Err("unavailable")
-    );
-}
-
-#[test]
-fn enforces_order_uniqueness_counts_and_end_consistency() {
+fn accepts_partial_positive_phases_and_complete_unresolved_calls() {
     let pid = 42;
-    let start = prefix(NONCE, pid);
-    let ce1 = format!("CE1\t{NONCE}\t{pid}\t1\tverify\tissuer\n");
-    let ce2 = format!("CE1\t{NONCE}\t{pid}\t2\tmissing\tunknown\n");
-    let end = |calls, records, overflow| {
-        format!("CX1\t{NONCE}\t{pid}\t{calls}\t{records}\t{overflow}\t1\n")
-    };
-    let invalid = [
-        format!(
-            "{ce1}{start_string}",
-            start_string = String::from_utf8(start.clone()).unwrap()
-        ),
-        format!(
-            "{}{}{}",
-            String::from_utf8(start.clone()).unwrap(),
-            ce1,
-            ce1
-        ),
-        format!(
-            "{}{}",
-            String::from_utf8(start.clone()).unwrap(),
-            end(2, 1, 0)
-        ),
-        format!(
-            "{}{}{}",
-            String::from_utf8(start.clone()).unwrap(),
-            ce1,
-            end(1, 0, 0)
-        ),
-        format!(
-            "{}{}{}",
-            String::from_utf8(start).unwrap(),
-            ce1,
-            end(1, 1, 1)
-        ),
-    ];
-    for text in invalid {
-        assert_eq!(
-            client_reason_metadata::parse(text.as_bytes(), NONCE, &identity(pid)),
-            Err("unavailable")
-        );
-    }
-    let valid_two = format!("CR1\t{NONCE}\t{pid}\n{ce1}{ce2}{}", end(2, 2, 0));
-    let observation =
-        client_reason_metadata::parse(valid_two.as_bytes(), NONCE, &identity(pid)).unwrap();
-    assert_eq!(observation.calls, 2);
-    assert_eq!(observation.records.len(), 2);
-    let overflow =
-        format!("CR1\t{NONCE}\t{pid}\nCO1\t{NONCE}\t{pid}\nCX1\t{NONCE}\t{pid}\t4\t0\t1\t1\n");
-    let observation =
-        client_reason_metadata::parse(overflow.as_bytes(), NONCE, &identity(pid)).unwrap();
-    assert!(observation.overflow && observation.complete && observation.healthy);
-    assert_eq!(observation.calls, 4);
-    let reversed = format!("CR1\t{NONCE}\t{pid}\n{ce2}{ce1}{}", end(2, 2, 0));
-    let observation =
-        client_reason_metadata::parse(reversed.as_bytes(), NONCE, &identity(pid)).unwrap();
+    let entered = format!("{}{}", prefix(pid), entry(1));
+    let observation = parse(&entered, NONCE, pid).unwrap();
+    assert_eq!(observation.calls.len(), 1);
+    assert_eq!(observation.calls[0].call, 1);
+    assert_eq!(observation.calls[0].origin, None);
+    assert_eq!(observation.calls[0].terminal, None);
+    assert_eq!(observation.reported_calls, None);
+    assert!(!observation.complete);
+
+    let returned_prefix = format!("{}{}{}", prefix(pid), entry(1), returned(1));
+    let observation = parse(&returned_prefix, NONCE, pid).unwrap();
+    assert_eq!(
+        observation.calls[0].origin,
+        Some(client_reason_metadata::Origin::Returned)
+    );
+    assert_eq!(observation.calls[0].terminal, None);
+    assert_eq!(observation.reported_calls, None);
+
+    let complete = format!(
+        "{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        end(pid, 1, 0, 0, 1)
+    );
+    let observation = parse(&complete, NONCE, pid).unwrap();
+    assert!(observation.complete && observation.healthy);
+    assert_eq!(observation.reported_calls, Some(1));
+    assert_eq!(observation.calls[0].terminal, None);
+    assert!(!observation.overflow);
+}
+
+#[test]
+fn accepts_each_origin_and_reentrant_interleaving() {
+    let pid = 42;
+    let rows = format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        entry(2),
+        threw(2),
+        error(pid, 2),
+        entry(3),
+        returned(3),
+        resolved(3, "CF2"),
+        entry(4),
+        returned(4),
+        resolved(4, "CA2"),
+        end(pid, 4, 1, 0, 0),
+        "",
+        ""
+    );
+    let observation = parse(&rows, NONCE, pid).unwrap();
+    assert_eq!(observation.calls.len(), 4);
+    assert_eq!(observation.records.len(), 1);
+    assert_eq!(observation.records[0].call, 2);
+    assert_eq!(
+        observation.calls[1].origin,
+        Some(client_reason_metadata::Origin::Threw)
+    );
+    assert_eq!(
+        observation.calls[1].terminal,
+        Some(client_reason_metadata::Terminal::Error)
+    );
+    assert_eq!(
+        observation.calls[2].terminal,
+        Some(client_reason_metadata::Terminal::Fulfilled)
+    );
+    assert_eq!(
+        observation.calls[3].terminal,
+        Some(client_reason_metadata::Terminal::AttachmentFault)
+    );
+}
+
+#[test]
+fn accepts_four_async_errors_out_of_order() {
+    let pid = 42;
+    let four_async_errors = format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        entry(2),
+        returned(2),
+        entry(3),
+        returned(3),
+        entry(4),
+        returned(4),
+        error(pid, 4),
+        error(pid, 2),
+        error(pid, 1),
+        error(pid, 3),
+        end(pid, 4, 4, 0, 1),
+        ""
+    );
+    let observation = parse(&four_async_errors, NONCE, pid).unwrap();
     assert_eq!(
         observation
             .records
             .iter()
             .map(|record| record.call)
             .collect::<Vec<_>>(),
-        [2, 1]
+        [4, 2, 1, 3]
     );
-    for invalid in [
-        format!("CR1\t{NONCE}\t{pid}\r\n"),
-        format!("CR1\t{NONCE}\t{pid}\nCE1\t{NONCE}\t{pid}\t+1\tverify\tissuer\n"),
-        format!(
-            "CR1\t{NONCE}\t{pid}\nCX1\t{NONCE}\t{pid}\t0\t0\t0\t1\nCE1\t{NONCE}\t{pid}\t1\tverify\tissuer\n"
+
+    let async_order = format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        entry(2),
+        returned(2),
+        error(pid, 2),
+        entry(3),
+        returned(3),
+        resolved(3, "CU2"),
+        error(pid, 1),
+        end(pid, 3, 2, 0, 0),
+        ""
+    );
+    let observation = parse(&async_order, NONCE, pid).unwrap();
+    assert_eq!(
+        observation.calls[0].terminal,
+        Some(client_reason_metadata::Terminal::Error)
+    );
+    assert_eq!(
+        observation.calls[1].terminal,
+        Some(client_reason_metadata::Terminal::Error)
+    );
+    assert_eq!(
+        observation.calls[2].terminal,
+        Some(client_reason_metadata::Terminal::ObserverFault)
+    );
+}
+
+#[test]
+fn accepts_one_overflow_marker_and_short_fault_rows_only_with_unhealthy_end() {
+    let pid = 42;
+    let overflow = format!(
+        "{}{}{}{}{}{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        entry(2),
+        returned(2),
+        entry(3),
+        returned(3),
+        entry(4),
+        returned(4),
+        row("CO2", pid, "") + &end(pid, 4, 0, 1, 1)
+    );
+    let observation = parse(&overflow, NONCE, pid).unwrap();
+    assert!(observation.overflow && observation.complete && observation.healthy);
+    assert_eq!(observation.reported_calls, Some(4));
+
+    for (tag, origin, terminal_kind) in [
+        (
+            "CA2",
+            "CN2",
+            client_reason_metadata::Terminal::AttachmentFault,
         ),
-        format!("CR1\t{NONCE}\t{pid}\nCO1\t{NONCE}\t{pid}\nCO1\t{NONCE}\t{pid}\n"),
+        (
+            "CU2",
+            "CS2",
+            client_reason_metadata::Terminal::ObserverFault,
+        ),
     ] {
-        assert_eq!(
-            client_reason_metadata::parse(invalid.as_bytes(), NONCE, &identity(pid)),
-            Err("unavailable")
+        let rows = format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            terminal(origin, 1),
+            terminal(tag, 1),
+            end(pid, 1, 0, 0, 0)
         );
+        let observation = parse(&rows, NONCE, pid).unwrap();
+        assert_eq!(observation.calls[0].terminal, Some(terminal_kind));
+    }
+    for tag in ["CA2", "CU2"] {
+        let rows = format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            returned(1),
+            resolved(1, tag),
+            end(pid, 1, 0, 0, 1)
+        );
+        assert_eq!(parse(&rows, NONCE, pid), Err("unavailable"));
     }
 }
 
 #[test]
-fn observer_sources_do_not_embed_cli_classifier_phrases() {
+fn enforces_exact_512_byte_worst_case_and_rejects_one_byte_over_limit() {
+    let pid = 2_147_483_647;
+    let mut stream = prefix(pid);
+    for call in 1..=4 {
+        stream.push_str(&entry(call));
+        stream.push_str(&returned(call));
+        stream.push_str(&row(
+            "CE2",
+            pid,
+            &format!("\t{call}\tnot_yet_valid\tnot_yet_valid"),
+        ));
+    }
+    stream.push_str(&row("CO2", pid, ""));
+    stream.push_str(&end(pid, 4, 4, 1, 1));
+    assert_eq!(stream.len(), 512);
+    assert!(parse(&stream, NONCE, pid).is_ok());
+    stream.push('x');
+    assert_eq!(stream.len(), 513);
+    assert_eq!(parse(&stream, NONCE, pid), Err("unavailable"));
+}
+
+#[test]
+fn rejects_malformed_binding_order_duplicates_conflicts_and_inconsistent_counts() {
+    let pid = 42;
+    let valid = format!(
+        "{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        error(pid, 1),
+        end(pid, 1, 1, 0, 0)
+    );
+    let invalid = [
+        format!("{}{}", prefix(pid), prefix(pid)),
+        format!("{}{}", entry(1), prefix(pid)),
+        format!("{}{}", prefix(pid), error(pid, 1)),
+        format!(
+            "{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            entry(1),
+            end(pid, 1, 0, 0, 1)
+        ),
+        format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            returned(1),
+            threw(1),
+            end(pid, 1, 0, 0, 1)
+        ),
+        format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            threw(1),
+            resolved(1, "CF2"),
+            end(pid, 1, 0, 0, 1)
+        ),
+        format!(
+            "{}{}{}{}",
+            prefix(pid),
+            entry(2),
+            returned(2),
+            end(pid, 1, 0, 0, 1)
+        ),
+        format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            returned(1),
+            resolved(1, "CA2"),
+            end(pid, 1, 0, 0, 1)
+        ),
+        valid.replace("\t42\t", "\t43\t"),
+        valid.replace(NONCE, "1123456789abcdef0123456789abcdef"),
+        valid.replace("CR2", "CR1"),
+        valid.replace("verify", "private-text"),
+        valid.replace("\n", "\r\n"),
+        valid.replace("\t1\tverify", "\t+1\tverify"),
+        valid.replace("\t1\tverify", "\t01\tverify"),
+        format!("{}{}", prefix(pid), row("NOISE", pid, "")),
+        format!(
+            "{}{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            returned(1),
+            error(pid, 1),
+            error(pid, 1),
+            end(pid, 1, 1, 0, 0)
+        ),
+    ];
+    for bytes in invalid {
+        let error = parse(&bytes, NONCE, pid).unwrap_err();
+        assert_eq!(error, "unavailable");
+        assert!(!error.contains("private-text") && !error.contains(NONCE));
+    }
+    assert_eq!(parse(&valid, "short", pid), Err("unavailable"));
+    assert_eq!(parse(&valid, NONCE, pid + 1), Err("unavailable"));
+}
+
+#[test]
+fn rejects_inconsistent_counts_and_healthy_fault_end() {
+    let pid = 42;
+    let valid = format!(
+        "{}{}{}{}{}",
+        prefix(pid),
+        entry(1),
+        returned(1),
+        error(pid, 1),
+        end(pid, 1, 1, 0, 0)
+    );
+    let invalid = [
+        valid.replace("\t1\t1\t0\t0\n", "\t2\t1\t0\t0\n"),
+        valid.replace("\t1\t1\t0\t0\n", "\t1\t0\t0\t0\n"),
+        valid.replace("\t1\t1\t0\t0\n", "\t1\t1\t1\t0\n"),
+        format!(
+            "{}{}{}{}{}",
+            prefix(pid),
+            entry(1),
+            returned(1),
+            resolved(1, "CU2"),
+            end(pid, 1, 0, 0, 1)
+        ),
+    ];
+    for text in invalid {
+        assert_eq!(parse(&text, NONCE, pid), Err("unavailable"));
+    }
+}
+
+#[test]
+fn observer_sources_do_not_embed_cli_classifier_needles() {
     const SOURCES: &[&[u8]] = &[
         include_bytes!("claude_two_tunnel/client_reason_classifier.cjs"),
         include_bytes!("claude_two_tunnel/client_reason_hook.cjs"),
         include_bytes!("claude_two_tunnel/client_reason_writer.cjs"),
         include_bytes!("claude_two_tunnel/client_reason_preload.cjs"),
     ];
-    let forbidden = [
-        ["CERTIFICATE", "_VERIFY_FAILED"].concat(),
-        ["self-signed", " certificate"].concat(),
-        "unable to verify".to_owned(),
+    let needles = [
+        "CERTIFICATE_VERIFY_FAILED",
+        "self-signed certificate",
+        "unable to verify",
     ];
     for source in SOURCES {
-        for phrase in &forbidden {
+        for needle in needles {
             assert!(
                 !source
-                    .windows(phrase.len())
-                    .any(|window| window.eq_ignore_ascii_case(phrase.as_bytes()))
+                    .windows(needle.len())
+                    .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
             );
         }
     }

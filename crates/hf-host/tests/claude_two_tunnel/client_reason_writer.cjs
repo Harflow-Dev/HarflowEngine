@@ -8,11 +8,14 @@ const categories = new Set(['missing','accessor','unknown','trap','verify','issu
   'expired','hostname','reset','refused','not_yet_valid','protocol','timeout','cancelled',
   'broken_pipe','not_connected']);
 const has = Set.prototype.has;
+const phases = new Set(['CI2','CN2','CS2','CF2','CA2','CU2']);
 function validFields(f) {
-  if ((f[0] === 'CR1' || f[0] === 'CO1') && f.length === 1) return true;
-  if (f[0] === 'CE1' && f.length === 4) return integer(f[1]) && f[1] >= 1 && f[1] <= 4 &&
+  if ((f[0] === 'CR2' || f[0] === 'CO2') && f.length === 1) return true;
+  if (apply(has, phases, [f[0]]) && f.length === 2)
+    return integer(f[1]) && f[1] >= 1 && f[1] <= 4;
+  if (f[0] === 'CE2' && f.length === 4) return integer(f[1]) && f[1] >= 1 && f[1] <= 4 &&
     apply(has, categories, [f[2]]) && apply(has, categories, [f[3]]);
-  return f[0] === 'CX1' && f.length === 5 && integer(f[1]) && f[1] >= 0 && f[1] <= 4 &&
+  return f[0] === 'CX2' && f.length === 5 && integer(f[1]) && f[1] >= 0 && f[1] <= 4 &&
     integer(f[2]) && f[2] >= 0 && f[2] <= 4 && (f[3] === 0 || f[3] === 1) &&
     (f[4] === 0 || f[4] === 1);
 }
@@ -23,7 +26,7 @@ function createWriter() {
   const dev = process.env.HARFLOW_TLS_OBSERVER_DEV;
   const ino = process.env.HARFLOW_TLS_OBSERVER_INODE;
   const pid = process.pid;
-  // CR48 + four CE78 + CO48 + CX56 = 464 bytes at u32 PID/category13.
+  // CR48 + four (CI6 + CN/CS6 + CE78) + CO48 + CX56 = 512 bytes.
   let size = 0, healthy = true;
   const valid = typeof path === 'string' && /^[0-9a-f]{32}$/.test(nonce) &&
     /^[0-9]+$/.test(dev) && /^[0-9]+$/.test(ino) && integer(pid) && pid > 0 && pid <= 4294967295 &&
@@ -33,8 +36,9 @@ function createWriter() {
     try {
       if (!valid || !healthy) return false;
       if (!validFields(fields)) throw null;
-      const prefix = fields[0] + '\t' + nonce + '\t' + pid;
-      const suffix = fields.length === 1 ? '' : '\t' + apply(join, fields.length === 4 ?
+      const short = fields.length === 2;
+      const prefix = fields[0] + (short ? '' : '\t' + nonce + '\t' + pid);
+      const suffix = short ? '\t' + fields[1] : fields.length === 1 ? '' : '\t' + apply(join, fields.length === 4 ?
         [fields[1], fields[2], fields[3]] : [fields[1], fields[2], fields[3], fields[4]], ['\t']);
       const row = from(prefix + suffix + '\n', 'ascii');
       if (size + row.length > 512) { healthy = false; return false; }

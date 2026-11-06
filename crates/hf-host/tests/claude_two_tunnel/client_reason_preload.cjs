@@ -8,6 +8,6 @@
     const observer = install(globalThis.fetch, writer);
     globalThis.fetch = observer.proxy;
     process.once('exit', () => { try { observer.finish(); } catch (_) {} });
-    writer.write(['CR1']);
+    writer.write(['CR2']);
   } catch (_) { /* Missing completion refuses qualification. */ }
 })();
