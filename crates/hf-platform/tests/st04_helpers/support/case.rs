@@ -206,10 +206,9 @@ fn read_probe(path: &Path) -> (Vec<u8>, Option<u64>, Option<u64>, u64) {
         .custom_flags(0x100) // Darwin O_NOFOLLOW
         .open(path)
         .expect("open bounded probe without following links");
-    let bytes = file
-        .take(4097)
-        .bytes()
-        .collect::<Result<Vec<_>, _>>()
+    let mut bytes = Vec::new();
+    file.take(4097)
+        .read_to_end(&mut bytes)
         .expect("read bounded probe");
     let after = fs::symlink_metadata(path).expect("probe identity after read");
     assert_eq!(
