@@ -1,4 +1,4 @@
-use crate::{Error, Result, Store, connection};
+use crate::{Error, Result, Store, connection, read_context::ReadContext};
 use hf_application::task_read::{TaskReadError, TaskReadPort, TaskReadResult, TaskRow};
 use hf_domain::task_read::{AuthorizedScope, Coverage, StoredObservation, TaskId, TaskQuery};
 use rusqlite::{Connection, OptionalExtension};
@@ -47,23 +47,26 @@ impl Store {
         scope.validate().map_err(|_| Error::InvalidTaskQuery)?;
         let mut connection = self.admit(deadline)?;
         let transaction = connection.transaction()?;
-        connection::timeout(&transaction, deadline)?;
-        let (generation, coverage) = dataset(&transaction)?;
-        #[cfg(all(test, unix))]
-        crate::tests::stage("task_read_snapshot");
-        let result = crate::task_query::execute(
-            self,
-            &transaction,
-            scope,
-            query,
-            &generation,
-            coverage,
-            deadline,
-        )?;
+        let result = run(&self.read_context(), &transaction, scope, query, deadline)?;
         self.binding.check()?;
         connection::check_deadline(deadline)?;
         Ok(result)
     }
+}
+/// The queries of one task read, shared by every session that can answer it.
+/// The caller owns admission, the transaction and the closing checks.
+pub(crate) fn run(
+    context: &ReadContext<'_>,
+    db: &Connection,
+    scope: &AuthorizedScope,
+    query: &TaskQuery,
+    deadline: Instant,
+) -> Result<TaskReadResult> {
+    connection::timeout(db, deadline)?;
+    let (generation, coverage) = dataset(db)?;
+    #[cfg(all(test, unix))]
+    crate::tests::stage("task_read_snapshot");
+    crate::task_query::execute(context, db, scope, query, &generation, coverage, deadline)
 }
 pub(crate) fn require_tables(connection: &Connection) -> Result<()> {
     let count: i64 = connection.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('task_dataset','task_headers','task_pending')",[],|r|r.get(0))?;

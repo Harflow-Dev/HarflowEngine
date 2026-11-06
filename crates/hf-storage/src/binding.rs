@@ -78,6 +78,19 @@ impl Binding {
         Ok(())
     }
     pub(crate) fn capture(root: &Path, existing: bool, leases: Arc<dyn LeasePort>) -> Result<Self> {
+        let binding = Self::identify_all(root, existing, leases)?;
+        if existing {
+            binding.check()?;
+            crate::wal::marker(&binding)?;
+            crate::connection::qualify_header(&binding.database())?;
+        }
+        Ok(binding)
+    }
+    /// Identities of an existing root only: no sidecar, marker or header check.
+    pub(crate) fn identify_existing(root: &Path, leases: Arc<dyn LeasePort>) -> Result<Self> {
+        Self::identify_all(root, true, leases)
+    }
+    fn identify_all(root: &Path, existing: bool, leases: Arc<dyn LeasePort>) -> Result<Self> {
         // Reject symlinks in every supplied ancestor, including relative paths.
         let absolute = std::path::absolute(root)?;
         let mut prefix = PathBuf::new();
@@ -94,7 +107,7 @@ impl Binding {
         } else {
             None
         };
-        let binding = Self {
+        Ok(Self {
             leases,
             root: absolute.clone(),
             root_id,
@@ -106,13 +119,7 @@ impl Binding {
             } else {
                 None
             },
-        };
-        if existing {
-            binding.check()?;
-            crate::wal::marker(&binding)?;
-            crate::connection::qualify_header(&binding.database())?;
-        }
-        Ok(binding)
+        })
     }
     pub(crate) fn source_stamp(
         &self,
@@ -135,11 +142,17 @@ impl Binding {
     pub(crate) fn root(&self) -> &Path {
         &self.root
     }
-    pub(crate) fn claim(&self, mode: LeaseMode, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
-        let guard = self
-            .leases
+    pub(crate) fn acquire(
+        &self,
+        mode: LeaseMode,
+        deadline: Instant,
+    ) -> Result<Box<dyn LeaseGuard>> {
+        self.leases
             .acquire(&self.root.join("store.lock"), mode, false, deadline)
-            .map_err(crate::lease_error)?;
+            .map_err(crate::lease_error)
+    }
+    pub(crate) fn claim(&self, mode: LeaseMode, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
+        let guard = self.acquire(mode, deadline)?;
         self.check()?;
         crate::wal::marker(self)?;
         crate::connection::qualify_header(&self.database())?;
@@ -168,6 +181,10 @@ impl Binding {
         Ok(())
     }
     pub(crate) fn check(&self) -> Result<()> {
+        self.check_sidecars(true)
+    }
+    /// Without `wal`, the `-wal` sidecar is left to the caller.
+    pub(crate) fn check_sidecars(&self, wal: bool) -> Result<()> {
         self.check_root()?;
         if identify(&self.root.join("store.lock"), false)? != self.lock_id {
             return Err(Error::Replaced);
@@ -184,6 +201,9 @@ impl Binding {
             return Err(Error::Replaced);
         }
         for suffix in ["-wal", "-shm", "-journal"] {
+            if suffix == "-wal" && !wal {
+                continue;
+            }
             let path = self.root.join(format!("store.sqlite3{suffix}"));
             match fs::symlink_metadata(path) {
                 Ok(metadata) if !metadata.is_file() || metadata.file_type().is_symlink() => {

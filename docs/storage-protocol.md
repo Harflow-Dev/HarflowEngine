@@ -29,7 +29,8 @@ follows from macOS process tests.
 2. Per-handle mutex: normal operations reject overlap rather than queue work.
 3. `io.lock`: exclusive while copying qualification snapshots, opening source
    SQLite, applying writes, or running checkpoints/recovery. It serializes main/WAL
-   changes across processes, not the lifetime of every normal handle. Handle
+   changes across processes, not the lifetime of every normal handle. Read
+   sessions do not take it. Handle
    methods acquire mutex before I/O; there is no reverse acquisition path.
 4. SQLite's own writer/read/WAL locks provide transactional isolation. Read batches
    use SQLite snapshots; a long read may limit checkpoint progress.
@@ -50,7 +51,8 @@ failure never authorizes source recovery. No custom WAL parser, immutable live-W
 shortcut, sidecar deletion or original-file reset is used.
 
 “No source writes” means no source content/sidecar creation/removal by probe;
-ordinary file reads may affect access metadata. Probe may allocate private scratch. Scratch parents equal to or beneath the source
+ordinary file reads may affect access metadata. A read session may create or
+rewrite `-shm`, never main or WAL content and never `-wal`. Probe may allocate private scratch. Scratch parents equal to or beneath the source
 root refuse before allocation, including normalized aliases. Defaults derive from
 the absolute source root parent, preserving relative-root support.
 A missing root returns absent before scratch or lock creation. Foreign, unknown,
@@ -68,6 +70,23 @@ being forcibly closed. Nonempty rollback journals refuse; this is a WAL-only rec
 schema migration operation is added; future schema-change
 work must use exclusive lifecycle, preserve generation/provenance and be separately
 assigned. Unknown outcomes do not permit reset/replay.
+
+## Read session
+
+A read session (`ReadSession`) answers reads from the real store without a copy.
+It takes `store.lock` shared (acquisition capped at 2s) and never `io.lock`, and
+it writes no main or WAL content. Before SQLite is opened it checks the marker,
+the database header, that the rollback journal is empty, and that `-wal` exists
+and is a regular file (`lstat`); a missing `-wal` is refused because opening would
+create an empty one and report an empty history. A `-wal` deleted between that
+check and the open is not detected. It then opens with `SQLITE_OPEN_READ_ONLY` and
+checkpoint-on-close disabled, compares the database identity with the marker, and
+runs the existing queries in one read transaction. It runs no `quick_check` and has
+no size limit of its own. The deadline is soft: SQLite open and WAL recovery cannot
+be interrupted, so a read that overruns is refused after the fact as busy; the
+caller supplies 5s for a read. Any SQLite error is a refusal, and `ReadRefusal`
+classifies refusals for the transport above. Open, recover, probe and the capped
+copy are unchanged and keep the 64MiB cap, `quick_check` and `io.lock`.
 
 ## Checkpoint and close policy
 

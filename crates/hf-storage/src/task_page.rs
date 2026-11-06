@@ -1,11 +1,11 @@
 use crate::task_query::{empty, filtered};
-use crate::{Error, Result, Store, connection, task_read};
+use crate::{Error, Result, connection, read_context::ReadContext, task_read};
 use hf_application::task_read::TaskReadResult;
 use hf_domain::task_read::{AuthorizedScope, Coverage, Cursor, PageFilter, SortKey, TaskId};
 use rusqlite::{Connection, params_from_iter, types::Value};
 use std::time::Instant;
 pub(crate) fn page(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     scope: &AuthorizedScope,
     args: (usize, &PageFilter, Option<&Cursor>),
@@ -15,7 +15,7 @@ pub(crate) fn page(
 ) -> Result<TaskReadResult> {
     let (limit, filter, cursor) = args;
     if let Some(cursor) = cursor
-        && (cursor.store != store.identity().generation
+        && (cursor.store != context.identity.generation
             || cursor.dataset != generation
             || cursor.scope != *scope
             || cursor.filter != *filter)
@@ -55,7 +55,7 @@ pub(crate) fn page(
         && coverage.ownership_complete
         && coverage.source_complete;
     collect(
-        store,
+        context,
         db,
         &mut candidates,
         &mut result,
@@ -72,7 +72,7 @@ pub(crate) fn page(
     }
     if result.partial {
         result.cursor = result.rows.last().map(|row| Cursor {
-            store: store.identity().generation.clone(),
+            store: context.identity.generation.clone(),
             dataset: generation.to_owned(),
             scope: scope.clone(),
             filter: filter.clone(),
@@ -85,7 +85,7 @@ pub(crate) fn page(
     Ok(result)
 }
 fn collect(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     candidates: &mut rusqlite::Rows<'_>,
     result: &mut TaskReadResult,
@@ -94,10 +94,10 @@ fn collect(
     deadline: Instant,
 ) -> Result<()> {
     let mut bytes = reserve;
-    let cap = store.limits.max_bytes.min(128 * 1024);
+    let cap = context.limits.max_bytes.min(128 * 1024);
     while let Some(row) = candidates.next()? {
         connection::check_deadline(deadline)?;
-        if result.rows.len() >= limit.min(store.limits.max_rows) {
+        if result.rows.len() >= limit.min(context.limits.max_rows) {
             if result.rows.is_empty() {
                 return Err(Error::LimitExceeded);
             }

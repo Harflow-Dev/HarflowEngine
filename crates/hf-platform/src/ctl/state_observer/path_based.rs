@@ -38,6 +38,16 @@ impl RootHandle {
         }
         Some((entries, false))
     }
+    /// Kind of the named entry by link-aware stat, without opening it.
+    pub(super) fn kind(&self, name: &str) -> Option<EntryKind> {
+        match fs::symlink_metadata(self.0.join(name)) {
+            Err(error) if error.kind() == ErrorKind::NotFound => None,
+            Err(_) => Some(EntryKind::Other),
+            Ok(metadata) if metadata.file_type().is_file() => Some(EntryKind::File),
+            Ok(metadata) if metadata.file_type().is_dir() => Some(EntryKind::Directory),
+            Ok(_) => Some(EntryKind::Other),
+        }
+    }
     pub(super) fn read(&self, name: &str, limit: u64, strict: bool) -> FileState {
         let path = self.0.join(name);
         let before = match fs::symlink_metadata(&path) {

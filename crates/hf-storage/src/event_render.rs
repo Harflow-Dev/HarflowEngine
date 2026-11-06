@@ -1,7 +1,7 @@
 use crate::{
-    Store,
     event_read::Stream,
     event_scan::{Line, Lines},
+    read_context::ReadContext,
 };
 use hf_application::event_read::{EventReadResult, RecordClass};
 use hf_domain::{
@@ -9,7 +9,7 @@ use hf_domain::{
     task_read::TaskId,
 };
 pub(crate) fn render(
-    store: &Store,
+    context: &ReadContext<'_>,
     query: &EventQuery,
     task: &TaskId,
     stream: &Stream,
@@ -38,7 +38,7 @@ pub(crate) fn render(
         .map_or(lines.older_open, |l| l.open_start);
     let newer_open = lines.rows.last().map_or(lines.newer_open, |l| l.open_end);
     let make_cursor = |boundary, direction, resync, neighbour_seq, neighbour_skip| EventCursor {
-        store: store.identity.generation.clone(),
+        store: context.identity.generation.clone(),
         generation: stream.generation.clone(),
         task: task.clone(),
         kinds: query.filter.kinds(),

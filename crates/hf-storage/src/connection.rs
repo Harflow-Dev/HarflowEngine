@@ -23,20 +23,38 @@ pub(crate) fn timeout(connection: &Connection, deadline: Instant) -> Result<()> 
     Ok(())
 }
 pub(crate) fn qualify_header(path: &Path) -> Result<()> {
+    read_header(path, false)
+}
+/// As `qualify_header`, but a foreign application id is `ForeignStore`.
+pub(crate) fn qualify_header_distinct(path: &Path) -> Result<()> {
+    read_header(path, true)
+}
+fn read_header(path: &Path, distinct: bool) -> Result<()> {
     let mut header = [0; 100];
     File::open(path)?
         .read_exact(&mut header)
         .map_err(|_| Error::Incompatible)?;
-    qualify_page(&header)
+    if distinct {
+        check_page(&header, true)
+    } else {
+        qualify_page(&header)
+    }
 }
 pub(crate) fn qualify_page(header: &[u8]) -> Result<()> {
+    check_page(header, false)
+}
+fn check_page(header: &[u8], distinct: bool) -> Result<()> {
     if &header[..16] != b"SQLite format 3\0" {
         return Err(Error::Incompatible);
     }
     let version = u32::from_be_bytes([header[60], header[61], header[62], header[63]]);
     let application = u32::from_be_bytes([header[68], header[69], header[70], header[71]]);
     if application != APPLICATION_ID {
-        return Err(Error::Incompatible);
+        return Err(if distinct {
+            Error::ForeignStore
+        } else {
+            Error::Incompatible
+        });
     }
     if version > SCHEMA_VERSION {
         return Err(Error::FutureSchema);

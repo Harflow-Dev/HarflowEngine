@@ -70,7 +70,9 @@ class NoSideEffectTests(CtlCase):
         rust_root(self.state)
         before = sorted(os.listdir(self.state))
         self.assertIn("store.sqlite3", before)
-        self.assertNotIn("store.sqlite3-wal", before)
+        self.assertIn("store.sqlite3-wal", before)
+        self.assertNotIn("store.sqlite3-shm", before)
+        self.assertEqual(os.path.getsize(os.path.join(self.state, "store.sqlite3-wal")), 0)
         self.assertEqual(self.inspect()["status"], "ready")
         self.assertEqual(sorted(os.listdir(self.state)), before)
 

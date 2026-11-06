@@ -179,7 +179,7 @@ def identity_text(version, generation="a" * 32):
 
 
 def database(path, version, application_id=APPLICATION_ID, generation="b" * 32):
-    """A real SQLite file in WAL mode, closed cleanly so no sidecars remain."""
+    """A real SQLite file in WAL mode with the 0-byte -wal a real engine root keeps."""
     import sqlite3
 
     connection = sqlite3.connect(path)
@@ -192,9 +192,15 @@ def database(path, version, application_id=APPLICATION_ID, generation="b" * 32):
         connection.commit()
     finally:
         connection.close()
-    for suffix in ("-wal", "-shm"):
-        if os.path.exists(path + suffix):
-            raise RuntimeError("database fixture left a sidecar")
+    # Closing this connection cleanly removes -wal and -shm. A real engine root, as
+    # initialize_fixture leaves it, keeps a 0-byte -wal (checkpoint-on-close is
+    # suppressed) and also an -shm. The fixture models the -wal and leaves -shm out:
+    # a root without -shm is a legal state that a reader rebuilds.
+    # "xb" refuses a leftover -wal, which would mean a connection outlived the fixture.
+    if os.path.exists(path + "-shm"):
+        raise RuntimeError("database fixture left a shared-memory file")
+    with open(path + "-wal", "xb"):
+        pass
 
 
 def rust_root(root, identity_version=None, header_version=None, application_id=APPLICATION_ID,

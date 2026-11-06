@@ -1,8 +1,10 @@
 //! Lease-free classification of a state root from observed facts.
 //!
 //! Nothing here opens a database, takes a lease or creates anything. `ready`
-//! means the identity marker and database header agree with this engine; it does
-//! not verify database integrity or the generation stored inside the database.
+//! means the identity marker and database header agree with this engine and the
+//! `-wal` file is a regular file; it does not verify database integrity or the
+//! generation stored inside the database. A current store without a regular `-wal`
+//! is `incompatible`, because every read of it is refused.
 use hf_domain::ctl::{
     inspect::{
         EntryKind, FileState, InspectReason, InspectStatus, JournalDecode, MarkerDecode,
@@ -203,7 +205,14 @@ fn store_identity_verdict(facts: &RootFacts, policy: StorePolicy) -> Option<Verd
     if version < policy.schema_version {
         return Some(Verdict::incompatible(InspectReason::UnsupportedLayout));
     }
-    Some(header_verdict(&facts.database_header, policy))
+    let verdict = header_verdict(&facts.database_header, policy);
+    // Only where the verdict would be `ready`: every other row keeps its precedence.
+    if verdict.status == InspectStatus::Ready && facts.wal != Some(EntryKind::File) {
+        return Some(Verdict::incompatible(
+            InspectReason::InfrastructureUnavailable,
+        ));
+    }
+    Some(verdict)
 }
 /// Parses `harflow-storage-2\n<schema>\n<32 lowercase hex>\n` exactly.
 fn parse_identity(bytes: &[u8]) -> Option<u32> {

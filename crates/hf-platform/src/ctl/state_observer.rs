@@ -51,6 +51,8 @@ impl StateObserverPort for FsStateObserver {
         facts.database_header = handle.read("store.sqlite3", HEADER_BYTES, false);
         facts.journal = handle.read(".harflow-recovery.json", JOURNAL_BOUND, true);
         facts.journal_pending = handle.read(".harflow-recovery.json.pending", JOURNAL_BOUND, true);
+        // A stat of the name itself: the 256-entry listing cannot prove absence.
+        facts.wal = handle.kind("store.sqlite3-wal");
         facts
     }
 }

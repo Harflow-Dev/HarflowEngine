@@ -1,4 +1,4 @@
-use crate::{Error, Result, Store, connection, event_read::Stream};
+use crate::{Error, Result, connection, event_read::Stream, read_context::ReadContext};
 use hf_application::event_read::{EventReadResult, EventRecord, RecordClass};
 use hf_domain::{
     event_read::{Direction, EventQuery},
@@ -46,7 +46,7 @@ impl Line {
     }
 }
 pub(crate) fn read(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     query: &EventQuery,
     task: &TaskId,
@@ -71,10 +71,10 @@ pub(crate) fn read(
         |c| c.boundary,
     );
     let resync = query.cursor.as_ref().is_some_and(|c| c.resync);
-    store.check_bounds(1, 1024)?;
+    context.check_bounds(1, 1024)?;
     let mut lines = Lines {
-        max_rows: store.limits.max_rows,
-        max_bytes: store.limits.max_bytes.min(262_144),
+        max_rows: context.limits.max_rows,
+        max_bytes: context.limits.max_bytes.min(262_144),
         rows: Vec::new(),
         older: if direction == Direction::Older {
             0
@@ -124,7 +124,7 @@ pub(crate) fn read(
             deadline,
         )?;
     }
-    crate::event_render::render(store, query, task, stream, lines, result);
+    crate::event_render::render(context, query, task, stream, lines, result);
     Ok(())
 }
 fn next_end(db: &Connection, task: &TaskId, after: u64, stop: u64) -> Result<Option<u64>> {

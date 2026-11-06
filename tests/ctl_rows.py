@@ -160,6 +160,7 @@ def rust_short_database(case):
 def rust_with_other_generation_database(case):
     rust_root(case.state, generation="a" * 32)
     os.remove(os.path.join(case.state, "store.sqlite3"))
+    os.remove(os.path.join(case.state, "store.sqlite3-wal"))
     database(os.path.join(case.state, "store.sqlite3"), storage_constants(), generation="c" * 32)
 
 

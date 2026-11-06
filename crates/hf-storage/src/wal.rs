@@ -44,12 +44,27 @@ impl Scratch {
     }
 }
 pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
+    read_marker(binding, false)
+}
+/// As `marker`, for the read session: a non-UTF-8 marker is `Incompatible` and an
+/// older schema is `UnsupportedLayout`, as the lease-free inspector reports them.
+pub(crate) fn marker_distinct(binding: &Binding) -> Result<Identity> {
+    read_marker(binding, true)
+}
+fn read_marker(binding: &Binding, distinct: bool) -> Result<Identity> {
     let file = File::open(binding.root().join("store.identity"))?;
     if file.metadata()?.len() > 128 {
         return Err(Error::Incompatible);
     }
     let mut text = String::new();
-    file.take(129).read_to_string(&mut text)?;
+    match file.take(129).read_to_string(&mut text) {
+        Err(error) if distinct && error.kind() == std::io::ErrorKind::InvalidData => {
+            return Err(Error::Incompatible);
+        }
+        other => {
+            other?;
+        }
+    }
     let mut lines = text.lines();
     if lines.next() != Some("harflow-storage-2") {
         return Err(Error::Incompatible);
@@ -59,11 +74,10 @@ pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
         .ok_or(Error::Incompatible)?
         .parse::<u32>()
         .map_err(|_| Error::Incompatible)?;
-    if version > crate::SCHEMA_VERSION {
-        return Err(Error::FutureSchema);
-    }
-    if version != crate::SCHEMA_VERSION {
-        return Err(Error::Incompatible);
+    // The inspector validates the whole marker before it compares schemas, so the
+    // distinct path does too; `Store`'s path keeps its order.
+    if !distinct {
+        classify_schema(version, false)?;
     }
     let generation = lines.next().ok_or(Error::Incompatible)?.to_owned();
     if generation.len() != 32
@@ -75,10 +89,26 @@ pub(crate) fn marker(binding: &Binding) -> Result<Identity> {
     {
         return Err(Error::Incompatible);
     }
+    if distinct {
+        classify_schema(version, true)?;
+    }
     Ok(Identity {
         generation,
         schema_version: version,
     })
+}
+fn classify_schema(version: u32, distinct: bool) -> Result<()> {
+    if version > crate::SCHEMA_VERSION {
+        return Err(Error::FutureSchema);
+    }
+    if version != crate::SCHEMA_VERSION {
+        return Err(if distinct {
+            Error::UnsupportedLayout
+        } else {
+            Error::Incompatible
+        });
+    }
+    Ok(())
 }
 pub(crate) fn publish(root: &Path, identity: &Identity) -> Result<()> {
     let mut file = OpenOptions::new()
@@ -123,6 +153,15 @@ fn copy(source: &Path, target: &Path, remaining: &mut u64, deadline: Instant) ->
     }
     Ok(())
 }
+/// A nonempty rollback journal is outside this WAL-only protocol.
+pub(crate) fn reject_nonempty_journal(binding: &Binding) -> Result<()> {
+    let journal = binding.root().join("store.sqlite3-journal");
+    match fs::metadata(journal) {
+        Ok(metadata) if metadata.len() != 0 => Err(Error::NeedsCheckpoint),
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error.into()),
+        _ => Ok(()),
+    }
+}
 pub(crate) fn qualify(binding: &Binding, parent: &Path, deadline: Instant) -> Result<Identity> {
     with_qualified_copy(
         binding,
@@ -139,12 +178,7 @@ pub(crate) fn with_qualified_copy<T>(
 ) -> Result<T> {
     connection::check_deadline(deadline)?;
     binding.check()?;
-    let journal = binding.root().join("store.sqlite3-journal");
-    match fs::metadata(journal) {
-        Ok(metadata) if metadata.len() != 0 => return Err(Error::NeedsCheckpoint),
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
-        _ => {}
-    }
+    reject_nonempty_journal(binding)?;
     let expected = marker(binding)?;
     Binding::validate_probe_path(parent)?;
     let parent = fs::canonicalize(parent)?;

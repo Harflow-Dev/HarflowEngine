@@ -14,7 +14,7 @@ The domain metadata check rejects build scripts and custom target source roots; 
 
 Inline modules gated by the exact #[cfg(test)] attribute are exempt from source purity analysis, allowing ordinary unit-test attributes and assertion macros. Out-of-line test modules and files named tests.rs receive no exemption. Production cfg modules and cfg_attr remain subject to the policy. Keep test-specific Clippy allowances inside the inline test module; production denies remain inherited. Non-domain crate roots allow unwrap/expect/panic only under cfg(test).
 
-Internal task-read values, ports, fixture queries and consumer-only mappings are
+hf-storage also provides a read session that answers task and event reads from the real store read-only under a shared lease; it is specified in the [read-path design](store-read-path.md) and the [storage protocol](storage-protocol.md) and adds no ctl command. Internal task-read values, ports, fixture queries and consumer-only mappings are
 described in [task reads](task-reads.md). They add no supported host command or
 production caller/lifecycle verification.
 

@@ -1,10 +1,10 @@
-use crate::{Error, Result, Store, connection, task_read};
+use crate::{Error, Result, connection, read_context::ReadContext, task_read};
 use hf_application::task_read::TaskReadResult;
 use hf_domain::task_read::{AuthorizedScope, Coverage, Lookup, PageFilter, TaskId, TaskQuery};
 use rusqlite::{Connection, OptionalExtension, params_from_iter, types::Value};
 use std::time::Instant;
 pub(crate) fn execute(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     scope: &AuthorizedScope,
     query: &TaskQuery,
@@ -18,7 +18,7 @@ pub(crate) fn execute(
             filter,
             cursor,
         } => crate::task_page::page(
-            store,
+            context,
             db,
             scope,
             (*limit, filter, cursor.as_ref()),
@@ -26,8 +26,8 @@ pub(crate) fn execute(
             coverage,
             deadline,
         ),
-        TaskQuery::StoredStatus(id) => status_query(store, db, scope, id, coverage, deadline),
-        TaskQuery::Ids(ids) => ids_query(store, db, scope, ids, coverage, deadline),
+        TaskQuery::StoredStatus(id) => status_query(context, db, scope, id, coverage, deadline),
+        TaskQuery::Ids(ids) => ids_query(context, db, scope, ids, coverage, deadline),
     }
 }
 fn scoped(scope: &AuthorizedScope) -> (String, Vec<Value>) {
@@ -67,14 +67,14 @@ pub(crate) fn empty(coverage: Coverage) -> TaskReadResult {
     }
 }
 fn ids_query(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     scope: &AuthorizedScope,
     ids: &[TaskId],
     coverage: Coverage,
     deadline: Instant,
 ) -> Result<TaskReadResult> {
-    store.check_bounds(ids.len(), ids.iter().map(|id| id.as_str().len()).sum())?;
+    context.check_bounds(ids.len(), ids.iter().map(|id| id.as_str().len()).sum())?;
     let mut result = empty(coverage);
     let mut bytes = 512usize;
     let mut seen = std::collections::BTreeSet::new();
@@ -89,7 +89,7 @@ fn ids_query(
             bytes = bytes
                 .checked_add(task_read::row_bytes(&row))
                 .ok_or(Error::LimitExceeded)?;
-            store.check_bounds(result.rows.len() + 1, bytes)?;
+            context.check_bounds(result.rows.len() + 1, bytes)?;
             if bytes > 128 * 1024 {
                 return Err(Error::LimitExceeded);
             }
@@ -101,7 +101,7 @@ fn ids_query(
         bytes = bytes
             .checked_add(lookup_bytes(&lookup))
             .ok_or(Error::LimitExceeded)?;
-        store.check_bounds(result.lookups.len() + 1, bytes)?;
+        context.check_bounds(result.lookups.len() + 1, bytes)?;
         if bytes > 128 * 1024 {
             return Err(Error::LimitExceeded);
         }
@@ -176,7 +176,7 @@ pub(crate) fn lookup(
 }
 
 fn status_query(
-    store: &Store,
+    context: &ReadContext<'_>,
     db: &Connection,
     scope: &AuthorizedScope,
     id: &TaskId,
@@ -184,7 +184,7 @@ fn status_query(
     deadline: Instant,
 ) -> Result<TaskReadResult> {
     ids_query(
-        store,
+        context,
         db,
         scope,
         std::slice::from_ref(id),

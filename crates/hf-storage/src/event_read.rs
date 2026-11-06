@@ -1,4 +1,4 @@
-use crate::{Error, Result, Store, connection};
+use crate::{Error, Result, Store, connection, read_context::ReadContext};
 use hf_application::event_read::{EventReadError, EventReadPort, EventReadResult};
 use hf_domain::{
     event_read::{CaptureState, EventError, EventQuery, LogFacts},
@@ -40,59 +40,62 @@ impl Store {
         query.validate().map_err(|_| Error::InvalidEventQuery)?;
         let mut db = self.admit(deadline)?;
         let tx = db.transaction()?;
-        connection::timeout(&tx, deadline)?;
-        let (_, coverage) =
-            crate::task_read::dataset_optional(&tx)?.ok_or(Error::TaskReadUnavailable)?;
-        let lookup = crate::task_query::lookup(
-            &tx,
-            &AuthorizedScope::Global,
-            &query.task,
-            coverage,
-            deadline,
-        )?;
-        let mut result = empty(lookup.clone());
-        if let Lookup::Found(task) = lookup {
-            result.task = Some(task.clone());
-            query
-                .validate_cursor(&task)
-                .map_err(|_| Error::InvalidEventQuery)?;
-            crate::event_fixture::require_schema(&tx)?;
-            let stream = stream_optional(&tx, &task)?;
-            #[cfg(all(test, unix))]
-            crate::tests::stage("event_read_snapshot");
-            if let Some(stream) = stream {
-                validate_cursor(self, query, &task, &stream)?;
-                result.facts = Some(stream.facts.clone());
-                if stream.facts.available {
-                    crate::event_scan::read(
-                        self,
-                        &tx,
-                        query,
-                        &task,
-                        &stream,
-                        &mut result,
-                        deadline,
-                    )?;
-                } else if query.cursor.is_some() {
-                    return Err(Error::ExpiredEventCursor);
-                }
-            } else if query.cursor.is_some() {
-                return Err(Error::ExpiredEventCursor);
-            } else {
-                result.facts = Some(LogFacts {
-                    task_status: None,
-                    available: false,
-                    capture: CaptureState::Unknown,
-                    output_drained: None,
-                    eof_finished_seq: None,
-                    within_grace: false,
-                });
-            }
-        }
+        let result = run(&self.read_context(), &tx, query, deadline)?;
         self.binding.check()?;
         connection::check_deadline(deadline)?;
         Ok(result)
     }
+}
+/// The queries of one event read, shared by every session that can answer it.
+/// The caller owns admission, the transaction and the closing checks.
+pub(crate) fn run(
+    context: &ReadContext<'_>,
+    tx: &Connection,
+    query: &EventQuery,
+    deadline: Instant,
+) -> Result<EventReadResult> {
+    connection::timeout(tx, deadline)?;
+    let (_, coverage) =
+        crate::task_read::dataset_optional(tx)?.ok_or(Error::TaskReadUnavailable)?;
+    let lookup = crate::task_query::lookup(
+        tx,
+        &AuthorizedScope::Global,
+        &query.task,
+        coverage,
+        deadline,
+    )?;
+    let mut result = empty(lookup.clone());
+    if let Lookup::Found(task) = lookup {
+        result.task = Some(task.clone());
+        query
+            .validate_cursor(&task)
+            .map_err(|_| Error::InvalidEventQuery)?;
+        crate::event_fixture::require_schema(tx)?;
+        let stream = stream_optional(tx, &task)?;
+        #[cfg(all(test, unix))]
+        crate::tests::stage("event_read_snapshot");
+        if let Some(stream) = stream {
+            validate_cursor(context, query, &task, &stream)?;
+            result.facts = Some(stream.facts.clone());
+            if stream.facts.available {
+                crate::event_scan::read(context, tx, query, &task, &stream, &mut result, deadline)?;
+            } else if query.cursor.is_some() {
+                return Err(Error::ExpiredEventCursor);
+            }
+        } else if query.cursor.is_some() {
+            return Err(Error::ExpiredEventCursor);
+        } else {
+            result.facts = Some(LogFacts {
+                task_status: None,
+                available: false,
+                capture: CaptureState::Unknown,
+                output_drained: None,
+                eof_finished_seq: None,
+                within_grace: false,
+            });
+        }
+    }
+    Ok(result)
 }
 pub(crate) struct Stream {
     pub generation: String,
@@ -198,7 +201,7 @@ pub(crate) fn validate_final(db: &Connection, task: &TaskId, stream: &mut Stream
 }
 
 fn validate_cursor(
-    store: &Store,
+    context: &ReadContext<'_>,
     query: &EventQuery,
     task: &TaskId,
     stream: &Stream,
@@ -207,7 +210,7 @@ fn validate_cursor(
         if cursor.task != *task {
             return Err(Error::InvalidEventQuery);
         }
-        if cursor.store != store.identity.generation
+        if cursor.store != context.identity.generation
             || cursor.generation != stream.generation
             || cursor.boundary > stream.size()
         {

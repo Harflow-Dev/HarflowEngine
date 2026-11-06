@@ -294,10 +294,11 @@ unreachable except by fixtures.
 | situation | code | reason / message |
 | --- | --- | --- |
 | `-wal` missing, or not a regular file | `state_incompatible` | `infrastructure_unavailable`; message `write-ahead log missing; the history cannot be trusted` |
-| CANTOPEN or READONLY (directory or file not openable), unreadable root, lease `Invalid` (lock not a regular file, root replaced under the lease) | `state_incompatible` | `infrastructure_unavailable`, message names the file |
+| CANTOPEN or READONLY (directory or file not openable), unreadable root, lease `Invalid` (lock not a regular file, root replaced under the lease) | `state_incompatible` | `infrastructure_unavailable`, message names the file; a failure not attributable to one file (the root, a sidecar type check) names the state root |
 | deadline exceeded, lease busy, SQLite busy | `state_busy` | |
 | SQLite corruption error (`malformed`, `not a database`) | `state_incompatible` | `infrastructure_unavailable` with the SQLite message |
 | marker mismatch or SQL identity mismatch (generation differs) | `state_incompatible` | an existing P5 reason (`invalid_marker`) |
+| database application id not ours; marker names an older schema; marker or header names a newer schema | `state_incompatible` | `foreign_store`; `unsupported_layout`; `newer_store` (as state-inspect reports them; a malformed marker is `invalid_marker` whatever its version) |
 | nonempty rollback journal | `state_incompatible` | `infrastructure_unavailable` |
 | `Error::Replaced` (identity changed during the read) | `state_incompatible` | `infrastructure_unavailable`; retry is allowed |
 | default: any other SQLite error | `state_incompatible` | `infrastructure_unavailable` |

@@ -79,6 +79,10 @@ impl RootHandle {
         }
         Some((entries, truncated))
     }
+    /// Kind of the named entry, without opening it.
+    pub(super) fn kind(&self, name: &str) -> Option<EntryKind> {
+        self.kind_of(OsStr::new(name))
+    }
     /// Like lstat: a symlink is `Other`. `None` when the entry vanished.
     fn kind_of(&self, name: &OsStr) -> Option<EntryKind> {
         match fstatat(&self.fd, name, AtFlags::AT_SYMLINK_NOFOLLOW) {

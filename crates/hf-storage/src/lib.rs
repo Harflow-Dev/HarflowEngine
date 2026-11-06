@@ -64,6 +64,13 @@ pub enum Error {
     LimitExceeded,
     CommitOutcomeUnknown,
     NeedsCheckpoint,
+    WalMissing,
+    /// Raised only by the read session: the database application id is not ours.
+    ForeignStore,
+    /// Raised only by the read session: the marker names an older schema.
+    UnsupportedLayout,
+    /// Raised only by the read session: the named file could not be used.
+    ReadUnavailable(&'static str),
     TaskReadUnavailable,
     InvalidTaskQuery,
     StaleTaskCursor,
@@ -255,6 +262,10 @@ mod capture_read;
 mod capture_schema;
 
 mod read_context;
+mod read_refusal;
+mod read_session;
+pub use read_refusal::ReadRefusal;
+pub use read_session::{LEASE_BUDGET, READ_BUDGET, ReadSession};
 mod recovery;
 mod recovery_events;
 pub use recovery::RecoveryReadSession;
