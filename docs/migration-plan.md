@@ -1,111 +1,79 @@
-# Rust engine migration checklist
+# Rust engine parallel migration checklist
 
-Dispatchable work packages: [migration sessions](migration-sessions.md).
+Revised 2026-11-04. Governing [revision 3](../../HARFLOW_MIGRATION_PLAN_V3.md),
+[workspace gates](../../HARFLOW_MIGRATION_CHECKLIST.md) and [current sessions](migration-sessions.md).
 
-Status: planned, 2026-11-02. All work items remain unverified.
+Experimental scaffold remains unqualified. R01/R02+ implementation may proceed
+parallel with M02+ native work after accepted M01 shared readiness. Both M12 and
+R14 acceptance gate I01 integration; no early production cutover. Canonical contracts remain
+HarflowMCP-owned until O04. Preserve accepted engine scope and unresolved decisions.
 
-Own the experimental Rust engine and its independently testable layers.
-HarflowMCP owns canonical contracts until explicit ownership transfer. Inputs
-are the reviewed Python contract, conformance suite, parity ledger and accepted
-E0 gate; outputs are Rust compatibility and cutover evidence.
+- [ ] R01 After shared readiness, approve process/SQLite/durability/responder/runtime/distribution seams and
+  explicit scope/complete fault matrix; read-only research needs separate assignment.
+- [ ] R02 Fresh bundled SQLite, durable bounded transactions/reads, capabilities,
+  canonical compatibility and cursor generation; no shared Python state root.
+- [ ] R03/R04 Detached owners, identity/boot/PID reuse, duplicate prevention,
+  descendant cancel/drain/capture and crash/restart/disk-full/concurrency faults.
+- [ ] R05–R07 Claude, continuation/messages, exact-action authenticated responder
+  and native secure storage contract; never replay uncertain mutation outcomes.
+- [ ] R08/R09 Resource/phase fairness/holder death, worktrees/scratch provenance
+  and safe cleanup; exclusive resources across roots need explicit allocation.
+- [ ] R10/R11 Workflow definitions/conflicts/snapshots, execution/nested/parallel/
+  on-demand/orchestrator, attention/questions/recovery and cancellation guarantees.
+- [ ] R12 Codex/Vibe/setup/MCP schemas and explicit unsupported refusals; real
+  harness version/platform qualification requires separate authorization.
+- [ ] R13 Statistics coverage/cost provenance; validated definitions/config/preferences
+  import only, no task/run/event histories, live adoption or reverse conversion.
+- [ ] R14 External-oracle conformance and full retained fault families; accepted
+  Rust budgets and exact runtime/platform identities; missing evidence disposed.
+- [ ] I01–I04 Native Mac integration and independent artifact/distribution checks.
+- [ ] O01–O04 Cutover rehearsal/backup/archive/registration handoff, observation and
+  explicit contract transfer/Python retirement. HarflowMac is retained.
+- [ ] W02 Later Linux engine/server qualification; WIN02 Windows job/process/
+  filesystem/authority/backend qualification only after Web stable owner gate.
 
-## Redesign target and intent
+Use existing Cargo architecture/dependency/check guidance. Never claim stock backend,
+managed runtime or platform qualification from synthetic S07–S09 profiles.
 
-The approved baseline is [HarflowDesign v2 at commit `3643d083700be4032c93237813b573d04bab6ab1`](https://github.com/Harflow-Dev/HarflowDesign/tree/3643d083700be4032c93237813b573d04bab6ab1/v2), including the owner-approved Mac connector amendment. Consult the optional workspace [coverage and intent ledger](../../HarflowDesign/v2/docs/migration-coverage.md); it is not a build dependency. Conform to retained engine wire contracts and semantics; frontend removals do not delete engine capabilities. Missing required states need a v2 design and explicit owner approval with exact commit, path and state before dependent implementation. Approval of visuals does not authorize new authority, public contract changes, backends or deferred features. Core execution safety and observability remain required.
+## Product engine API
 
-## Dispatch and boundaries
+The native app uses **harflow-ctl as its engine API**. MCP is agent-facing only:
+no native MCP client or fallback. Existing harflow-setup acquisition/registration
+tasks remain separate from product operations. If required app functionality lacks
+a ctl operation, first scope additive work in the current canonical contract owner:
+HarflowMCP before accepted O04 transfer, HarflowEngine afterward. Specify provenance,
+authority, bounds and unknown/refusal semantics, capability, fixtures and tests;
+then coordinate byte-identical fixture vendoring and consumer adapters. Pre-transfer
+native work starts in Python; Rust implements that same accepted ctl contract.
+After transfer, later Web work does not depend on retired Python. Missing API is not
+permission to read persistence, invoke agent MCP or invent semantics. M03 may split
+bounded suffix sessions.
 
-Work only on the assigned item. Read the workspace AGENTS.md, this repository's AGENTS.md if present, and
-applicable package instructions first; preserve concurrent edits and use primary checkouts.
-The orchestrator delegates unit tests under the current workflow. A checkbox is
-not authorization to start runtimes, mutate real roots, register clients, push,
-release, clean up, or expand scope. Use disposable roots and workspaces where
-needed. Report a blocker with concrete evidence; task status is not proof of
-completion. Repository builds and tests must not depend on sibling checkouts.
+## Parallel-track coordination
 
-The optional [workspace coordination index](../../HARFLOW_MIGRATION_CHECKLIST.md)
-uses B0 (baseline), C0 (contracts and design), E0 (client and Electron on
-Python), R0 (Rust parity), I0 (integrated stack), and O0 (owner cutover and
-publication). It is not a build dependency. Freeze and qualify the reproducible existing baseline without waiting for open
-feature tickets. Use the v2 intent ledger to decide retained and simplified scope;
-legacy UI parity and open tickets do not independently mandate inclusion. All boxes below are deliberately unchecked;
-scaffolds alone do not establish completion. Early-use gates and defaults remain
-subject to evidence and explicit authorization for root registration. Use fresh
-Rust state; archive historical task, run and event records rather than importing
-them. Import only definitions, configuration and preferences, with an explicit
-registration backup and handoff. No engine may share a writable root.
+M01 shared readiness follows S09 coverage disposition and the native capability,
+code/private-read inventory, with ratified initial ctl/capability/fixture baseline,
+exact identities, explicit blocking gaps and canonical change owner. M02+ native
+and R01/R02+ Rust work may then run concurrently with disjoint files/isolated roots.
+Pin each accepted subset, serialize canonical changes under MCP before O04 (Engine
+afterward), coordinate consumer fixture deltas and carry forward affected conformance.
+Both accepted M12 and R14 are required before I01; missing baseline/fault evidence
+is not automatically waived. Read-only research remains separately assignable.
 
-Stage dependencies: B0 → C0 → E0 → R0 → I0 → O0. Isolated C0
-architecture spikes do not depend on E0; production Rust implementation does.
-Within R0, order work as store → lifecycle → messages, approvals, resources
-and backends → workflows → statistics and integration.
+## Boundaries and evidence
 
-## B0 / C0 — research and decisions
+This plan authorizes no implementation by itself. Follow workspace/child/package
+AGENTS.md and the current session brief; preserve concurrent work in primary
+checkouts. Use isolated roots/fixtures. No implicit live-state, install, registration,
+paid-probe, signing, push, publication, retirement or deletion authority. Record exact
+commit/contract/design/runtime/profile identities, actual checks/reviews, missing
+coverage and owner decisions in the lead receipt. Delivery and acceptance differ.
+Builds/tests must not depend on sibling source checkouts. Documentation-only plan
+changes need link/consistency checks, not product test reruns.
 
-- [ ] B0-EN-01 Record scaffold commit and existing checks without claiming
-      compatibility or production readiness.
-- [ ] C0-EN-01 Run isolated architecture spikes for process identity, detached
-      survival, termination, SQLite contention, transport and authority.
-- [ ] C0-EN-02 Record platform evidence and an explicit owner decision on the
-      process model; document unsupported cells and follow-up decisions.
+## Conversational steering scope amendment — 2026-11-05
 
-## R0 — implementation after E0 acceptance
-
-- [ ] R0-EN-01 Confirm the complete Electron-on-Python gate is accepted before
-      production Rust implementation; spikes may precede this gate.
-- [ ] R0-EN-02 Implement bundled SQLite on fresh roots, bounded reads, durable
-      transactions, backups and contract-compatible errors and version info.
-- [ ] R0-EN-03 Implement detached ownership, identity, process-tree termination,
-      capture, drain and recovery; never automatically retry uncertain effects.
-- [ ] R0-EN-04 Implement tasks, messages, approvals and responder authority.
-- [ ] R0-EN-05 Implement slots, worktrees and shared scratch with safe cleanup.
-- [ ] R0-EN-06 Implement workflows, parallel and nested Nodes, attention,
-      recovery and statistics.
-- [ ] R0-EN-07 Implement setup and MCP, and qualify Claude, Codex and Vibe with
-      real CLI profiles when separately authorized; defer other backends.
-- [ ] R0-EN-08 Pass fixture and black-box behavior conformance on isolated roots
-      with external oracles; schema equality alone is insufficient.
-
-## R0 — behavioral and fault acceptance
-
-- [ ] R0-EN-09 Verify launch, resume, cancel and unknown outcomes with a fake
-      harness spawn ledger; replay of the same operation identity or reservation
-      cannot create duplicate execution.
-- [ ] R0-EN-10 Verify queued, delivered, unknown and unsupported send states;
-      uncertain external effects are not retried automatically.
-- [ ] R0-EN-11 Verify stale or duplicate approvals and attention checkpoints are
-      refused without applying an obsolete decision.
-- [ ] R0-EN-12 Exercise invalid workflow saves and conflicts, nested and parallel
-      recovery, preserving sibling Nodes and their state.
-- [ ] R0-EN-13 Verify resource queue fairness and holder death; statistics report
-      incomplete accounting rather than claiming a complete result.
-- [ ] R0-EN-14 Test owner death, restart, kill and drain, PID reuse, disk full
-      and recovery against external process and capture evidence.
-
-## I0 / O0 — integration and cutover
-
-- [ ] I0-EN-01 Revalidate the same accepted client against Rust and record
-      differences, performance and platform-specific evidence.
-- [ ] I0-EN-03 Rehearse archive and import of definitions, configuration and
-      preferences only; exclude historical task, run and event state.
-- [ ] O0-EN-02 Rehearse registration backup and explicit handoff; never allow
-      Python and Rust to write one root or cut over active work.
-- [ ] O0-EN-03 Transfer canonical contract ownership exactly once, only after
-      explicit owner retirement decision and verified handoff.
-
-## Validation
-
-Run `cargo fmt --check`, `cargo check --workspace --locked`,
-`cargo clippy --workspace --all-targets --locked -- -D warnings`,
-`cargo test --workspace --locked`, `python3 scripts/check-architecture.py`,
-`python3 scripts/check-legacy-names.py` and `python3 -m unittest discover -s tests`
-as appropriate; see [development](development.md) and [architecture](architecture.md).
-
-## Handoff evidence
-
-For every assigned item report: item ID and result; repository and dependency
-commit IDs; fixture manifest hash where applicable; commands, environment,
-results and evidence locations; local, committed, pushed, CI-passed, packaged
-and released state, stated separately; approved design commit, path and state where
-applicable; deviations, blockers and remaining work. Record unrun checks and
-why. Do not infer passing gates from a dispatched task's status.
+ST06 implements the canonical steering state machine and public ctl behavior as part of affected R11/R14 conformance, before integration. O04 transfer is not a prerequisite for consuming accepted contracts. Current Rust work continues unchanged; no ST06 implementation is assigned.
+See the [current ST session briefs](../../HARFLOW_MIGRATION_SESSIONS.md#conversational-steering-track--accepted-scope-2026-11-05)
+and [steering plan](../../HARFLOW_WORKFLOW_STEERING_PLAN.md). Scope acceptance does
+not pass prior gates, permit live control or authorize releases.
