@@ -1,627 +1,626 @@
 {
   "canonical_owner": "HarflowMCP until accepted O04",
-  "consumer_audit_version": 1,
-  "contracts_md_sha256": "780170354755824d324ed9804f132f0fae6b070c5315bf09393642db2d89264d",
+  "consumer_audit_version": 2,
+  "contracts_md_sha256": "850b4fded3f3b4732585902f7bcadf47cd7fdab5f733c49e32fe49aca20b70c2",
   "counts": {
-    "capability-list": 8,
+    "added": 84,
+    "capability-list": 9,
     "opaque-regeneration": 17,
-    "product-version-only": 104,
-    "unchanged": 69,
-    "usage-help": 1,
-    "watch-capability-negative": 1,
-    "watch-contract-added": 7
+    "product-version-only": 110,
+    "unchanged": 70,
+    "usage-help": 1
   },
   "files": [
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-already-answered.json",
-      "previous_sha256": "c87cd9865fbab6d9f6aeb3e1603441235fc902003c0a3685848a200ed31d2256",
-      "sha256": "9073a0af12f0579c76c1c695314d84dcdc158ef049ed6125435ac8cfb75b8b24"
+      "previous_sha256": "9073a0af12f0579c76c1c695314d84dcdc158ef049ed6125435ac8cfb75b8b24",
+      "sha256": "38fc6c92c7da1baef73d9060a690b25984b26d6d0cd0a9b6334177ddcd241700"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-caller-undecidable-approval.json",
-      "previous_sha256": "6de2f487e016889f050dc398e8bb980c3dbbf7e995ddbe7e0b33b218c2b16f5f",
-      "sha256": "c2424d5a5c6f313955ccf4ea7e809ae7b7d0a1f78081c67640005f532a4903fd"
+      "previous_sha256": "c2424d5a5c6f313955ccf4ea7e809ae7b7d0a1f78081c67640005f532a4903fd",
+      "sha256": "88c19fa11e64cb7e863304a99b64adde025b3c0493ff744ea7f05741546a0216"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-caller-undecidable-global.json",
-      "previous_sha256": "76dc5383f294f43eaa54e5fea784800f66e6de8f7030c899dbb133e8db029b44",
-      "sha256": "e46248b51236fa9ba414855d897b0ec74f6d11c98aae61b80513c2d8a7d118ae"
+      "previous_sha256": "e46248b51236fa9ba414855d897b0ec74f6d11c98aae61b80513c2d8a7d118ae",
+      "sha256": "e517ad63f2adf1f8f6cf47bec8aaa01ce715bb7c0af4dc9bf9469882243d3dd7"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-expired.json",
-      "previous_sha256": "a009a05bc3a41ae94df3b279b0dd1f37a8e6d8a38e499a13aa14008ae3ecaf65",
-      "sha256": "9aca26a18629b81339296a9d2ffa6307f36613aed0ad8d6ea7ea38f9ed76c870"
+      "previous_sha256": "9aca26a18629b81339296a9d2ffa6307f36613aed0ad8d6ea7ea38f9ed76c870",
+      "sha256": "e7040747e954f2312f08ce4822fc506a48965cad9e78f7534c8a2e81265d5b9d"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-generic-no-reason.json",
-      "previous_sha256": "25dacbe496c568c95ce1b63e7c001bba4ff57de2b4cbe61a2d25066c62eb3c32",
-      "sha256": "5d1b6d87252aa0729869691f545877099f91a5655e834d6a032303821a3f02dd"
+      "previous_sha256": "5d1b6d87252aa0729869691f545877099f91a5655e834d6a032303821a3f02dd",
+      "sha256": "5428fbbcd62876aaf3b875ede36fdf13bd1b0148a54fcf8531e1ba7cd5f03c44"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-legacy-no-reason-synthetic.json",
-      "previous_sha256": "c6ebb901817b8a82bd63f69dd8cb659d58cf1fba79b3c56099f7874aa5891fdd",
-      "sha256": "53c5001a8adfff1a7325e7a0c9ae54ff8db354e8eea0ab16abcd886ce1593c5c"
+      "previous_sha256": "53c5001a8adfff1a7325e7a0c9ae54ff8db354e8eea0ab16abcd886ce1593c5c",
+      "sha256": "aa8c1791062d5e2d360eaf00f7d646e122c5518a771bc2982c77eae482f7dbb5"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-not-current.json",
-      "previous_sha256": "46115a4bba8f3510f4c07b1df3149f598ac57d8c1f6016857e3ff62ea4e83a31",
-      "sha256": "96fae2bdedc2d44c6d857bb42886b9d1ada5abde3fac02f9e682af7d8eb00a80"
+      "previous_sha256": "96fae2bdedc2d44c6d857bb42886b9d1ada5abde3fac02f9e682af7d8eb00a80",
+      "sha256": "3fef3a97209bd52c65deec948fa7534c4f122068b21ab63f7535b564fd41f213"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-ownership-lost.json",
-      "previous_sha256": "aad31000a36148075b63618056956da295d061047ab3fef01f07055caacf108a",
-      "sha256": "a26e8a1dd12a2875db77ed37db1eb96a6673acba70d1937b09aa296f6d3ec82a"
+      "previous_sha256": "a26e8a1dd12a2875db77ed37db1eb96a6673acba70d1937b09aa296f6d3ec82a",
+      "sha256": "b4cb52bc8a698158319e95e87f834dc6a83a712c9b0a7693bb0b1a43a2291b93"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-reason-incomplete-synthetic.json",
-      "previous_sha256": "fdbbcf149c3643d1868fc020a61148f9b28d65db66aa5e98b3a0edeab60e17ae",
-      "sha256": "8091759615e2b508266f0c8f4449eeec415c87c1bf5d0462929ee24e0cc86edc"
+      "previous_sha256": "8091759615e2b508266f0c8f4449eeec415c87c1bf5d0462929ee24e0cc86edc",
+      "sha256": "121a97e56316917857f0a6a179a2142a8f4ca5af34893d81623a04a8550acbf1"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-reason-unsupported-synthetic.json",
-      "previous_sha256": "a6d77462938cd9cf14f5635f800fb9bba1ab9679a81f8f461b12a60f75e0b5c1",
-      "sha256": "fd18ea665e04b4bcc99aaed1b9dae4b0a2a6d21b46c8d18f904aaa461178031c"
+      "previous_sha256": "fd18ea665e04b4bcc99aaed1b9dae4b0a2a6d21b46c8d18f904aaa461178031c",
+      "sha256": "8164585acea1d25e4aaf0ed778bac5bdf766f66cfee271543c4e4018511a2801"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-settled.json",
-      "previous_sha256": "046b6f47a14979f549b64d0a0c4b53ec19f14fe649aaf7af24fb6552f61d4f58",
-      "sha256": "8767f651df5d973b262495d3f979a6fd9cdd4dd2ab91ed3ae3d0af55b06c8b5f"
+      "previous_sha256": "8767f651df5d973b262495d3f979a6fd9cdd4dd2ab91ed3ae3d0af55b06c8b5f",
+      "sha256": "1b0003e948485f9894dcebed7670ee79f0dcb807c2acb5fcb52aacdebabc590d"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-unauthorized-agent.json",
-      "previous_sha256": "980baf1dd31cdc8e2aa5256bde954cdb55f7d105e5193dd4742e2d0a0465e450",
-      "sha256": "b815b58eaf7fe453fd0ffa0b0f29412e81a870109f9ea29c3d4f81e5cf8bd9e6"
+      "previous_sha256": "b815b58eaf7fe453fd0ffa0b0f29412e81a870109f9ea29c3d4f81e5cf8bd9e6",
+      "sha256": "76870b99881a9289f751ccc1cacf7706a6cb860ca09a8f92e82672544324228f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-unauthorized-managed-task.json",
-      "previous_sha256": "f4b2d60f0f7847a9c4d0929a6b29c38220eb4fe05a07d621e4c0003e1c8f03ff",
-      "sha256": "012a9b2398e6666f56d46d4dcddbefcee75d7c23ba436aa5ec30532bc324764e"
+      "previous_sha256": "012a9b2398e6666f56d46d4dcddbefcee75d7c23ba436aa5ec30532bc324764e",
+      "sha256": "26f3fefc456721bb7aedce78c94bbd2d0ea7fdabc833cf83e0d9861cd193c156"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-unauthorized-owner.json",
-      "previous_sha256": "34885b2b9580cb9f0d1fb36f421b4bbc9d35c670534536487b16dd80d553e389",
-      "sha256": "e0d0dd235cf05bb68c1f46642ff6369401179d25a332ecb178ea4bbaf9ffa9fe"
+      "previous_sha256": "e0d0dd235cf05bb68c1f46642ff6369401179d25a332ecb178ea4bbaf9ffa9fe",
+      "sha256": "41becb425cc16f9306ac710d425790906d79ac2534e7217314b1f9a1e4c9185a"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-error-unknown-reason-synthetic.json",
-      "previous_sha256": "985f3608868a2b1fb977c871b452dfca35085de1a54a6883305644a7b436cf42",
-      "sha256": "4212330272bf412bce492c671af5d7197bc9129c58678479cab4e9824c56a883"
+      "previous_sha256": "4212330272bf412bce492c671af5d7197bc9129c58678479cab4e9824c56a883",
+      "sha256": "c67c6178ff95f18908ae92c9787f98101ea4a2ff541190deaef887ab1d882d53"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-claude-bash-no-reason.json",
-      "previous_sha256": "0176200dbdaa22ec1aa509145d189774576bbfdc192ad15794cc800700c94f34",
-      "sha256": "edd346a2f792a2fc187cb396031aa0d41ffa998da980f34e55600795c03dc3be"
+      "previous_sha256": "edd346a2f792a2fc187cb396031aa0d41ffa998da980f34e55600795c03dc3be",
+      "sha256": "50ebbcf382d06732741032fdfd600ff16874f25c1819f0a6566e30324365afa2"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-claude-bash.json",
-      "previous_sha256": "58b1fc2d16fc105c96a2874786c566e449f79af83ac989f401eafb572595e294",
-      "sha256": "0fcee27598b6fdf41d47623ae03a54df32eb5621805e1256c02c8ca67b52c1bc"
+      "previous_sha256": "0fcee27598b6fdf41d47623ae03a54df32eb5621805e1256c02c8ca67b52c1bc",
+      "sha256": "a9a499983864a771804591a983fbe2b15ccd702c2e8df09347883e4d02b6eae6"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-claude-edit.json",
-      "previous_sha256": "e67c031bfa1450d5dacb70a5ba0027176545b77eda966a09f87e60460d8b4b9c",
-      "sha256": "679e28bf271740055ae3c3bdd5ed34a82c05a5a21328bed4955862c79274ec95"
+      "previous_sha256": "679e28bf271740055ae3c3bdd5ed34a82c05a5a21328bed4955862c79274ec95",
+      "sha256": "d92148434f17fea1f1ad84ca413be12c6d9a51100869ca3825410e69e40a1c40"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-claude-write.json",
-      "previous_sha256": "6a22ad0b14304d00690de7809de46878d964e649bc16c2ace054544b1c7b4a07",
-      "sha256": "614f762cf9efd9b75bd4890300479368aaa4671699d807d1adea5316499d42b5"
+      "previous_sha256": "614f762cf9efd9b75bd4890300479368aaa4671699d807d1adea5316499d42b5",
+      "sha256": "407fac70f9ad7036b9417d2927d015dd107266713568ab1efc2032d1cc49d721"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-codex-command.json",
-      "previous_sha256": "d99885c4287634aa6d53a913b69d288ea75f3d42fd14328059349e9b6e1bb525",
-      "sha256": "e8ae708b86713b25526844f17dc1b5c15437bbbf7685b4765d444b4d0f24be44"
+      "previous_sha256": "e8ae708b86713b25526844f17dc1b5c15437bbbf7685b4765d444b4d0f24be44",
+      "sha256": "4dbde27fac64d35f35213b6fc455d31ef300dcb79a86fec6bf715b7aac0f5fef"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-codex-file-change-move.json",
-      "previous_sha256": "f574384416b3a80f411af256f65232df8c9c9cd8bcdc1e95cc5a8be479410af5",
-      "sha256": "7e8ed4189275c4a2c3ac2ced00ae1e33c2b9a48d300414b72c700978d778be8f"
+      "previous_sha256": "7e8ed4189275c4a2c3ac2ced00ae1e33c2b9a48d300414b72c700978d778be8f",
+      "sha256": "47586da0c871b2ba2e0d4fa9083e712bf96a00f5bb60f7e7a3294d48dc743f96"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-codex-file-change.json",
-      "previous_sha256": "10497dbd248cab13fe6923327d86b2266f1a3f93de752ff7049d50966340ee4c",
-      "sha256": "42bd8254c17a1e4eb17aee1c73e6ea1e22a88e55838c6190b154697bb3bae213"
+      "previous_sha256": "42bd8254c17a1e4eb17aee1c73e6ea1e22a88e55838c6190b154697bb3bae213",
+      "sha256": "1f6e74d0a7501a878a8c7afa92b147f0a319f8ea8110fb98501ba5941937c676"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-get-optional-fields-omitted-synthetic.json",
-      "previous_sha256": "60376844d374bc6936c46ce58649a6be98628a17d7fd580c33d94ef5a518a5b3",
-      "sha256": "bed55e00337457480776e689eeb6f5aca7d8ab20e5d7b6c836bb64019eeb4d23"
+      "previous_sha256": "bed55e00337457480776e689eeb6f5aca7d8ab20e5d7b6c836bb64019eeb4d23",
+      "sha256": "e82e51f0135c744b8eb6fe9a0e809039807c34d3611e4fa55c5832707652db9b"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-codex.json",
-      "previous_sha256": "e181d39cd7866c6f46d15d0d1880115f0fc2b4f8c289c66b63c16535098c5db1",
-      "sha256": "f6edbdb0f7c57624cdcc0df9d8debae6bbe51bd8533e3e042daee1abd8d65141"
+      "previous_sha256": "f6edbdb0f7c57624cdcc0df9d8debae6bbe51bd8533e3e042daee1abd8d65141",
+      "sha256": "a19649031ac0ad73b16f6d868c048db3fc039e96ddec5837e24aeb48b7e91f09"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-history.json",
-      "previous_sha256": "9bc1b0857edc80e8fb551cd44bcbe68a0978a9ee0881cd8d5d82f78d600526e6",
-      "sha256": "066f8e81f6a307056d2d79770f5d4c060090c60143d99f39a0c5e609e139cbe7"
+      "previous_sha256": "066f8e81f6a307056d2d79770f5d4c060090c60143d99f39a0c5e609e139cbe7",
+      "sha256": "872f578bf58a23d088ce8c23ac90c16c975e725ac4de5e653082c2900b2627b5"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-optional-fields-omitted-synthetic.json",
-      "previous_sha256": "78202433da558770fcabcb6bf8d4cae200731ff7b6cc0c440ecf15e2ca6b232d",
-      "sha256": "2272c19802f8e7f5318aade5dc7e06324e1230e0cb112d8d7d5b2c60fed172f5"
+      "previous_sha256": "2272c19802f8e7f5318aade5dc7e06324e1230e0cb112d8d7d5b2c60fed172f5",
+      "sha256": "0df1589d3dc3e0dec9e37c597327586d663102473bb261b9172fba6465c86c56"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-page-1.json",
-      "previous_sha256": "f958019e5e783bfca3828d97b5a4baeefc5a1c4f092cfc81e9bbc819532ffda1",
-      "sha256": "f7508984af715f44608584509e4c13e08c51f546f36ced055ee786c16cb8e70e"
+      "previous_sha256": "f7508984af715f44608584509e4c13e08c51f546f36ced055ee786c16cb8e70e",
+      "sha256": "fe43b1aad012fb4bdaa392c5495761af36387b85e7de8feecca4dc47311ad5a7"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-page-2.json",
-      "previous_sha256": "7d52732646a8cd3dc5e736eb92580151773ffde5b64e359ec27e647cb38203ea",
-      "sha256": "fa2043fa944136c9de8b538e31a9f7e249067054d66ff54a573d984f06f01ce3"
+      "previous_sha256": "fa2043fa944136c9de8b538e31a9f7e249067054d66ff54a573d984f06f01ce3",
+      "sha256": "1557ed25fddd19658ceddfcaff471a5b2fc8016980b6a9d792d2dca064f2d818"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-page-3.json",
-      "previous_sha256": "0b8a7b7ee8bbf55c9ac7bd11de7f183ffa1f9cc807279dbb084b2dfd57f31f87",
-      "sha256": "26f6da652db2599cb784ab1f8ad6ce8cfa3a8c9126c4721e34c8d6c957f54e09"
+      "previous_sha256": "26f6da652db2599cb784ab1f8ad6ce8cfa3a8c9126c4721e34c8d6c957f54e09",
+      "sha256": "a6a82aeb48e1f89168d80a1ffeaf6b37ef9ffdfd8dd271888d5bfb869fe926c5"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-list-pending.json",
-      "previous_sha256": "8ebdce5d608e0f6b698bf09136dbed10b57df79190968b054149de64c32917b7",
-      "sha256": "96251e4eaf0009793ff6e89cb3dadedfbc2b9980c96324cc5a5548f1b5270a3b"
+      "previous_sha256": "96251e4eaf0009793ff6e89cb3dadedfbc2b9980c96324cc5a5548f1b5270a3b",
+      "sha256": "451dc631353ed09e3ccc6d62a56c0a8260b5e16f55258c1fe48d5ae48410a349"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-respond-caller.json",
-      "previous_sha256": "23b9d35decc9ff88cb654bc2c4b0aee9a189f15c6b80631b7dc531428d41f491",
-      "sha256": "560b670c8e0727cbb9c3227f699fcf0fcaeb50834e15cf0360f7c2973963b48d"
+      "previous_sha256": "560b670c8e0727cbb9c3227f699fcf0fcaeb50834e15cf0360f7c2973963b48d",
+      "sha256": "885bf45924dc277ba1cf6e05892b686b291afc2047212ce39b9a3553e5dd496f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-respond-monitor-owned.json",
-      "previous_sha256": "daaf95a62f83886a7a017479ef08097bd7c531914c6a0f0359c646de604624e1",
-      "sha256": "ef059037f71e55002bbe7fac45d4d65af00c1f4bd413e516727447e485c30516"
+      "previous_sha256": "ef059037f71e55002bbe7fac45d4d65af00c1f4bd413e516727447e485c30516",
+      "sha256": "adc26ddfdb05355e2304452013af111fc013ad5657bdad2db2b1874c74eb8760"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-respond-monitor.json",
-      "previous_sha256": "d011121a4b6997ba07c39a15dc0f952674fa00ccb7732307d8145e9a7522f79a",
-      "sha256": "821bb328536697b0b0af6920bf9b691f53249f1431ac8887616d3bf7f801d93a"
+      "previous_sha256": "821bb328536697b0b0af6920bf9b691f53249f1431ac8887616d3bf7f801d93a",
+      "sha256": "6c444198d6518e3a355ec4f255bd84be68e9692ec313d22cb24dad64262252e5"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-cancelled.json",
-      "previous_sha256": "7f3f254566b9601ae9def3446880c36954eae24d787edfb40953cfc1f7e135f0",
-      "sha256": "f632003e99405a161c02f3ca057fbf019c713ffb1c60dabe206deccdae0d9b31"
+      "previous_sha256": "f632003e99405a161c02f3ca057fbf019c713ffb1c60dabe206deccdae0d9b31",
+      "sha256": "4833fbf6a8de994588640c011ba6a4530a6355c521805d17014e6a73c6b0b0b0"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-codex-sent.json",
-      "previous_sha256": "5525dd85554d19a15cbc5f138abf339f98ae4ffc00e31b1fc22d127c21221761",
-      "sha256": "1421c59b0ec1441390403c6630dc8cf626b059771e4c34d1ca1143f78d1b8007"
+      "previous_sha256": "1421c59b0ec1441390403c6630dc8cf626b059771e4c34d1ca1143f78d1b8007",
+      "sha256": "5ca27e9ef09ccf89fd36d16051618bf6831498df519ba10fbc5978f8ded3b325"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-delivery-unknown.json",
-      "previous_sha256": "e84e06be2bb5cde63ce453b44222ff2e98d07a0b3a3e4d4ef0d9e1a0b0040a53",
-      "sha256": "33957dff5917a27b0908434c51a0f1f5f5bbf16183c800ba90f92618fb4980af"
+      "previous_sha256": "33957dff5917a27b0908434c51a0f1f5f5bbf16183c800ba90f92618fb4980af",
+      "sha256": "ba8d72d674c18872ea3892e94375d451e961ce04ad582a8939a5baafe97d11ce"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-expired-override.json",
-      "previous_sha256": "a04fd5d66d6fc621d89908be64cf9d0609a4efba4c5a313731603b6c92bdb2db",
-      "sha256": "1325d63314d00baca79c0c46250c9762a2d308b0bffcbb277e7217c73e6fbc82"
+      "previous_sha256": "1325d63314d00baca79c0c46250c9762a2d308b0bffcbb277e7217c73e6fbc82",
+      "sha256": "baeba87ce89278517076ece8eff8975aabe78c45b6edf511a105199e4e59e5cc"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-expired-unanswered.json",
-      "previous_sha256": "e3f1382df989c08c91ebdbf0a37a1378d2acec4fd4cca467f306524e02a0a76f",
-      "sha256": "91008e6bbd9314b9d245fc3df3e7b9da36c11b2c4ce7c03674c4c1aab2dcd453"
+      "previous_sha256": "91008e6bbd9314b9d245fc3df3e7b9da36c11b2c4ce7c03674c4c1aab2dcd453",
+      "sha256": "76a6b4231ea65ca103c938499230f2d02309b4130022dc7899f1a0e82dbb7d8f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-invalidated.json",
-      "previous_sha256": "b10f2b9bed35ec980cb37052bce9674d26ad950b044841c3166d65b1682f14de",
-      "sha256": "f00a2a04aea582b5715e2535148190b13d3aca51fd004c3f2d97bb90cebd6ee1"
+      "previous_sha256": "f00a2a04aea582b5715e2535148190b13d3aca51fd004c3f2d97bb90cebd6ee1",
+      "sha256": "6a155b066f4ec894d379274afb347d940d6b296974bffce78401c0bf130713f8"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-reserved.json",
-      "previous_sha256": "d011121a4b6997ba07c39a15dc0f952674fa00ccb7732307d8145e9a7522f79a",
-      "sha256": "821bb328536697b0b0af6920bf9b691f53249f1431ac8887616d3bf7f801d93a"
+      "previous_sha256": "821bb328536697b0b0af6920bf9b691f53249f1431ac8887616d3bf7f801d93a",
+      "sha256": "6c444198d6518e3a355ec4f255bd84be68e9692ec313d22cb24dad64262252e5"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-sending.json",
-      "previous_sha256": "aac0ffa00a0aceaf2a23f24d076a6b8441e7bf864a76bfcd9460b3c4c9ea6583",
-      "sha256": "2ac511315ee1def47147cc4bae2cb8d8ac612a2885e1e84f3258d4afd46e5bc4"
+      "previous_sha256": "2ac511315ee1def47147cc4bae2cb8d8ac612a2885e1e84f3258d4afd46e5bc4",
+      "sha256": "c2616a4456a41bb3282f0be8a01e2791512b2b586fb6c7cdb5180e23647bc277"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-sent-approved.json",
-      "previous_sha256": "b69596f8e2270092d58f4b999fe4a082596f9999cf2a93991fb1dfdc8480c239",
-      "sha256": "86019f42bf88907e42c89216f41eecf317a04352c5642ebb2bd556056662fbd7"
+      "previous_sha256": "86019f42bf88907e42c89216f41eecf317a04352c5642ebb2bd556056662fbd7",
+      "sha256": "d16dd86095fc11bfbcb2d1ee8963e115c8cfd71079997464ce96d0d274414aea"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-sent-rejected-monitor.json",
-      "previous_sha256": "8a80c994f65dc52b90336ed4a477d2b9b05430ebcfd44ead3a0b01e49b948a5f",
-      "sha256": "325035f7da2b1024bf1da80f39c04f31ed9bb2b0618be0e26c706bfce79ce14a"
+      "previous_sha256": "325035f7da2b1024bf1da80f39c04f31ed9bb2b0618be0e26c706bfce79ce14a",
+      "sha256": "ef19db3691c54506b719ef069d6b6d97c808199b792a42df8de3e1a9eb34d987"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-system-rejected-admission.json",
-      "previous_sha256": "ed0cd41d9b7d735ec820554b17cf123dfac5912dbaa49a56ca1d723b0fb43e56",
-      "sha256": "75cd36fd964e980418c4d463222b040ab27247b60ace77ae717b3d1ff7d059bf"
+      "previous_sha256": "75cd36fd964e980418c4d463222b040ab27247b60ace77ae717b3d1ff7d059bf",
+      "sha256": "b327d3c8094e1959ffda51745e7bf3358b56d40ba0d81bfd47661fd34d8bd297"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-system-rejected-delivery.json",
-      "previous_sha256": "c732dc16572d09c17d32cacfd308ed72ea2a87040adca0b75891c42001452488",
-      "sha256": "4f19383c6bddfbf6c4e4837236e26740031bdec9541e6612de9b1ec60b9d7691"
+      "previous_sha256": "4f19383c6bddfbf6c4e4837236e26740031bdec9541e6612de9b1ec60b9d7691",
+      "sha256": "b9c4fcddb761e42a7af01c70f937c8caa4f775302306f1737749028604cdb5e8"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-state-unsupported.json",
-      "previous_sha256": "0b42ad82938de6fa6a6e8fb88ff44072ecf21b6a5fbb431851bc9ec5c0648833",
-      "sha256": "77876b958b7f1f2cce57ece0573ba7a0f4363d9b03cfe1fca77dc9a33075357a"
+      "previous_sha256": "77876b958b7f1f2cce57ece0573ba7a0f4363d9b03cfe1fca77dc9a33075357a",
+      "sha256": "657f1813a76cb297dae36532f39e137ed2bd535ee5382a496a60b00077a0fd01"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-approval-status-awaiting.json",
-      "previous_sha256": "19d04814f1e3752fbf9319a141f9e1ae0b83f64233e20a92b61a5098eaf5341a",
-      "sha256": "29155dafefd637417af8efd77d7eee947a129786cfb43d244f7254d87a7d1fe2"
+      "previous_sha256": "29155dafefd637417af8efd77d7eee947a129786cfb43d244f7254d87a7d1fe2",
+      "sha256": "fea20350913c223c852b13c7d202dd691b75f66ea73af3e11bdf7c9210b73b03"
     },
     {
       "changes": [],
@@ -636,6 +635,270 @@
       "file": "ctl-batch.json",
       "previous_sha256": "875d139e45893885aa0b1e9502a8b047c43b91ebcfaa179c4c6f5f1d8063fc2a",
       "sha256": "875d139e45893885aa0b1e9502a8b047c43b91ebcfaa179c4c6f5f1d8063fc2a"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-bounded-window.json",
+      "previous_sha256": null,
+      "sha256": "0070e72bb81b6e8b410837e27ed3e80031e87a76989b1bc3ed874ccb168b9975"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-cancel-ack.json",
+      "previous_sha256": null,
+      "sha256": "4bcd057fe78514dee33b1742e8ef2399bf7d0eff1ddbd93a80c22025ce6d23e9"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-cancel-replayed.json",
+      "previous_sha256": null,
+      "sha256": "7355efa2d85d8798d616ae4594a0d6899e901e1b33488884c74370a53e72c72d"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-cancelled.json",
+      "previous_sha256": null,
+      "sha256": "7355efa2d85d8798d616ae4594a0d6899e901e1b33488884c74370a53e72c72d"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-closed.json",
+      "previous_sha256": null,
+      "sha256": "660a7992a92b295c6b118dd90acf29f2b4943d1dea2ab7508e5770c160b8d6c1"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-consumed-synthetic.json",
+      "previous_sha256": null,
+      "sha256": "abc9ea3a395f206e48c479a9c6cbedfe80a66a94310e40fd8abfa59fcf91c456"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-delivery-unknown.json",
+      "previous_sha256": null,
+      "sha256": "165aa6266829bb00c51c6435d14963cbc183234c020cf2d93ca92aec4a1619a2"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-empty.json",
+      "previous_sha256": null,
+      "sha256": "ef2b6beea039e8f69a28d322a50fada0b3cf6c82d8016576b8c1a3b160c848fd"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-interrupt-intent.json",
+      "previous_sha256": null,
+      "sha256": "d839ac5e046afdd7060f74d7d56523ce5e6430d18391ecfef7285c6d7c76b4b6"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-now-claimed.json",
+      "previous_sha256": null,
+      "sha256": "2f7cc314b36c365f99e255bd45e88544afbe6e10fe52a08f2388f6f5b460ffe9"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-now-queued.json",
+      "previous_sha256": null,
+      "sha256": "5ec02ed549cb480564ff886dbda769aaaea7545affa33c071d4e4b6898f122d2"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-promote-ack.json",
+      "previous_sha256": null,
+      "sha256": "1f9ee55807c243e8ba7c7898e8bc61f3c2483fbbceaf23f74698e896baec7445"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-promoted-now.json",
+      "previous_sha256": null,
+      "sha256": "3a10d757a3dab590c39615f7ef22b9896e5b29e4b5d0586cb982f835b694e99b"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-promotion-replayed.json",
+      "previous_sha256": null,
+      "sha256": "3a10d757a3dab590c39615f7ef22b9896e5b29e4b5d0586cb982f835b694e99b"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-queue-fifo.json",
+      "previous_sha256": null,
+      "sha256": "2515753bf871bef638ea55c370048f796f5dfa661ce395e433824a345d6189b3"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-queue-replayed.json",
+      "previous_sha256": null,
+      "sha256": "2515753bf871bef638ea55c370048f796f5dfa661ce395e433824a345d6189b3"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-cancel-issued.json",
+      "previous_sha256": null,
+      "sha256": "2cf70c10d61c1250501f91659119d886947ad659b0f9e5881cfcdd66cde36cf1"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-conversation-unknown.json",
+      "previous_sha256": null,
+      "sha256": "fb36540a2ce465ee3d62c26a9f1477e29b3527e1adef4e8cf6658cea4bcb5766"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-now-busy.json",
+      "previous_sha256": null,
+      "sha256": "7d3dc44b2455fc01352256fb82430714abe9bbfd0613cf5f508891f14b78d536"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-queue-full.json",
+      "previous_sha256": null,
+      "sha256": "9e1857225b6908c1a337d78d9fc098e3f744dde7f0c23c3dd177935c38896e85"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-request-conflict.json",
+      "previous_sha256": null,
+      "sha256": "47b153152bf71edefb6dc979f49dba233d5204cb5e6b61ccfd31cf913d3e12bd"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-request-expired.json",
+      "previous_sha256": null,
+      "sha256": "b810252a9936fba8f728c6a8378518e8a8ffc1b6b89a59868cf95752164a7d6f"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-target-stale.json",
+      "previous_sha256": null,
+      "sha256": "a286642db457277ab2f6dc4a7376abb35ba568a43075282e2c053843288c04e5"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-refusal-tool-interruption-unqualified.json",
+      "previous_sha256": null,
+      "sha256": "f3ea24556e0b749c7fc2432fbec084694118013aea10820a427aa4a84a5cd0fa"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-runtime-unknown.json",
+      "previous_sha256": null,
+      "sha256": "bab3a7eee7e577338776a64450e2c05159763f833c7237b741e02f7be09594ef"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-send-ack.json",
+      "previous_sha256": null,
+      "sha256": "800e80bb1a9b6ad4b0f76ebd4a01efb4f70a6fd9f75f911d384e9e3b39b2ea8a"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-task-status-available.json",
+      "previous_sha256": null,
+      "sha256": "0c523ee1e43ce2ec3b33f2ed39d57935833b3268a4931488a6771a97beb7af16"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-task-status-unavailable.json",
+      "previous_sha256": null,
+      "sha256": "de98b902a87c51511f21ce85e16f0d61916a0206363ed026af0f81eb5b9ac6a2"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-unknown-reconciled-synthetic.json",
+      "previous_sha256": null,
+      "sha256": "8875dcc172af9c754147e25c83b7d55e8cc35af7a6177c2a3deaf2682ed2f3a2"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-waiting-tool-settlement.json",
+      "previous_sha256": null,
+      "sha256": "fc14bfe84ac793b4659b85b4d3714b920667d497e0309d742bdc6abc7d5eceae"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-workflow-cancel-ack.json",
+      "previous_sha256": null,
+      "sha256": "3aff12f2464e5709abd764fb21d33cf0a941fa39f85bb67ea9e4c4950ab0e547"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-workflow-promote-ack.json",
+      "previous_sha256": null,
+      "sha256": "e169ba7bd650fedc9f4a0836bc58694f99f98aa1d889a22474259a907d8b83be"
+    },
+    {
+      "added_family": "ctl-conversation",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-conversation-workflow-send-ack.json",
+      "previous_sha256": null,
+      "sha256": "30b93f132fd5fc904796c6639984e6afb9d7d028f37b56fb2844e3feda106acb"
     },
     {
       "changes": [],
@@ -676,136 +939,136 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-resume-accepted.json",
-      "previous_sha256": "bafb27c054a7ee6ecab57e762702f0737ade33ca92dfff8accb96e7ac45c4384",
-      "sha256": "5db0da8bf819aae9d14c57b6afecea94e75fc5c7468130abd6be5b1a6ef71972"
+      "previous_sha256": "5db0da8bf819aae9d14c57b6afecea94e75fc5c7468130abd6be5b1a6ef71972",
+      "sha256": "328ecacdc2bb1d5d8a05bb3401112887b44164351fea7b46dae030c6048af32d"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-resume-refused.json",
-      "previous_sha256": "2f6e1b70d38576552d1c350ba396f389721314241c5d13014211645756f3cf1b",
-      "sha256": "c7281f6d153631dc26edda89b639e44d2d3fe98fc60148d371b04514e40bcd4e"
+      "previous_sha256": "c7281f6d153631dc26edda89b639e44d2d3fe98fc60148d371b04514e40bcd4e",
+      "sha256": "859edd74803956469adf3a03d60d869e2dcd8116100d0df04eb0f5755556823e"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-resume-unknown.json",
-      "previous_sha256": "25ccb4ef050062b0bbd5b1ea1118879abc5a4cd3ec9f9eade743b0a343b740ef",
-      "sha256": "61c043f4a1c251edd1a274b7e01496c7ee6cf24f42e76e6fcb9413a76d109132"
+      "previous_sha256": "61c043f4a1c251edd1a274b7e01496c7ee6cf24f42e76e6fcb9413a76d109132",
+      "sha256": "45b0a814a4679a77bc27749dfdd2f26e685f4be96fb370c1fe764539ca618aa8"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-run-accepted.json",
-      "previous_sha256": "bafb27c054a7ee6ecab57e762702f0737ade33ca92dfff8accb96e7ac45c4384",
-      "sha256": "5db0da8bf819aae9d14c57b6afecea94e75fc5c7468130abd6be5b1a6ef71972"
+      "previous_sha256": "5db0da8bf819aae9d14c57b6afecea94e75fc5c7468130abd6be5b1a6ef71972",
+      "sha256": "328ecacdc2bb1d5d8a05bb3401112887b44164351fea7b46dae030c6048af32d"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-run-refused.json",
-      "previous_sha256": "2f6e1b70d38576552d1c350ba396f389721314241c5d13014211645756f3cf1b",
-      "sha256": "c7281f6d153631dc26edda89b639e44d2d3fe98fc60148d371b04514e40bcd4e"
+      "previous_sha256": "c7281f6d153631dc26edda89b639e44d2d3fe98fc60148d371b04514e40bcd4e",
+      "sha256": "859edd74803956469adf3a03d60d869e2dcd8116100d0df04eb0f5755556823e"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-launch-run-unknown.json",
-      "previous_sha256": "25ccb4ef050062b0bbd5b1ea1118879abc5a4cd3ec9f9eade743b0a343b740ef",
-      "sha256": "61c043f4a1c251edd1a274b7e01496c7ee6cf24f42e76e6fcb9413a76d109132"
+      "previous_sha256": "61c043f4a1c251edd1a274b7e01496c7ee6cf24f42e76e6fcb9413a76d109132",
+      "sha256": "45b0a814a4679a77bc27749dfdd2f26e685f4be96fb370c1fe764539ca618aa8"
     },
     {
       "changes": [
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/error/message",
+          "argument command: invalid choice: 's05-unknown-operation' (choose from 'version-info', 'state-inspect', 'state-recover', 'register-artifact', 'task-artifacts', 'workflow-notifications', 'interaction-events', 'limit-hits', 'statistics-page', 'task-events', 'task-prompt', 'task-changes', 'task-list-watch', 'list', 'task-list-page', 'task-list-compact', 'backends', 'qualify', 'status', 'recovery-activity', 'status-batch', 'send', 'cancel-message', 'cancel', 'takeover', 'takeover-attach', 'slot', 'resources', 'resources-release', 'resources-repair', 'launch-settle', 'worktree-list', 'worktree-remove', 'scratch', 'approval-list', 'approval-get', 'approval-respond', 'run', 'permission-preview', 'resume', 'continue', 'mcp-allowlist', 'workflow-validate', 'workflow-list', 'workflow-list-page', 'workflow-get', 'workflow-save', 'workflow-delete', 'workflow-build', 'workflow-preview', 'workflow-start', 'workflow-list-runs', 'workflow-status', 'workflow-detail', 'workflow-wait', 'workflow-pause', 'workflow-resume', 'workflow-cancel', 'workflow-revise-goal', 'workflow-builder-followup', 'workflow-builder-apply', 'workflow-inspect', 'workflow-assigned-input', 'workflow-artifacts', 'workflow-recover', 'workflow-migrate', 'workflow-abandon-dispatch', 'workflow-send', 'workflow-cancel-message', 'workflow-limit-hits')",
+          "argument command: invalid choice: 's05-unknown-operation' (choose from 'version-info', 'state-inspect', 'state-recover', 'register-artifact', 'task-artifacts', 'workflow-notifications', 'interaction-events', 'limit-hits', 'statistics-page', 'task-events', 'task-prompt', 'task-changes', 'task-list-watch', 'list', 'task-list-page', 'task-list-compact', 'backends', 'qualify', 'status', 'recovery-activity', 'status-batch', 'send', 'conversation-prepare', 'conversation-send', 'conversation-control', 'conversation-commit', 'cancel-message', 'cancel', 'takeover', 'takeover-attach', 'slot', 'resources', 'resources-release', 'resources-repair', 'launch-settle', 'worktree-list', 'worktree-remove', 'scratch', 'approval-list', 'approval-get', 'approval-respond', 'run', 'permission-preview', 'resume', 'continue', 'mcp-allowlist', 'workflow-validate', 'workflow-list', 'workflow-list-page', 'workflow-get', 'workflow-save', 'workflow-delete', 'workflow-build', 'workflow-preview', 'workflow-start', 'workflow-list-runs', 'workflow-status', 'workflow-detail', 'workflow-wait', 'workflow-pause', 'workflow-resume', 'workflow-cancel', 'workflow-revise-goal', 'workflow-builder-followup', 'workflow-builder-apply', 'workflow-inspect', 'workflow-assigned-input', 'workflow-artifacts', 'workflow-recover', 'workflow-migrate', 'workflow-abandon-dispatch', 'workflow-send', 'workflow-cancel-message', 'workflow-limit-hits', 'workflow-steer', 'workflow-steering-status', 'workflow-steering-history', 'workflow-steering-replan')"
         ],
         [
-          "/error/message",
-          "argument command: invalid choice: 's05-unknown-operation' (choose from 'version-info', 'state-inspect', 'state-recover', 'register-artifact', 'task-artifacts', 'workflow-notifications', 'interaction-events', 'limit-hits', 'statistics-page', 'task-events', 'task-prompt', 'task-changes', 'list', 'task-list-page', 'task-list-compact', 'backends', 'qualify', 'status', 'recovery-activity', 'status-batch', 'send', 'cancel-message', 'cancel', 'takeover', 'takeover-attach', 'slot', 'resources', 'resources-release', 'resources-repair', 'launch-settle', 'worktree-list', 'worktree-remove', 'scratch', 'approval-list', 'approval-get', 'approval-respond', 'run', 'permission-preview', 'resume', 'continue', 'mcp-allowlist', 'workflow-validate', 'workflow-list', 'workflow-list-page', 'workflow-get', 'workflow-save', 'workflow-delete', 'workflow-build', 'workflow-preview', 'workflow-start', 'workflow-list-runs', 'workflow-status', 'workflow-detail', 'workflow-wait', 'workflow-pause', 'workflow-resume', 'workflow-cancel', 'workflow-revise-goal', 'workflow-builder-followup', 'workflow-builder-apply', 'workflow-inspect', 'workflow-assigned-input', 'workflow-artifacts', 'workflow-recover', 'workflow-migrate', 'workflow-abandon-dispatch', 'workflow-send', 'workflow-cancel-message', 'workflow-limit-hits')",
-          "argument command: invalid choice: 's05-unknown-operation' (choose from 'version-info', 'state-inspect', 'state-recover', 'register-artifact', 'task-artifacts', 'workflow-notifications', 'interaction-events', 'limit-hits', 'statistics-page', 'task-events', 'task-prompt', 'task-changes', 'task-list-watch', 'list', 'task-list-page', 'task-list-compact', 'backends', 'qualify', 'status', 'recovery-activity', 'status-batch', 'send', 'cancel-message', 'cancel', 'takeover', 'takeover-attach', 'slot', 'resources', 'resources-release', 'resources-repair', 'launch-settle', 'worktree-list', 'worktree-remove', 'scratch', 'approval-list', 'approval-get', 'approval-respond', 'run', 'permission-preview', 'resume', 'continue', 'mcp-allowlist', 'workflow-validate', 'workflow-list', 'workflow-list-page', 'workflow-get', 'workflow-save', 'workflow-delete', 'workflow-build', 'workflow-preview', 'workflow-start', 'workflow-list-runs', 'workflow-status', 'workflow-detail', 'workflow-wait', 'workflow-pause', 'workflow-resume', 'workflow-cancel', 'workflow-revise-goal', 'workflow-builder-followup', 'workflow-builder-apply', 'workflow-inspect', 'workflow-assigned-input', 'workflow-artifacts', 'workflow-recover', 'workflow-migrate', 'workflow-abandon-dispatch', 'workflow-send', 'workflow-cancel-message', 'workflow-limit-hits')"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "usage-help",
       "file": "ctl-launch-unknown-operation.json",
-      "previous_sha256": "beb600c9fc6f99f5f5c88d24f13254fa3de194c6840599a56299bf8f881f7116",
-      "sha256": "26aede1695e7c6b6bb766ce16c7c1487c2c9c9de841337567c2bfdc812c13fbc"
+      "previous_sha256": "26aede1695e7c6b6bb766ce16c7c1487c2c9c9de841337567c2bfdc812c13fbc",
+      "sha256": "7699b6859be66ae11db9af437ce02cf6a1704ea498beca083c6e337bdd33fc39"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-limit-hits-empty.json",
-      "previous_sha256": "7f61f73763795056448455f49feab63a926082f8db1d3e54469cb712547680c2",
-      "sha256": "b840858677977f4e2da31bce3c54941b8b97312c9de25f46b269507c4bf8bf81"
+      "previous_sha256": "b840858677977f4e2da31bce3c54941b8b97312c9de25f46b269507c4bf8bf81",
+      "sha256": "f71d5ed77290cd2d53b17129f8e020210f018f17a4e0df3bab0bbe5c3589ecba"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-limit-hits-preparing.json",
-      "previous_sha256": "70ac063f0dec1807ff8e39c3fdfe560e861fa5710099fc25ee1c8acdb74e8554",
-      "sha256": "54b41785c74df221b750ba45c7a5084b885c6dcbb957c678c6b86aca663c7512"
+      "previous_sha256": "54b41785c74df221b750ba45c7a5084b885c6dcbb957c678c6b86aca663c7512",
+      "sha256": "bcad93d57d5b176205a2846c5e8b4861cae5ae80bea89e03ed8d77d7c4544e64"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-limit-hits-ready.json",
-      "previous_sha256": "67ecc44bf483d53e5c94955ef6d7ee342fdbf41c310d14803c311b9521e4fb92",
-      "sha256": "68b664607ee868f1f934b34df858c53130dd12ec8414b70f6cfc468c943be919"
+      "previous_sha256": "68b664607ee868f1f934b34df858c53130dd12ec8414b70f6cfc468c943be919",
+      "sha256": "daf9f498ee11b3ad1b55805cc64e1ab5f45f46f70fc1768ea8c437e18038ca4d"
     },
     {
       "changes": [],
@@ -832,14 +1095,14 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-not-enabled.json",
-      "previous_sha256": "be115dfe6763bfaae7b6a79dc1e158d03e76425c4113406111b67f8e74ddc7a4",
-      "sha256": "3d5626c4b66900fc9a5823e3e8090ef82ca4426aede711d320a2b2eb7312ef7b"
+      "previous_sha256": "3d5626c4b66900fc9a5823e3e8090ef82ca4426aede711d320a2b2eb7312ef7b",
+      "sha256": "051245c4f7f5c348508f2f631ed45b04e01b57ed13adce50ab9290316348e69b"
     },
     {
       "changes": [],
@@ -859,66 +1122,66 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-status-configured-idle.json",
-      "previous_sha256": "cb9ca4c333c26d65332a25818ef388ce94fa7fe80282ace3ba7b114a32adf685",
-      "sha256": "908b799ff521b337e0671fd83596590c0c0e7a3a9aaf8f65b0e49b345450d25e"
+      "previous_sha256": "908b799ff521b337e0671fd83596590c0c0e7a3a9aaf8f65b0e49b345450d25e",
+      "sha256": "b5ec40a50775eae233d48d785997116229ef03338d4b926f10e78320b531080a"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-status-empty.json",
-      "previous_sha256": "35e211939a3747808391b47170ff0059ced654ff5efc80ea41fe5c84375f4333",
-      "sha256": "0934bd8043c8de8ff8a5fe9e32a1cf5b9c511615f3580431df12b75c6822e658"
+      "previous_sha256": "0934bd8043c8de8ff8a5fe9e32a1cf5b9c511615f3580431df12b75c6822e658",
+      "sha256": "208a13d92a2f35d50dd3cee1d02598203e7a11f9ffbee80fde4ffa99aec4aa2f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-status-populated.json",
-      "previous_sha256": "ae716cf69452d3cb3f2476f2371cea16254a8c34829ef0fc104cdcb3de85572e",
-      "sha256": "405960b49e5a4f3dca4949be51772afccedf7a94886187fcf331f2e06a9a865f"
+      "previous_sha256": "405960b49e5a4f3dca4949be51772afccedf7a94886187fcf331f2e06a9a865f",
+      "sha256": "e58bd34ffc0ed93aa6049f0b940db71b7d93e0928d1d3d7bb28abb3c7d2fcf9f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-status-service-unavailable.json",
-      "previous_sha256": "cea16f01fb40d438e5eba88e18009564f7c47a61417bb5ffce3a4597712d5e42",
-      "sha256": "c7f52d36695bd5f95dc040a0cf09977f17cbc0e10ab9ec92cae802c6fe441653"
+      "previous_sha256": "c7f52d36695bd5f95dc040a0cf09977f17cbc0e10ab9ec92cae802c6fe441653",
+      "sha256": "f546343490be395a4b76fc781ec54144805b3861d1c7d2b5f3e75231d2f061b4"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-phase-slot-status-truncated.json",
-      "previous_sha256": "0eec10dadca34ab339f231c8580980b77caf13fa9f3e2b4e3078af00075785d4",
-      "sha256": "16281d2368e02d2df7c96fc21764781b92b4d5207b837e1212c8e3cce333bd2a"
+      "previous_sha256": "16281d2368e02d2df7c96fc21764781b92b4d5207b837e1212c8e3cce333bd2a",
+      "sha256": "3891499c05b14ab3d65293586fb485f9015b2ed7c789ae24706e0b7710880c65"
     },
     {
       "changes": [],
@@ -945,14 +1208,14 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-resources-mixed.json",
-      "previous_sha256": "377e9b8aa30d6c6bcc36bf209654bc9d7ff09a4b7dd65c29342d3554d343c564",
-      "sha256": "625d4fb9834c0bc1c9ef13aeacbd58f47e8c88e3540d8a9137b709e61580269c"
+      "previous_sha256": "625d4fb9834c0bc1c9ef13aeacbd58f47e8c88e3540d8a9137b709e61580269c",
+      "sha256": "2025febefe08afc4f8d02cd76f937df5c8167004a9b95c9de8939ac2e50f409b"
     },
     {
       "changes": [],
@@ -992,25 +1255,25 @@
     {
       "changes": [
         [
-          "/result/snapshot_id",
-          "226fb10b7663474bc54ae7f0a8ef7535df45521b64a7e147a14f4334aeabcbc9",
-          "545c9f0ebceb67e47073c273a2f7960f3a30293392094a4154b51976df929bc4"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/generation",
-          "226fb10b7663474bc54ae7f0a8ef7535df45521b64a7e147a14f4334aeabcbc9",
-          "545c9f0ebceb67e47073c273a2f7960f3a30293392094a4154b51976df929bc4"
+          "545c9f0ebceb67e47073c273a2f7960f3a30293392094a4154b51976df929bc4",
+          "65bd9850ece0b3c80c69843eca18efe6188e585c59d60f82b46b419f3b5ad89d"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/snapshot_id",
+          "545c9f0ebceb67e47073c273a2f7960f3a30293392094a4154b51976df929bc4",
+          "65bd9850ece0b3c80c69843eca18efe6188e585c59d60f82b46b419f3b5ad89d"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-statistics-page-cost-reported-and-silent.json",
-      "previous_sha256": "4059eb8ddf01baaf46302f88c74bb9a624371a661716ea4ed403b734ffcf7295",
-      "sha256": "1cec3b7df181fc994cde893be0bb00a3a5c3394db7c5ac44bad0dae39f63aa1c"
+      "previous_sha256": "1cec3b7df181fc994cde893be0bb00a3a5c3394db7c5ac44bad0dae39f63aa1c",
+      "sha256": "70891b3a87dad6fe46ab5f6d57a1210ae93c11d460e0ac7da35de9d4cea2f12b"
     },
     {
       "changes": [],
@@ -1048,6 +1311,366 @@
       "sha256": "a193e3c0a446a1d8dee4c6147a54cfecb860ba7e3ebcbae56814b18a90d8d006"
     },
     {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-admitted.json",
+      "previous_sha256": null,
+      "sha256": "517c648f1027a20636cf4b06c7291a29e23f28c9b5aab0a06f4bae97df9a57a5"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-awaiting-caller.json",
+      "previous_sha256": null,
+      "sha256": "f588da0adfc15e29eb1ff6257ac2b64fa73cbe7442f56c3530bc77d0d932f5a3"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-command-refused.json",
+      "previous_sha256": null,
+      "sha256": "8d9ab9e21e2f48c1e7bdfdad814994cd91c1013e5b54316fe64afb42173374bb"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-committed.json",
+      "previous_sha256": null,
+      "sha256": "b7abd64aa03d70ef2637e4a97ff2cb2fa50076a8a2af147653db4e80dfef5473"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-history.json",
+      "previous_sha256": null,
+      "sha256": "41e30861e7fb6465d993af77eb3a0225c7336446540f1c92a2b86d45556c1762"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-queued.json",
+      "previous_sha256": null,
+      "sha256": "94b1b2740a0e03265d84a4a45482e43b9c238cf3e1dcb3a773e1410ace467eb0"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-ready.json",
+      "previous_sha256": null,
+      "sha256": "61da4cefb4d6cdaf6ea8c06b658b4c8aac5d55db1ea5a7e4d2833762ad84053f"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-replayed.json",
+      "previous_sha256": null,
+      "sha256": "51097515fe814cc78db3b32a2ce680fce33598348fbcc2c7e8c2ed3373b678bc"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-builder-summary.json",
+      "previous_sha256": null,
+      "sha256": "d6135c1c3325fd401e51b97f9f2e7bdf4ef7cd50860c16310a8987fa2aa298b4"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-admitted.json",
+      "previous_sha256": null,
+      "sha256": "a301fb185ca59a87036c72537cc41cf6ebf87d8a67f5c261dbc5c794810903bb"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-awaiting-caller.json",
+      "previous_sha256": null,
+      "sha256": "308e31ab1ad5897fe147ad56399ea2acfe2a1d88f2d832f067ef957598e19561"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-capture-unknown.json",
+      "previous_sha256": null,
+      "sha256": "1a86adf40455ecedc944baa749e286d44dce069d434f8a1496a3b31dfc946553"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-command-refused.json",
+      "previous_sha256": null,
+      "sha256": "7c2b58abd198cf91f4649095407d65b47dcca2ed811c9a63bcf1d3598222f0c6"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-committed.json",
+      "previous_sha256": null,
+      "sha256": "142d296b1e79c9ac9218e6e4e6137d5e1b0766c3c519da1fdd238a3737c416fd"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-history.json",
+      "previous_sha256": null,
+      "sha256": "6d1c329e3b621e90588f94bdf9f9283b37e63e642f0d32d8df611a71641d6151"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-nested-admitted.json",
+      "previous_sha256": null,
+      "sha256": "6c596dc545b17048485a5867dfa2d759b9adfb3ff5fe840723820e7981e964c1"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-nested-committed.json",
+      "previous_sha256": null,
+      "sha256": "4dc5cd4830c493550d34167d00e662bc481da7d11cca9023db64aa497ca494ae"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-nested-history.json",
+      "previous_sha256": null,
+      "sha256": "557a238977de96809634e3571b49bcfa9f79bf70b6c9e8cb5d9618b5911072e6"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-nested-ready.json",
+      "previous_sha256": null,
+      "sha256": "2af596f48b97c84504ce52ffd898c7f3ef99858375e7c6cfb4377d4cdd177ea5"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-queued.json",
+      "previous_sha256": null,
+      "sha256": "6b6ceecaf0e10187c1eca4c8ad33fb4e3b5ad188d85c3a81d9b6a7a317984344"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-ready.json",
+      "previous_sha256": null,
+      "sha256": "a7088971112e72a36165754a7fa812735c9108239e8dd97a1ef920030f9ed544"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-replayed.json",
+      "previous_sha256": null,
+      "sha256": "346167190196702de1aacb31bcf59820654392b186389a6e31fd7e3504314cb3"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-stale.json",
+      "previous_sha256": null,
+      "sha256": "3ee8b676b58bdff908f91f9c727fd88b67c660569a3f304f34cb38780dce7ebc"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-orchestrator-summary.json",
+      "previous_sha256": null,
+      "sha256": "9ad4b18c0d2e89c92dda3e11eb4eebc1252d7bf57bb03f2a47eddf1ab4bf7081"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-admitted.json",
+      "previous_sha256": null,
+      "sha256": "87a1dbfede0af2e2e7bb9440825f53680cd20b76a14478836c09a919c574a57e"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-committed.json",
+      "previous_sha256": null,
+      "sha256": "f967056676a2221ec0fe6e2a4989b4fca4a30679de4ce7534d96c7191e468174"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-expired.json",
+      "previous_sha256": null,
+      "sha256": "56baf134d67c38a26f93062dd6f89b935935c146b251d1b9c2c010b8baab52d1"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-ready.json",
+      "previous_sha256": null,
+      "sha256": "642bfc7b16025ea9476dc98be86985e8b109b048cbe0fbb03c1254442a032d0a"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-replayed.json",
+      "previous_sha256": null,
+      "sha256": "4e16c3b3bedf5da388caa07de6120dc07c87381a73871fd8b85ef601dbe3474b"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-settling.json",
+      "previous_sha256": null,
+      "sha256": "3426cf86e1f6fe55d72a8ed40f8bbf55dfabc7690885afe301a32d024696b7f6"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-spawn-race-unknown.json",
+      "previous_sha256": null,
+      "sha256": "9d78095fd5e18a078efd7740851783c014c0df0264511695e569f45bdacd7268"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-window-history.json",
+      "previous_sha256": null,
+      "sha256": "c6be923d1e0c8f39117ab4b8e4a611f9e189d3165e95b5437b3411cf481f43bb"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-replan-window-status.json",
+      "previous_sha256": null,
+      "sha256": "c9d7dffffec385c0a8e94aca882dc0c61ed12c75ea5c0b82ed7fd80097ea67b4"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-request-conflict.json",
+      "previous_sha256": null,
+      "sha256": "c5e12c1a6f0245e14dd0e7eee3fe82a6369559d4b85be8823c1af54ca651d236"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-window-history.json",
+      "previous_sha256": null,
+      "sha256": "ffa27e58921f7fa70ef06e6f985b218b55a1f71448f0d226e54cce519d8bff6d"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-window-status.json",
+      "previous_sha256": null,
+      "sha256": "0b0076144a150dd98c3ff76df4e82c16a937f31d14051cc9b72d89445f8c8998"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-window-upgrade-admitted.json",
+      "previous_sha256": null,
+      "sha256": "bd8cd297828d002c523079a84436ff04c104f52e83aed7ee2e836396b89fc275"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-window-upgraded-status.json",
+      "previous_sha256": null,
+      "sha256": "eed929ba899b106e831148d04226676f8abf98f4c0271e469c6828f71b9cffd5"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-admitted.json",
+      "previous_sha256": null,
+      "sha256": "32eb3bd484ed589e0facd945826ef02cfe9fecabe2e2d40ca69e2b45d85c39bc"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-awaiting-caller.json",
+      "previous_sha256": null,
+      "sha256": "d0e40a758d1a7891b423f5fe6ce92f1169a47219fd868622c7c8df368666132e"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-capture-unknown.json",
+      "previous_sha256": null,
+      "sha256": "97f68bb95babe839029a66f7e17f9059447bab5722542e3044d45f141186c360"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-committed.json",
+      "previous_sha256": null,
+      "sha256": "425e933080d3c82c65dfa24013efc10adf4f04d65c486c7d2c2a14cc404535cf"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-history.json",
+      "previous_sha256": null,
+      "sha256": "c407742a8867f4a4f4aea8116773809fc4f41682715ff3a99a65c03e0409a81f"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-ready.json",
+      "previous_sha256": null,
+      "sha256": "eed929ba899b106e831148d04226676f8abf98f4c0271e469c6828f71b9cffd5"
+    },
+    {
+      "added_family": "ctl-steering",
+      "changes": [],
+      "classification": "added",
+      "file": "ctl-steering-worker-stale.json",
+      "previous_sha256": null,
+      "sha256": "55a837d4ad82f2746b7b2d249399600f0532f9d58f13b43b83787067d77ba309"
+    },
+    {
       "changes": [],
       "classification": "unchanged",
       "file": "ctl-success.json",
@@ -1057,900 +1680,912 @@
     {
       "changes": [
         [
-          "/result/next_cursor",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6Imxpc3QiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJjZDEyNWY3MDM5MWEwZmI0YWU4MGRkNDg4ZjQ2ZWFjYTg0MDM2OTcxZWU5NmIzODA0M2MyYWM3MTY1YjQyMDlhIiwiZSI6WzAsMCwyXSwibyI6MH0",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6Imxpc3QiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwyXSwibyI6MH0"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/next_cursor",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6Imxpc3QiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwyXSwibyI6MH0",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6Imxpc3QiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiI4YTNjOTg3NDczZmVmOTg5YTBmMDNjYmFlNmQzMThkOWY2MTkyMTdjMTZhNDYyYzNlZGQ2ZTQyNTAwZGJkMDg1IiwiZSI6WzAsMCwyXSwibyI6MH0"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-changes-available-listing.json",
-      "previous_sha256": "b7938675357d8bdd16b012ae58d4bcca9113d0b8e81f3dd83e2f6d1397b3d43b",
-      "sha256": "53a564ba284ae56ba518a992965b1464095fd685979d1b9c880721ad5e4b4762"
+      "previous_sha256": "53a564ba284ae56ba518a992965b1464095fd685979d1b9c880721ad5e4b4762",
+      "sha256": "07034b5fa5bdbad1e189e801b3ea2910441e75871ffbb399ee374465e1beb19f"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-cursor-expired.json",
-      "previous_sha256": "3c8b35b23b194bd014b9c5066b82a7b55d70ada6005dded804ba4d161826ceec",
-      "sha256": "570abefa17dc703dce668707a3d75cc4e5f3160a1393eb0615e48941edb43b8f"
+      "previous_sha256": "570abefa17dc703dce668707a3d75cc4e5f3160a1393eb0615e48941edb43b8f",
+      "sha256": "2aec65fe4e5f238b90b4afe9e7ff695646d6f6bc509ee2465e6049f46e94bf75"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-cursor-invalid.json",
-      "previous_sha256": "819c12bc32f2495d50176c9024518b12214ed9609c71601957a20cbe3cf69737",
-      "sha256": "d2b10b42877e98bca252cd8d6f67caabf3a7af913aa30e94b5869edf5d471b2b"
+      "previous_sha256": "d2b10b42877e98bca252cd8d6f67caabf3a7af913aa30e94b5869edf5d471b2b",
+      "sha256": "e28d272b69a7248b11b02d20d3961e8d8ee131212afa043ea12f3d7e2114ded9"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-direct-caller-refused.json",
-      "previous_sha256": "adc791c326f00af01640e1f36351921c3b3a20111127e375ca23b06a435f1d6d",
-      "sha256": "4e418b28776b3226b4ed0fd4b681071f499e732e86b7a9568c1f31225e61079d"
+      "previous_sha256": "4e418b28776b3226b4ed0fd4b681071f499e732e86b7a9568c1f31225e61079d",
+      "sha256": "d5a473604120d139b2823bf95eef0395a8dc0f46d9a661018deea621875caa01"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-document-invalid.json",
-      "previous_sha256": "1dbdf6fa134d7ff665c54e3425eb4631af601dc7756aabf7ae3962004dded6db",
-      "sha256": "ee408714b5fa526aabb9ac391299bc3a176d4f40d5ac032275428feb571c40b5"
+      "previous_sha256": "ee408714b5fa526aabb9ac391299bc3a176d4f40d5ac032275428feb571c40b5",
+      "sha256": "e0e3ba4e8be17539c3a592f0718cef86ca158aa1fff3cb4d9f6f2fa39934a9bc"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-entry-not-found.json",
-      "previous_sha256": "c5db93aaf93cc543675a0dd7621c6cebb9bd305959532bb61ca064a55bb532c9",
-      "sha256": "b660d4c7c9cd6cc4fad938add4d5d2608de010ab5f6c3e862b5b09f5d5dd9e6f"
+      "previous_sha256": "b660d4c7c9cd6cc4fad938add4d5d2608de010ab5f6c3e862b5b09f5d5dd9e6f",
+      "sha256": "a1e03556bcdc209ac9be867b3375de83a5eaaf04d6e994c371f46ae1a747b0ca"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-incomplete.json",
-      "previous_sha256": "625bde4f5f40936a9eb124c4d74892965de9063dfd743b5956dbd5fb4483fe31",
-      "sha256": "18ef281c659351c2e0a88c7fac3bc09961a187b31718438a098b0fac8155cc1b"
+      "previous_sha256": "18ef281c659351c2e0a88c7fac3bc09961a187b31718438a098b0fac8155cc1b",
+      "sha256": "0079548932b4dc3db810a65cc7728d329e2e2cc9459fe3cddcdba7636d189f05"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-listing-next-page.json",
-      "previous_sha256": "31d6e85c212bcee943edc05d03cbfb08e39b25b3fd8946683475d13ed638635c",
-      "sha256": "4a3459ad685f45073335c37ccd4c6104d57f11752974c2e6a0a67ba1deabd98a"
+      "previous_sha256": "4a3459ad685f45073335c37ccd4c6104d57f11752974c2e6a0a67ba1deabd98a",
+      "sha256": "01be93ef9c3fe71c7dba5cca0db91c51b8445b196e7d02c42062d652f0e2e433"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-no-repository.json",
-      "previous_sha256": "06e52cd77e759d48c485247d78da3f40e59ebd45e9c14768727393639285055d",
-      "sha256": "16cab59399d81fd2ab9825b4cafb7ecef6883d68582a5e41c02022bf9103ea34"
+      "previous_sha256": "16cab59399d81fd2ab9825b4cafb7ecef6883d68582a5e41c02022bf9103ea34",
+      "sha256": "703605092b31cd9f8ed81a336246fbd756b6c86559b7823852051fb41d939341"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-not-captured-missing.json",
-      "previous_sha256": "c4e61898944ec5e099eed7ca5d9a835e4ed6e44d8cd19853257c66e4540b862e",
-      "sha256": "3332f2d03159e536426865cdf9477ba92495242cbdeaa9962c890efcc87df4b4"
+      "previous_sha256": "3332f2d03159e536426865cdf9477ba92495242cbdeaa9962c890efcc87df4b4",
+      "sha256": "7c910cde7b98626519331f2318128a1c24d878833c7a2cd11ac651f531a78d87"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-not-captured-unobserved.json",
-      "previous_sha256": "c1e421822bcefdd6cad1c58512273dd6d984eb3f82d409a677586da41af8685b",
-      "sha256": "de10ab0c6ef15ff890dc5a5c707d868a8860a140190cac0023f669a6210b6bf6"
+      "previous_sha256": "de10ab0c6ef15ff890dc5a5c707d868a8860a140190cac0023f669a6210b6bf6",
+      "sha256": "3c09469d38dec36c04723d8b5bd91de910cb938889912c62da0cd0fe66bc6f3a"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-page-too-large.json",
-      "previous_sha256": "aa06e98db2632195c54fb151fcc7e700a2ad3fd9d9caeecc059b016ee7ccd7ec",
-      "sha256": "672da46310604244e49f1eb207a89f53c8c3bc3ec63ffaa0ec42274ac97940bd"
+      "previous_sha256": "672da46310604244e49f1eb207a89f53c8c3bc3ec63ffaa0ec42274ac97940bd",
+      "sha256": "bb86522d7c1f767f2d6663ed70485b5704e2f75e5f03786cda75997ff8b9c462"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-pending-launch.json",
-      "previous_sha256": "ac8e4b2c38e6fdfcf011a38beb8d8566daf269fbd6768f87ff4524d77aeb6f18",
-      "sha256": "7a233ccc5ebeae24467410aeb71c4e2f207295eeacb3cfd66741a3968a96c671"
+      "previous_sha256": "7a233ccc5ebeae24467410aeb71c4e2f207295eeacb3cfd66741a3968a96c671",
+      "sha256": "75c3f9e61da8f292108868ea10443697fbf1d6749c9b4e4b36db8fad15c54ac4"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-pending-running.json",
-      "previous_sha256": "4d0ed6efb3bc86b9d8f1549349e8f582efb14204239997421f23a8bd95d45ac6",
-      "sha256": "0e8cbfc1627689f23a462b8ccbce02702a8849873a941476469e9211e45817b6"
+      "previous_sha256": "0e8cbfc1627689f23a462b8ccbce02702a8849873a941476469e9211e45817b6",
+      "sha256": "bd311b871329d0174a9b79cb03773a3e4cdef99c547996e7888789bc63b3ef27"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-pending-settling.json",
-      "previous_sha256": "0bda67d8210788c2699d12d1bf279ded98969646101e448b515d60fce1e85ec3",
-      "sha256": "d98bb24b47e5eaa43b06d7f9637083122c2eff71fd146326cb615ccac6a9891e"
+      "previous_sha256": "d98bb24b47e5eaa43b06d7f9637083122c2eff71fd146326cb615ccac6a9891e",
+      "sha256": "a1a963ee162a0e59abf527aedd51df443f175ad4da8de4f1939d005da8658ebf"
     },
     {
       "changes": [
         [
-          "/result/next_cursor",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJjZDEyNWY3MDM5MWEwZmI0YWU4MGRkNDg4ZjQ2ZWFjYTg0MDM2OTcxZWU5NmIzODA0M2MyYWM3MTY1YjQyMDlhIiwiZSI6WzAsMCwxXSwibyI6NTc4fQ",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwxXSwibyI6NTc4fQ"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/next_cursor",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwxXSwibyI6NTc4fQ",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiI4YTNjOTg3NDczZmVmOTg5YTBmMDNjYmFlNmQzMThkOWY2MTkyMTdjMTZhNDYyYzNlZGQ2ZTQyNTAwZGJkMDg1IiwiZSI6WzAsMCwxXSwibyI6NTc4fQ"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-changes-text-chunk-next.json",
-      "previous_sha256": "4e5e4899f883223c533fb650b62b9a0d8607e5fd81af25332753caecd41a8a52",
-      "sha256": "dc2d155c04fd421241f84347c728b83c95434dad2de1a98eadf61bb24bf60264"
+      "previous_sha256": "dc2d155c04fd421241f84347c728b83c95434dad2de1a98eadf61bb24bf60264",
+      "sha256": "94c5ea9b3b26116ea320da58875bd74a8ebd5f3c73cf8743922d10561730e329"
     },
     {
       "changes": [
         [
-          "/result/next_cursor",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJjZDEyNWY3MDM5MWEwZmI0YWU4MGRkNDg4ZjQ2ZWFjYTg0MDM2OTcxZWU5NmIzODA0M2MyYWM3MTY1YjQyMDlhIiwiZSI6WzAsMCwxXSwibyI6MzMwfQ",
-          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwxXSwibyI6MzMwfQ"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/next_cursor",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiJlODg4NWQxMDk1NDc2YmJhOTU1MDM2Y2M3MGFkOTNiMDU1Y2M4N2Y3YjJmZDNiNzMwZDJkZjc2MzE1YzRlNzY2IiwiZSI6WzAsMCwxXSwibyI6MzMwfQ",
+          "eyJnIjoicHktY2hhbmdlcy0xIiwibSI6InRleHQiLCJ0IjoiNjYyZTk2ODNiNTEwMjg5YWE2OGFjNzQ1ZDZhOGViNDQ1ZjRlYTMxNjA1MjAzMDdiNjFjN2E4NWRjYjc1OTE0NSIsImQiOiI4YTNjOTg3NDczZmVmOTg5YTBmMDNjYmFlNmQzMThkOWY2MTkyMTdjMTZhNDYyYzNlZGQ2ZTQyNTAwZGJkMDg1IiwiZSI6WzAsMCwxXSwibyI6MzMwfQ"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-changes-text-chunk.json",
-      "previous_sha256": "a24c73f054dd5ac56bb8c04947864ab26090e92abd4d8ca49e08494c8ef948db",
-      "sha256": "de770b513931b33d3260116bf84bd1a19d770a9090030bb21d8ce6711ff9940f"
+      "previous_sha256": "de770b513931b33d3260116bf84bd1a19d770a9090030bb21d8ce6711ff9940f",
+      "sha256": "a61af02d93ee8cdc54a9bd8674144a310dc50f50c2348850bd4c3be05fc1df01"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-text-complete.json",
-      "previous_sha256": "392b54b23d5f02aa8cddd45361dd594d2426af66e9ded1bc9ddd6a625f4ee4de",
-      "sha256": "9ffb3ec9c5440e1d3e5c491ce08c17ba5480f03c461328adb53b17532c66c8fd"
+      "previous_sha256": "9ffb3ec9c5440e1d3e5c491ce08c17ba5480f03c461328adb53b17532c66c8fd",
+      "sha256": "ec764eca6c4b4091f626b5530db348d87f4f4ca2a174db4ddb9e9de26694d037"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-unavailable.json",
-      "previous_sha256": "ae4b4d460468b3f9896028b00d650b60471d01504d66a64d1051caf64b4dadff",
-      "sha256": "f67c634dede9274fb6ac7b368006f8f21e86146b6663d33e2285a29d9c5d748f"
+      "previous_sha256": "f67c634dede9274fb6ac7b368006f8f21e86146b6663d33e2285a29d9c5d748f",
+      "sha256": "cef3f410fd65e7bba64da8c456c20cdc0106d739dd5367e8f5b7502a3b7cc7b7"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-changes-unknown-task.json",
-      "previous_sha256": "1bedd095c5dcc288f59716da52393c9d8718f2e6f91e10e91bec950fe6182e36",
-      "sha256": "0851e69e0ea432f2d229795c7f5ba270f8b93edbae86d6c6668b7319b37854e1"
+      "previous_sha256": "0851e69e0ea432f2d229795c7f5ba270f8b93edbae86d6c6668b7319b37854e1",
+      "sha256": "9a9228e557817bb46f5d9fea6256d4b5d2f4381c40c10dd98a14f33ae49577c4"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4MCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImJiZDU5MjdhYjBkMjdlYzYxNzI1N2QzOGJkNGU0MDk4NjM0MTc0M2RhMGNlYmI1NTQxNTI1M2UyZDJlNjcxMjUiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImJiZDU5MjdhYjBkMjdlYzYxNzI1N2QzOGJkNGU0MDk4NjM0MTc0M2RhMGNlYmI1NTQxNTI1M2UyZDJlNjcxMjUiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
+          "/result/change_token",
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/3/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/4/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/5/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/6/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/7/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/8/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImJiZDU5MjdhYjBkMjdlYzYxNzI1N2QzOGJkNGU0MDk4NjM0MTc0M2RhMGNlYmI1NTQxNTI1M2UyZDJlNjcxMjUiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImJiZDU5MjdhYjBkMjdlYzYxNzI1N2QzOGJkNGU0MDk4NjM0MTc0M2RhMGNlYmI1NTQxNTI1M2UyZDJlNjcxMjUiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-all-kinds.json",
-      "previous_sha256": "ce24c68965c3f73975c24fe62d6c932ce6004a6a593b47fad27dc1a5ece753a6",
-      "sha256": "b68c814d6b6a7c054e04dc21a0069432dfffa8d5f91efb2ae3cf7d340166d677"
+      "previous_sha256": "b68c814d6b6a7c054e04dc21a0069432dfffa8d5f91efb2ae3cf7d340166d677",
+      "sha256": "a47449a10c2f87b78d38cc5b47dd8b43753414a542912cc206bb29049cac21a9"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-events-cursor-expired.json",
-      "previous_sha256": "24392a9d380116b5920e7b237e65b30309a3417c0f8036a27369dd400b1f63b4",
-      "sha256": "20e4691658d171b7c56c79619c1697979e5cd5d226b2dd0d7fef7587091e4932"
+      "previous_sha256": "20e4691658d171b7c56c79619c1697979e5cd5d226b2dd0d7fef7587091e4932",
+      "sha256": "df0ef615359da7303599eb05db64e663000d910d6e73d651429b0d2b5ad062bd"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-events-cursor-invalid.json",
-      "previous_sha256": "7d9e1b72354b3d98da686644cfe07fb4b62ee45193416c952859a21726b91549",
-      "sha256": "2525533e0dce18b30015c31f6dae4965753d95d03569bb82c0832adb43502e43"
+      "previous_sha256": "2525533e0dce18b30015c31f6dae4965753d95d03569bb82c0832adb43502e43",
+      "sha256": "219ebcd9a416bfc2373ac4babd1990e35f9174b44ce97ab886dd4226d1ead422"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "498d291251a1b5be2fb874f817682fe52b34096b52723eddfc6f07563b79d886",
-          "339fd5e00fbd5ad7376e06ba5291e8a5e45964408bc713d35781143f15d40a4f"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImYzMDU0NGUzNGQxM2NhZDYzNmQ0ZDBjNjYxYTZjZDhlYWM2Y2QzMzg3MDljMDhkNDk5ZjFhNjRjYzA0M2M1MjMiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImNiODE1ZTcxYzA1MjkxZTI1MWNlNmU1NDFkNDNmNWI1MzJjNmE5ODU5ODE1ZDdhNDNiMDg0ZDczNThlYTZiMGIiLCJib3VuZGFyeSI6MjE1MiwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImYzMDU0NGUzNGQxM2NhZDYzNmQ0ZDBjNjYxYTZjZDhlYWM2Y2QzMzg3MDljMDhkNDk5ZjFhNjRjYzA0M2M1MjMiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImNiODE1ZTcxYzA1MjkxZTI1MWNlNmU1NDFkNDNmNWI1MzJjNmE5ODU5ODE1ZDdhNDNiMDg0ZDczNThlYTZiMGIiLCJib3VuZGFyeSI6MjE2MCwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
+          "/result/change_token",
+          "339fd5e00fbd5ad7376e06ba5291e8a5e45964408bc713d35781143f15d40a4f",
+          "8d0411f24aa15d391830d3748e2d0fd63e1a154d928bb547b0e242b768c409dd"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImYzMDU0NGUzNGQxM2NhZDYzNmQ0ZDBjNjYxYTZjZDhlYWM2Y2QzMzg3MDljMDhkNDk5ZjFhNjRjYzA0M2M1MjMiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImNiODE1ZTcxYzA1MjkxZTI1MWNlNmU1NDFkNDNmNWI1MzJjNmE5ODU5ODE1ZDdhNDNiMDg0ZDczNThlYTZiMGIiLCJib3VuZGFyeSI6MjE2MCwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImYzMDU0NGUzNGQxM2NhZDYzNmQ0ZDBjNjYxYTZjZDhlYWM2Y2QzMzg3MDljMDhkNDk5ZjFhNjRjYzA0M2M1MjMiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImNiODE1ZTcxYzA1MjkxZTI1MWNlNmU1NDFkNDNmNWI1MzJjNmE5ODU5ODE1ZDdhNDNiMDg0ZDczNThlYTZiMGIiLCJib3VuZGFyeSI6MjE2MCwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-default-filter-delta-seqs.json",
-      "previous_sha256": "9e5fc76f866f90d97d60b2b1fd95c2f7a9e72131275d63c23bc1c43b1621a2c8",
-      "sha256": "fb244e7dd1bb7da1d3feca7c3c71040fe078b7c569ddca118b8b3cab9ec50f25"
+      "previous_sha256": "fb244e7dd1bb7da1d3feca7c3c71040fe078b7c569ddca118b8b3cab9ec50f25",
+      "sha256": "abe91134c2310c58cf490d1db2007a6d1018306fba1ef4c90f1a5a017dea37e4"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-events-direct-caller-refused.json",
-      "previous_sha256": "adc791c326f00af01640e1f36351921c3b3a20111127e375ca23b06a435f1d6d",
-      "sha256": "4e418b28776b3226b4ed0fd4b681071f499e732e86b7a9568c1f31225e61079d"
+      "previous_sha256": "4e418b28776b3226b4ed0fd4b681071f499e732e86b7a9568c1f31225e61079d",
+      "sha256": "d5a473604120d139b2823bf95eef0395a8dc0f46d9a661018deea621875caa01"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "08cc5309fb88bc7ac650ec91c5e998025f64c33529e827afe49d9d33c452732f",
-          "0d136b27ee191954956d1f9ed0432fca35d800928be3e14815ee2a3cd1df5522"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImJmN2YxODQ1MDNmZDNmMmNjMWY2ZGNjODBhODI0OGFjZmRkY2NkMzI5OGU3MzUyNjhiYjg3ZjY1OTA3MjhlYTYiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImU5Nzg1YmI1MWRhMzRlYTkwOTgwMTIwOTY5YmI0YmZkM2M3MGQ5ZTUzYWQ4MDhhMTRmYzJiMjUyZDU0NzdmMmMiLCJib3VuZGFyeSI6MTM4NCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjYsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImJmN2YxODQ1MDNmZDNmMmNjMWY2ZGNjODBhODI0OGFjZmRkY2NkMzI5OGU3MzUyNjhiYjg3ZjY1OTA3MjhlYTYiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImU5Nzg1YmI1MWRhMzRlYTkwOTgwMTIwOTY5YmI0YmZkM2M3MGQ5ZTUzYWQ4MDhhMTRmYzJiMjUyZDU0NzdmMmMiLCJib3VuZGFyeSI6MTM4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjYsInNraXAiOmZhbHNlfQ=="
+          "/result/change_token",
+          "0d136b27ee191954956d1f9ed0432fca35d800928be3e14815ee2a3cd1df5522",
+          "b8c71173bcf155c651a2a2809ebe9ee4aa44029f03cd10ebb03a2bb058121396"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/3/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/4/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImJmN2YxODQ1MDNmZDNmMmNjMWY2ZGNjODBhODI0OGFjZmRkY2NkMzI5OGU3MzUyNjhiYjg3ZjY1OTA3MjhlYTYiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImU5Nzg1YmI1MWRhMzRlYTkwOTgwMTIwOTY5YmI0YmZkM2M3MGQ5ZTUzYWQ4MDhhMTRmYzJiMjUyZDU0NzdmMmMiLCJib3VuZGFyeSI6MTM4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjYsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImJmN2YxODQ1MDNmZDNmMmNjMWY2ZGNjODBhODI0OGFjZmRkY2NkMzI5OGU3MzUyNjhiYjg3ZjY1OTA3MjhlYTYiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImU5Nzg1YmI1MWRhMzRlYTkwOTgwMTIwOTY5YmI0YmZkM2M3MGQ5ZTUzYWQ4MDhhMTRmYzJiMjUyZDU0NzdmMmMiLCJib3VuZGFyeSI6MTM4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjYsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-gaps-skipped.json",
-      "previous_sha256": "7152e9a9fe779d8526a8f0dce670a98d7e86222d72e38c1f575df318f5511151",
-      "sha256": "3bee8764e2e15e3292ca6dc5193a14bc98a58917caa14e5de71671813665d80c"
+      "previous_sha256": "3bee8764e2e15e3292ca6dc5193a14bc98a58917caa14e5de71671813665d80c",
+      "sha256": "7b03c5dc746414222fe9813ae2f2abc1d0bd3feff87eb8e572496e392a3ed4b1"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MTQwNywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MTQxMiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ=="
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "f5e1407e4de3dbe94c24160ea09c56a730d6c2c7ae1e0fde1eb970babb57e8af",
-          "8352eea62cd14e8fbbbe7ecd196c44645cc9364419946dc92c5807127806ee07"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MjI0NSwiYW5jaG9yIjoiYjM2ZDBiOGM1ZGNjMmM3NmZlZWQzOTI1OWMxMjNiNDRjMzZlN2QwYTM1ODQ5MzMyNDFhMjhkZmI2MjkzMjk4YyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MjI1MywiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
+          "8352eea62cd14e8fbbbe7ecd196c44645cc9364419946dc92c5807127806ee07",
+          "b1f98e8159336b9b3a0e2c7fb9d9b3e27b2ac9efb40cb406a8ff6de4f521717b"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MjI1MywiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6ImQyNjIzN2UzOTNiYThiNjY4ZmJhMmM3OWM0YTBhOTBlMzM0ODJiZWVhNjhjNDM3ZTU1NmMyZDQ1Yjc0YzNiNWIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjliYWYzNGYwN2ZmNzE2OTI1YmI3OTU4M2U1NDhlZDY4ZTA1ODhkZTFlODEwNjI4YzNmYWQ1MTAwYTc4ZDMzMDEiLCJib3VuZGFyeSI6MjI1MywiYW5jaG9yIjoiMGQ5OGQ0ZjEzYjM1Y2Q2NGZiOTg2NmJhOWZlMGM1Y2MxNDUzMWEyNDgwN2E5OTliYmFmNTM1OWEzMjRjOTA5MiIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-incomplete.json",
-      "previous_sha256": "ecd9e9e6b3796857d815c0c7f1f09935493e4d394d205d5ef162175023c6a4bc",
-      "sha256": "aa80d9ca2924d347a7a68c62d9e74df8f57477f78c31f415f0a7d8133f653643"
+      "previous_sha256": "aa80d9ca2924d347a7a68c62d9e74df8f57477f78c31f415f0a7d8133f653643",
+      "sha256": "56d25f8371228bfbaf59dc5d5bb23a7262be2b1e61621135524e01268fa0d16f"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4MCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6Ijk4M2VjODJlOTQzZjNmNmM4Y2VlMTNlYWI2YWIzYjJhZTEzZTdlM2ZlNjRlOGUyNTk5OGMzOTk3OWIzM2IwMGYiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6Ijk4M2VjODJlOTQzZjNmNmM4Y2VlMTNlYWI2YWIzYjJhZTEzZTdlM2ZlNjRlOGUyNTk5OGMzOTk3OWIzM2IwMGYiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
+          "/result/change_token",
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6Ijk4M2VjODJlOTQzZjNmNmM4Y2VlMTNlYWI2YWIzYjJhZTEzZTdlM2ZlNjRlOGUyNTk5OGMzOTk3OWIzM2IwMGYiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6Ijk4M2VjODJlOTQzZjNmNmM4Y2VlMTNlYWI2YWIzYjJhZTEzZTdlM2ZlNjRlOGUyNTk5OGMzOTk3OWIzM2IwMGYiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-kinds-filtered.json",
-      "previous_sha256": "daecc4084966ca5749230abce5f8a36e8682d321be20cffea0d1872155c4c07f",
-      "sha256": "c9152510b936f7b5b68d93aafaa31c60285bc702cc8bd058f8857e9d42c52499"
+      "previous_sha256": "c9152510b936f7b5b68d93aafaa31c60285bc702cc8bd058f8857e9d42c52499",
+      "sha256": "cff0c539e4f05449284ede2fc4d432f8ad81ab381838e0d02b9fb8f2585a25f8"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4MCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4MCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/older_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-newer-empty-final.json",
-      "previous_sha256": "09e2b9821fdbdbac173c717a2908062ef5b906a57622052c6329afc5da39c378",
-      "sha256": "17318cf9fb27b32211b19d7a36d729e1cbfee8d8e2ba738ad1b0a906bb04bc9a"
+      "previous_sha256": "17318cf9fb27b32211b19d7a36d729e1cbfee8d8e2ba738ad1b0a906bb04bc9a",
+      "sha256": "7dcc19d958193c883600781ed0cb23684673a0dd79587eee10556034bf97857a"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6NTI4LCJhbmNob3IiOiI1OGViZDA0YTQ1YWRiZGE5Yjk1NjM3MGRiMjE1YTY4YjVhZDA3MmJjOWUwZGU0ZWEzYzY2OTQ0OWUyMzg1MmNhIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6NTMwLCJhbmNob3IiOiI3NmI4YmQwNjA1MjMyZDY1OGRlOTA5MDUyYzUyODQ2YWMwMzAyYjk1NzBmMmE3ZjJkODAyYTc2ZGZjMTAxODIwIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4MiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjQsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4NywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjQsInNraXAiOmZhbHNlfQ=="
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/older_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6NTMwLCJhbmNob3IiOiI3NmI4YmQwNjA1MjMyZDY1OGRlOTA5MDUyYzUyODQ2YWMwMzAyYjk1NzBmMmE3ZjJkODAyYTc2ZGZjMTAxODIwIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6NTMwLCJhbmNob3IiOiI3Yzc4YzNjZTNhZGMxNDk3NzY0NzBiYzk4MGZmZTFmNDI4NDEwMjEzYjAxY2Y3MDIwNDJmYzU4Mjc0NGM5MmQ1IiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-newer.json",
-      "previous_sha256": "dffa8dff7fd12bd1c073cb09c1e67faf175935e1e0825816f7b3fb2f3888fed5",
-      "sha256": "1abb5405be28d0aa8c451e3f760affcc52f72ae8c6855cbe00a01437c8ac8ad6"
+      "previous_sha256": "1abb5405be28d0aa8c451e3f760affcc52f72ae8c6855cbe00a01437c8ac8ad6",
+      "sha256": "c48283b0ae0bfa97f515a828d850beb08b70da75577e057431a9c35a54783477"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4MiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4NywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ=="
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4MCwiYW5jaG9yIjoiMzlkYmQwMTdhYzYzN2JhNzY2NDdlMjMyYjg5NDBkMzMxYzMzMDEzMDMzMGFiZjEzMWZlODYzYmQ5YTViNTAxYyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/3/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiMWUwMGYwMzM3ZTAzYWQyNjI1NDg2ZTM1ZDVlNjBkODMwZTVlYjczZmI3Njg1MWM1NTE3YjJkMTNjOGViMGI5NSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjQ4OSwiYW5jaG9yIjoiNDk4N2IzNWUzOTIwMTI2NjIzNzcxNzQzZDY3NjEyYWJhZDkzMWM3YTM5MDE2Yzc2MmJhYWExYWEyZDIyZGIyYSIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjgsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-newest.json",
-      "previous_sha256": "c757e86d9cdb98737486345b9329e9ff6275403ed3836b1b028ca676dd52cbdf",
-      "sha256": "d08f7ffef1d9924c8370c4f8bb45825dee7ab7c93fcc52c5ed55ace93fd81a96"
+      "previous_sha256": "d08f7ffef1d9924c8370c4f8bb45825dee7ab7c93fcc52c5ed55ace93fd81a96",
+      "sha256": "e37f8953fb4ef7702ed31748cef4815ddf195b53a01d65e1b0a490f85e211fce"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjcxLCJhbmNob3IiOiIwM2E3ZGU1MWNhNDQwZWVkMjcxMDEzMGQ1YWJmMGY4ZjZiOWRhMmU0YzA1ZjcxOGFlNTM5YTBiYTMxYjhkMWFjIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6MSwic2tpcCI6ZmFsc2V9",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjcyLCJhbmNob3IiOiI5MTdjZGMzM2MyZGU3ZTNiMjg0ZGRmM2MwYTFhNzk5YjQ1MDk3N2FiYWJhZDM0MTM1ODZmZWMyMzg1ZDI5NjY2IiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6MSwic2tpcCI6ZmFsc2V9"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4MiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjQsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MTM4NywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjQsInNraXAiOmZhbHNlfQ=="
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/older_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjcyLCJhbmNob3IiOiI5MTdjZGMzM2MyZGU3ZTNiMjg0ZGRmM2MwYTFhNzk5YjQ1MDk3N2FiYWJhZDM0MTM1ODZmZWMyMzg1ZDI5NjY2IiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6MSwic2tpcCI6ZmFsc2V9",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6MjcyLCJhbmNob3IiOiJhYzJlZTAzZTc3NTQwOWNjNTAwZDg4NzVmODlkNWI1MzVlOWRkZWM0ZjcwMzkyMDhmNjE2NzhjNGM3MDRhM2VlIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6MSwic2tpcCI6ZmFsc2V9"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-older.json",
-      "previous_sha256": "af5046aef7fecd8d5501cef88f22b28c027e1429d0c390e258ec7013c3ca5d6b",
-      "sha256": "bd9fb0c8bccac4bd583526efc8d538974bf105bc0d08f50bf6580476f8f709c3"
+      "previous_sha256": "bd9fb0c8bccac4bd583526efc8d538974bf105bc0d08f50bf6580476f8f709c3",
+      "sha256": "8784f4fec3f9220af44e8c63780655a89ec6e950fa96e10e76e7bf4b3f8ca9df"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "f1ca71e784a608153015ed91cf0e79ac62cd852d5ad733c0ed3de219ffe95665",
-          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6NzkxLCJhbmNob3IiOiIyNDExN2UxZjkxYzUzMTYxNThmNTFkNTUxMjExOTQ4M2ZiMTQ3ZmNlZDg2NTYyZmM5NjEwYzI1NjE5Yjc4MTcwIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6Nzk0LCJhbmNob3IiOiI5NjYwYzhiNjY0ZmUzZjI0YjA0MjY3NTdlNDlmOTQ3YWIxODI4ZWQ2ZjdlNDA5MzI1NDM5M2QzNjliZThmNjlmIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9"
+          "/result/change_token",
+          "7b07da8a59775e1ad7fdc04dcacc4913c826d0b83dac16135e83a2afe3817e56",
+          "b8811cbb3605d49620489f663b4b8b89ef08d9bd700694ca21a9ace666dec34c"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6Nzk0LCJhbmNob3IiOiI5NjYwYzhiNjY0ZmUzZjI0YjA0MjY3NTdlNDlmOTQ3YWIxODI4ZWQ2ZjdlNDA5MzI1NDM5M2QzNjliZThmNjlmIiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjdkZGZkZWZjZWM2NDgxYmRmY2E3MjhkYzQ5ZDg3ZTIzOGI1MTBiYjlkZjhjNmQ3Nzg1Mjk3ZTA2YjI1ZGM5NzIiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImZlMzRiNjZiMGYwMDA3YjU3YmEwMjNjYjc0YTE2NjE1YTU0MjVhOTVjNGIzM2FlMzQ4ZTc5YzY4ZjVjMTZkYjMiLCJib3VuZGFyeSI6Nzk0LCJhbmNob3IiOiI1ZjY2OTM5YjhhMTZhZmIwMTllMWIwYzNjYmVkMGQyNDQxZTU2YjRlN2FjNTNkZjQyMTUyN2FiNzA1ZjUyYWE1IiwiaGVhZCI6ImNiNDZkMjMyNzU1MzQ2M2RmOTg3ZWIyNWJlODE4ZDBlZjNlMTRkYTE0NzMyNWQ3MzQ2NDZiNjkzMWVlYzY1MTQiLCJobGVuIjo2NCwiZmlsdGVyIjoiY2UzODljZWUyZjZmNWE0ZjRhODlkOWNmNTMyMzE4NGFiY2RmOTY5OTRiN2VmOTJiOTM4ODFmODIzNTNiODRiMSIsInJlc3luYyI6ZmFsc2UsInNlcSI6Miwic2tpcCI6ZmFsc2V9"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-oldest-forward.json",
-      "previous_sha256": "12d773c9015944c282806f04e4bbe0bc53300db540ea6643d4c820c8742b76b3",
-      "sha256": "4c5defffd4c1cfd0d210dc4154a4f8a16d365108fa98d379c445b5fb6491df41"
+      "previous_sha256": "4c5defffd4c1cfd0d210dc4154a4f8a16d365108fa98d379c445b5fb6491df41",
+      "sha256": "e7d186fb559c49e8cbabf5921ee4a130f6fa8f82076a64e8c90f1215054bc267"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MTM3NywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MTM4MiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ=="
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "8b94bb7b95f382c567d91463805aaba3db023b1660f4cf712b9457548d0f98db",
-          "c491af65b2dccb2745145d1e88649d681a2cece33dbcb80fa369129bdaf53a19"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MjE5NywiYW5jaG9yIjoiYjM2ZDBiOGM1ZGNjMmM3NmZlZWQzOTI1OWMxMjNiNDRjMzZlN2QwYTM1ODQ5MzMyNDFhMjhkZmI2MjkzMjk4YyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MjIwNSwiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
+          "c491af65b2dccb2745145d1e88649d681a2cece33dbcb80fa369129bdaf53a19",
+          "5f4fa000fedff0cc03aea08f776dfb01c8fd493be1401c3ea9017baf3b640d57"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MjIwNSwiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjVkY2Q0OWMwNmI3NDkwYWZjMTk4YWE3MjhhOTlmMGQxOWNlMjM0YTcxNmVhZWYwNDEyYjVlM2E3Mzc0MDFjNDUiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6ImUyMDY2ODdmZDAzNWNkOWFlOThmZGI0MDg0ZTQyYzBjZmQxYTBiMTIwYTVlYjI0YzU5MzBiNGI1NzRmYTViYmYiLCJib3VuZGFyeSI6MjIwNSwiYW5jaG9yIjoiMGQ5OGQ0ZjEzYjM1Y2Q2NGZiOTg2NmJhOWZlMGM1Y2MxNDUzMWEyNDgwN2E5OTliYmFmNTM1OWEzMjRjOTA5MiIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-open.json",
-      "previous_sha256": "ee8d1a4b3c9a8aa9f3183007a38e67c94e524598ecbf4cc249fb5121a2a25006",
-      "sha256": "cc8c992febe4c48d300c5d886e0da88a64c2c0d5401d709dd690b645837a7335"
+      "previous_sha256": "cc8c992febe4c48d300c5d886e0da88a64c2c0d5401d709dd690b645837a7335",
+      "sha256": "bc50e3a6eaf024244ad20bca6cec4b808000027afe2ab9c540f97db79e19be1b"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-events-pending-launch.json",
-      "previous_sha256": "68e6ba8770365da0dc5e09b7178e00f81e714eb770e5af73f09f46f3b3d1a0d0",
-      "sha256": "546e19ca4e70d3ce30528024bf5802c8ec0dcb41e8d27d2e62c86467e656ec01"
+      "previous_sha256": "546e19ca4e70d3ce30528024bf5802c8ec0dcb41e8d27d2e62c86467e656ec01",
+      "sha256": "49d061c76e86ede336dd65f866f11a28d10b2b89bee85a65961667b867ec7bd4"
     },
     {
       "changes": [
         [
-          "/result/older_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MTM5NywiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im9sZGVyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MTQwMiwiYW5jaG9yIjoiOTJjMDM0MTZiMDNhYjk3NDlmYjg4NzYzOWQ5ZTljMmIxNTU1YjRjOTAyZmM0NDQwYjM1MzU0NjUxMzgxM2RkMyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjUsInNraXAiOmZhbHNlfQ=="
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/change_token",
-          "27f7f1d31277e7cf9b8d2c302544760044f7a4563e4f18157424c8ee8b3de893",
-          "ecb8b4eb80cf0e04b38e2b1e78cf69c3a974d852f264845b1c30c65d08544f6b"
-        ],
-        [
-          "/result/newer_cursor",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MjIyOSwiYW5jaG9yIjoiYjM2ZDBiOGM1ZGNjMmM3NmZlZWQzOTI1OWMxMjNiNDRjMzZlN2QwYTM1ODQ5MzMyNDFhMjhkZmI2MjkzMjk4YyIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
-          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MjIzNywiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
+          "ecb8b4eb80cf0e04b38e2b1e78cf69c3a974d852f264845b1c30c65d08544f6b",
+          "d6e7606192a9a0ac284e4ece1ced4367da4a19b6c561890b688b389566c7b43e"
         ],
         [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/newer_cursor",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MjIzNywiYW5jaG9yIjoiZDQ1NmM5ODJlOTU0M2RhYWQ4ZWY0N2MxY2E3ODM5MDk5YWIzZTlhMTQ3ZmZmMWY5MDNkYjFmMjc2OTQ5YjBlOCIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ==",
+          "eyJ2IjoyLCJnZW4iOiJweS1ldmVudHMtMSIsImRpciI6Im5ld2VyIiwidGFzayI6IjhiZTEyY2Q5N2I1NjQxMWIwZGNmZjg1ZjU1NTg5Y2RkNDk0YjU3YmUxYjE5MzU5Y2RmMTFiNmYwNzkyNTA2NDEiLCJkZXYiOjEsImlubyI6MSwicGF0aCI6IjA5YTM5ODM1MWQzNTk4ODhhNzViMjk5OTY5MmJjNTA4MzhlZDcwMjA4YzQwMDJhMTA2YzdmZjU1ODNmM2NiZmMiLCJib3VuZGFyeSI6MjIzNywiYW5jaG9yIjoiMGQ5OGQ0ZjEzYjM1Y2Q2NGZiOTg2NmJhOWZlMGM1Y2MxNDUzMWEyNDgwN2E5OTliYmFmNTM1OWEzMjRjOTA5MiIsImhlYWQiOiJjYjQ2ZDIzMjc1NTM0NjNkZjk4N2ViMjViZTgxOGQwZWYzZTE0ZGExNDczMjVkNzM0NjQ2YjY5MzFlZWM2NTE0IiwiaGxlbiI6NjQsImZpbHRlciI6ImNlMzg5Y2VlMmY2ZjVhNGY0YTg5ZDljZjUzMjMxODRhYmNkZjk2OTk0YjdlZjkyYjkzODgxZjgyMzUzYjg0YjEiLCJyZXN5bmMiOmZhbHNlLCJzZXEiOjcsInNraXAiOmZhbHNlfQ=="
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-settling.json",
-      "previous_sha256": "138d7ee3de309e05ac2eaa70a0d549161c166a70f313b7c1dfe627e79bb58f3b",
-      "sha256": "5f77a5a0074638d4286dcb75e9f377774d7d0bd3dacc038bca44b9b173dce0d3"
+      "previous_sha256": "5f77a5a0074638d4286dcb75e9f377774d7d0bd3dacc038bca44b9b173dce0d3",
+      "sha256": "c4cbf7f10f7b254b6d6ddd4f8ddf0185f77efdf09ebb61abaebe351da3d2c950"
     },
     {
       "changes": [
         [
-          "/result/change_token",
-          "53e8a9a0a5012a3ac555697286b33feed9c26f0b87a89688ff4dad118f60734f",
-          "c35750b88bf474b0861c4b86c96a5018b7f1b6fe1f061846ce9e0d9037a7171f"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/change_token",
+          "c35750b88bf474b0861c4b86c96a5018b7f1b6fe1f061846ce9e0d9037a7171f",
+          "b0ea4e934810dca8c7f02f68bc836dcb5fd784a052ec664c48bbaebbecd82643"
         ]
       ],
       "classification": "opaque-regeneration",
       "file": "ctl-task-events-unavailable.json",
-      "previous_sha256": "faaf4790fa7a9f7e6728ce8c3af43b890f22b0def7802b5d1934b348924e32c6",
-      "sha256": "e17f1165879911f85a8b4656597130b2de488a4455b6ced029d1bb09b18b950d"
+      "previous_sha256": "e17f1165879911f85a8b4656597130b2de488a4455b6ced029d1bb09b18b950d",
+      "sha256": "1e98c8550c91bfd55ab2517d9124cb38720d1e50bee8ae88ccbcad5915aaecb1"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-events-unknown-task.json",
-      "previous_sha256": "f5a3e3e3f9dd740ec3cd4ccc4166528e3232cf22d3426a8c56d7be33f075e4dc",
-      "sha256": "2f8e56ae708811d8de63ee8bc423f728a024b83968fae497ae4c47a373268f5d"
+      "previous_sha256": "2f8e56ae708811d8de63ee8bc423f728a024b83968fae497ae4c47a373268f5d",
+      "sha256": "2e8fea733876465a4d99fe261bcabbad0230114e12fc6b7dac4bbe70ccbe4a0d"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-baseline.json",
-      "previous_sha256": null,
-      "sha256": "1e2dfabb14f09b7f2ab9167204b84e4d78417d455dfcec84c1c670c1ae685e68"
+      "previous_sha256": "1e2dfabb14f09b7f2ab9167204b84e4d78417d455dfcec84c1c670c1ae685e68",
+      "sha256": "2cccf73d7567fa524bf1edfd735b505eac88f2a12c9199869e310ab0c3151b35"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-changed.json",
-      "previous_sha256": null,
-      "sha256": "e969253b99e245aa4a131597e49a944db357b32ff35753fa116bef3a33023d7d"
+      "previous_sha256": "e969253b99e245aa4a131597e49a944db357b32ff35753fa116bef3a33023d7d",
+      "sha256": "f3b5559b2b7148ae7f5bef5e718d1c918c668c1e2ecdbe695401c3f805d2da55"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-cursor-invalid.json",
-      "previous_sha256": null,
-      "sha256": "a579ecb1607e93d557d49c41613bec060ffc24b608889a07ae33eb968ad572e2"
+      "previous_sha256": "a579ecb1607e93d557d49c41613bec060ffc24b608889a07ae33eb968ad572e2",
+      "sha256": "163b8dad1f51eac06a0fa9b475f08d9ecb231bf798f6eda501cb45e53c89d0e8"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-direct-caller-refused.json",
-      "previous_sha256": null,
-      "sha256": "5dbdd43340ec85cae201ce89a8d42ff14ae41c8baeae632c772540d273e3b879"
+      "previous_sha256": "5dbdd43340ec85cae201ce89a8d42ff14ae41c8baeae632c772540d273e3b879",
+      "sha256": "7ca7b37ef349e6bd01c179f9c455b6dbac3df37c94eadd0d65f4b9cc71c4f0ac"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-reset.json",
-      "previous_sha256": null,
-      "sha256": "45ae58d522ad88956f75a07b73dc923889c53559c1b6b92a2d7bc7c586c4c994"
+      "previous_sha256": "45ae58d522ad88956f75a07b73dc923889c53559c1b6b92a2d7bc7c586c4c994",
+      "sha256": "53b925bbaaf13729913ebd99d4e1f7b2d9a3154153997224d9d860289a4f7cbe"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-timeout.json",
-      "previous_sha256": null,
-      "sha256": "c3beb69e4894a9f7a9cd086c930feb9c18f070d2a20e146f20a6049ffb9da423"
+      "previous_sha256": "c3beb69e4894a9f7a9cd086c930feb9c18f070d2a20e146f20a6049ffb9da423",
+      "sha256": "8ac48a3dae33a53828336e39c68b541bd5dfc8adf28dbf0b520225e7a9afb46c"
     },
     {
-      "changes": [],
-      "classification": "watch-contract-added",
+      "changes": [
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "product-version-only",
       "file": "ctl-task-list-watch-unavailable.json",
-      "previous_sha256": null,
-      "sha256": "3ec0577d4e511b011db441a9bbd04668b411c40cf21029086c5e6574bb1fe523"
+      "previous_sha256": "3ec0577d4e511b011db441a9bbd04668b411c40cf21029086c5e6574bb1fe523",
+      "sha256": "3fe141f8e052b93f58f419811626530eb695659005a196626d8f2d552401de05"
     },
     {
       "changes": [],
@@ -1963,131 +2598,131 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-direct-caller-refused.json",
-      "previous_sha256": "efd8d3d93ee5148d574399e82ea247834a7a23b4537938e9900da6abdd574137",
-      "sha256": "b4493039b7679dbabc66b4fb2249b3dc50eae32196ec568606d05a6b4eff8328"
+      "previous_sha256": "b4493039b7679dbabc66b4fb2249b3dc50eae32196ec568606d05a6b4eff8328",
+      "sha256": "d7d4e230f681b782b8b8245c5f716500fc18ebba0432f0f5a2d7708a27b16bfb"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-found-first-page.json",
-      "previous_sha256": "a5f1467ceec3c0bf6e810726c7c1489ad7b920fcae8bb696ea1d2b637498c9f5",
-      "sha256": "383ab237f909188c8ea4f7676add89b9f91d1943e5be3a8828b954d8bced85f5"
+      "previous_sha256": "383ab237f909188c8ea4f7676add89b9f91d1943e5be3a8828b954d8bced85f5",
+      "sha256": "f2f16f28396e9007fcaa3fbb439a7a2594dabbc5351e79a9b8bca02533b5abb1"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-found.json",
-      "previous_sha256": "87e66e6c81e5c888debc451199a7528655fb3c1c59a5142b2890b2aa4ea8755d",
-      "sha256": "588d5956676d5c52d64d5cadeb3c28aed051081c148cd1bb344fc3ab30607ac9"
+      "previous_sha256": "588d5956676d5c52d64d5cadeb3c28aed051081c148cd1bb344fc3ab30607ac9",
+      "sha256": "ba23bdd7ade4d644b62681df7fc9045390d1d68ff1aab938bf7ebda4f49a4056"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-none-found.json",
-      "previous_sha256": "d8cc6623dc44be3d4d060b640538b40edbdb41d208366e419a6f979657d433d1",
-      "sha256": "89aa56a4859dc703cd9fa66d1517c70b4201461bb88e03f5d547a54cbf914561"
+      "previous_sha256": "89aa56a4859dc703cd9fa66d1517c70b4201461bb88e03f5d547a54cbf914561",
+      "sha256": "06816d23b127dd63785cc6e9e66893eb8d3f89a09501e7fe7e2d9f18dba9f396"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-pending-launch-predecessor.json",
-      "previous_sha256": "c38b7e119ddddbb12b7707462f23f4539ef5158b52b0b4a4aa948cb813b52aa4",
-      "sha256": "c885e113baee4b39724b5576c5fa7e1098c66f1f83b80c2100851e60757c6751"
+      "previous_sha256": "c885e113baee4b39724b5576c5fa7e1098c66f1f83b80c2100851e60757c6751",
+      "sha256": "adab332bca4a77e607c761b253b61a632ed115a93120e0b208886a7cc62b63f4"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-page-successors-unknown-predecessor.json",
-      "previous_sha256": "7cc602439de30b371fa787c0a5ebfda8842bea3e289bb8c8c3eb8defbdf110e8",
-      "sha256": "87050fa4a8aea453fb6e718145f05aa8c71d8bc596519c73b7ca24e897f27496"
+      "previous_sha256": "87050fa4a8aea453fb6e718145f05aa8c71d8bc596519c73b7ca24e897f27496",
+      "sha256": "31b87cffa6c2b3b9b1c1871eb5e7479065c7e3412457974fbab84ac9a730aa24"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-prompt-available.json",
-      "previous_sha256": "cec48574a57ec0841042f2f4c1dd024c274e4ac9e766f2763a7ff100bd27e00d",
-      "sha256": "ab00572e98e116cc5f3a72278a6b5ad90c277c25b33cdda3aac18daa4b0e0b1b"
+      "previous_sha256": "ab00572e98e116cc5f3a72278a6b5ad90c277c25b33cdda3aac18daa4b0e0b1b",
+      "sha256": "aa0d29ae6e93b38acc6da01a29e4a1bc3e8cb2f0025a3c34e6497f8b183d6112"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-prompt-integrity-failed.json",
-      "previous_sha256": "a36aa79861e9a544b537b24388608e2e3f49861cc80d7888d664d36ca1d9f41d",
-      "sha256": "6db0e7b2243c3fc1eb0c3ebeb3496c3997b972f088fd382b08172440a8f9e77a"
+      "previous_sha256": "6db0e7b2243c3fc1eb0c3ebeb3496c3997b972f088fd382b08172440a8f9e77a",
+      "sha256": "6dcacd0bb3408f922d17385bf87d1c84977b96ed9548d62646a39a01266dbaff"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-prompt-preview-only.json",
-      "previous_sha256": "d6d68aabbece4165784c18104695d1e9b0b5bf450887984e5e26da5918e324af",
-      "sha256": "8455123f206ee2c458f400fd68f380579675c0fa0b8cad9ab78e98f4278c5178"
+      "previous_sha256": "8455123f206ee2c458f400fd68f380579675c0fa0b8cad9ab78e98f4278c5178",
+      "sha256": "42ecd9a2092295123f349618aa94e53e721666c90ae0a13a92e4e7dbeaf56923"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-task-prompt-truncated.json",
-      "previous_sha256": "a31f88b13e1af2d6e51a61d64a0598b1a543853bcf620b010946c15fa7cdfb73",
-      "sha256": "b349852950e894d9207b85b0eb78cc2f2b46e404c38ca827542e3b7be6ffde98"
+      "previous_sha256": "b349852950e894d9207b85b0eb78cc2f2b46e404c38ca827542e3b7be6ffde98",
+      "sha256": "b4cbdc0169ed1595c5ff04b65dce62a76265eecb6491ad849f59db7c2b8fff9c"
     },
     {
       "changes": [],
@@ -2128,86 +2763,86 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-inspect-live-agent-caller-settled-only.json",
-      "previous_sha256": "ec8ee7f1424b884fcffa7fd4b57d4a38df8d6ec7228c4696b0c6393672a75925",
-      "sha256": "fb912e238e0e3ebb71788f9db0b7e3137b4a5c43559fca61981790fcda24c9aa"
+      "previous_sha256": "fb912e238e0e3ebb71788f9db0b7e3137b4a5c43559fca61981790fcda24c9aa",
+      "sha256": "1d688ab7d9fbedcfd4bd1e9fd780af786237473de7f2187085e4b2858aff1f09"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-inspect-live-no-attempt.json",
-      "previous_sha256": "b852d07195cc2f469ec4477be8d9b20b5a19bc96a1ed24e578eb33a3d6ec70f9",
-      "sha256": "5eeda8ba84fc5c306d914ecd1cb7139f7de417d7582cccd5b60c885da3796d6f"
+      "previous_sha256": "5eeda8ba84fc5c306d914ecd1cb7139f7de417d7582cccd5b60c885da3796d6f",
+      "sha256": "e993e41b99717fee3f338d3c7ce715e967994f9e805b331787a2e64dd743a22e"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-inspect-live-reserved-attempt.json",
-      "previous_sha256": "610e6b937796fc9c6834efec926fa4fd822696891ffc9517c98c05c0f2c4164e",
-      "sha256": "f5eab0f9891e94b1432791983f07bda7d229b35ab9b39b3cdb3159687eb81abd"
+      "previous_sha256": "f5eab0f9891e94b1432791983f07bda7d229b35ab9b39b3cdb3159687eb81abd",
+      "sha256": "932584f5c47053b9a0b51c50cbaaaaf4a365a8a626df08ddd773a4e376798288"
     },
     {
       "changes": [
         [
-          "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
         ],
         [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "/result/events/0/product_version",
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-inspect-live-running-attempt-after.json",
-      "previous_sha256": "60eddbdab3b5799be45c5ca68aeda55b5bc3e90a630e1561b1896a0fa1b783db",
-      "sha256": "0de240782c4a2dcf665b5f7e2392741f9c89d46e5d88fdb11837fdd261adfd3d"
+      "previous_sha256": "0de240782c4a2dcf665b5f7e2392741f9c89d46e5d88fdb11837fdd261adfd3d",
+      "sha256": "fa755ff55669f861e3a2648b82f12c1f1e232ccf661b955b3a85f117b03ec90a"
     },
     {
       "changes": [
         [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ],
+        [
           "/result/events/0/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/1/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ],
         [
           "/result/events/2/product_version",
-          "0.0.7",
-          "0.0.10"
-        ],
-        [
-          "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-inspect-live-running-attempt.json",
-      "previous_sha256": "d92d9173f732457f580da4861f75a5c274ff5256699a25885d290784ae9e74bd",
-      "sha256": "b935096be11e947c7a8ebff29aa534c5de86601e195bafa8587b36e8e7c30463"
+      "previous_sha256": "b935096be11e947c7a8ebff29aa534c5de86601e195bafa8587b36e8e7c30463",
+      "sha256": "50df99cc68371a07f4226a78ccb46760d8ceec2eea581675e8144a2cb30022e9"
     },
     {
       "changes": [],
@@ -2220,40 +2855,40 @@
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-limit-hits-empty.json",
-      "previous_sha256": "82d42765f26fe070d048d8240032456a51c1855da66382dcaef9df3f41768ba2",
-      "sha256": "30e9d573fbba72bae910e7408fcedc07b5cb6d0a39798448c73c7a9b0216a4d7"
+      "previous_sha256": "30e9d573fbba72bae910e7408fcedc07b5cb6d0a39798448c73c7a9b0216a4d7",
+      "sha256": "fd7240de193c18d0411ed6907da16819d61439f86ed80c036e7a0294bb452043"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-limit-hits-preparing.json",
-      "previous_sha256": "e55023f81cfa5634d042dfc8bf3a8ca24b97584293ae0c235e1fd899f18d1f3f",
-      "sha256": "8a15253ee51e1cf1cc3dbf373948ac93b0fd247ab4aaba9008dc631987a66bba"
+      "previous_sha256": "8a15253ee51e1cf1cc3dbf373948ac93b0fd247ab4aaba9008dc631987a66bba",
+      "sha256": "93a9ac16a864de8ca2de15d1ed067a07d6dde067d3310dfbf723f788ec2b2699"
     },
     {
       "changes": [
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "product-version-only",
       "file": "ctl-workflow-limit-hits-ready.json",
-      "previous_sha256": "d81d429d853cea8d6dc97281c197768482e2566a28ea12ce180f10c2ae98ed04",
-      "sha256": "ca40fb2e2284d83c452662ac2309b9eb1592fd47744ca2276d734d51e2b93fc3"
+      "previous_sha256": "ca40fb2e2284d83c452662ac2309b9eb1592fd47744ca2276d734d51e2b93fc3",
+      "sha256": "516427279b5b6f559c0fa9f1db7a3c2a34094c7abb78db1a540aaea051ac428a"
     },
     {
       "changes": [],
@@ -2433,9 +3068,17 @@
             "task-prompt.v1",
             "task-successors.v1",
             "workflow-live-activity.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2461,14 +3104,14 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-statistics-cost-model.json",
-      "previous_sha256": "2ff1a25642b8182278a04fd32b507685cea9d0de34e2b2505c7e858656dea942",
-      "sha256": "03e37a5311acfa01611c13ba8bcbe00a677488a9d51d1049a7895ef47ecfdab0"
+      "previous_sha256": "03e37a5311acfa01611c13ba8bcbe00a677488a9d51d1049a7895ef47ecfdab0",
+      "sha256": "d44b2198d872c8f9cb7c93c144298d1a70cf7ccdc79730c7c17b996173d72ec8"
     },
     {
       "changes": [
@@ -2494,9 +3137,17 @@
             "task-prompt.v1",
             "task-successors.v1",
             "workflow-live-activity.v1",
-            "statistics-cost-model.v1"
+            "statistics-cost-model.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2522,14 +3173,14 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-task-changes.json",
-      "previous_sha256": "2ec0c7fa90192938e5d155e4df1f27e523016569df9f8d11979c7394233ca016",
-      "sha256": "00ea9e2286e736121729e709947660508da7e6592ec070520bcc1d2128b98a23"
+      "previous_sha256": "00ea9e2286e736121729e709947660508da7e6592ec070520bcc1d2128b98a23",
+      "sha256": "9eac1c47a72ca8fff8e69276018292c6b89a28ad0d2bcf1f7fe4ee9aa6545e63"
     },
     {
       "changes": [
@@ -2555,9 +3206,17 @@
             "task-successors.v1",
             "workflow-live-activity.v1",
             "statistics-cost-model.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2583,21 +3242,83 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-task-event-page.json",
-      "previous_sha256": "f805b6bdf6acdaf64b37f5fb263cf668cd1a62fa755a9e6fc48ddafb0cf892bf",
-      "sha256": "561369d8c434228dc8f703ba239ba7895734a234c075ddd4e89f8121b2d16be6"
+      "previous_sha256": "561369d8c434228dc8f703ba239ba7895734a234c075ddd4e89f8121b2d16be6",
+      "sha256": "937a3dbdc1e1ba10ab072b8f697be43e4cca7d15005e868d2f0f49292e79e8af"
     },
     {
-      "changes": [],
-      "classification": "watch-capability-negative",
+      "changes": [
+        [
+          "/capabilities",
+          [
+            "workflow-shared-interactions.v1",
+            "interaction-events.v1",
+            "workflow-attention-checkpoints.v1",
+            "phase-slots.v1",
+            "ctl.v1",
+            "setup.v1",
+            "events.v1",
+            "version-info.v1",
+            "state-recovery.v1",
+            "caller-approvals.monitor-respond.v1",
+            "statistics-page.v1",
+            "backend-qualification.v1",
+            "messaging.v1",
+            "limit-hits.v1",
+            "workflow-limit-hits.v1",
+            "task-event-page.v1",
+            "task-prompt.v1",
+            "task-successors.v1",
+            "workflow-live-activity.v1",
+            "statistics-cost-model.v1",
+            "task-changes.v1"
+          ],
+          [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
+            "workflow-shared-interactions.v1",
+            "interaction-events.v1",
+            "workflow-attention-checkpoints.v1",
+            "phase-slots.v1",
+            "ctl.v1",
+            "setup.v1",
+            "events.v1",
+            "version-info.v1",
+            "state-recovery.v1",
+            "caller-approvals.monitor-respond.v1",
+            "statistics-page.v1",
+            "backend-qualification.v1",
+            "messaging.v1",
+            "limit-hits.v1",
+            "workflow-limit-hits.v1",
+            "task-event-page.v1",
+            "task-prompt.v1",
+            "task-successors.v1",
+            "workflow-live-activity.v1",
+            "statistics-cost-model.v1",
+            "task-changes.v1"
+          ]
+        ],
+        [
+          "/product_version",
+          "0.0.10",
+          "0.0.11"
+        ]
+      ],
+      "classification": "capability-list",
       "file": "invalid-s05-missing-task-list-watch.json",
-      "previous_sha256": null,
-      "sha256": "f5822dfed1bdc2c1a5030a5af256b0dc1123fd34d8d943126b825bfb29a6efe4"
+      "previous_sha256": "f5822dfed1bdc2c1a5030a5af256b0dc1123fd34d8d943126b825bfb29a6efe4",
+      "sha256": "4be968456b1d3189024ded6b2d997bd8e04f99cbbd852b65b49f89a11c9f8a8e"
     },
     {
       "changes": [
@@ -2623,9 +3344,17 @@
             "task-successors.v1",
             "workflow-live-activity.v1",
             "statistics-cost-model.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2651,14 +3380,14 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-task-prompt.json",
-      "previous_sha256": "5e140f09a313d79150422291a6f13f86f1039709f6abc4d56b7e158f859e4d79",
-      "sha256": "023b830995e1ded870f74f452374094f11ea5483934cd119a9d54cbcc5fc63ac"
+      "previous_sha256": "023b830995e1ded870f74f452374094f11ea5483934cd119a9d54cbcc5fc63ac",
+      "sha256": "b4fcd20a8ae96c663d9263850269743cef1016ae4bb9a99d06173795eb98205c"
     },
     {
       "changes": [
@@ -2684,9 +3413,17 @@
             "task-prompt.v1",
             "workflow-live-activity.v1",
             "statistics-cost-model.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2712,14 +3449,14 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-task-successors.json",
-      "previous_sha256": "b60ac645337bab3be9beda7a125e7bd7732354198c2a4e22f2ce10793ee92ccc",
-      "sha256": "200110541f32195ada0c2933299a5a52b6dcf6fd519c44b8c6ff9ffff778fece"
+      "previous_sha256": "200110541f32195ada0c2933299a5a52b6dcf6fd519c44b8c6ff9ffff778fece",
+      "sha256": "77e44c870a58b13b4c596e117697ce5f22c1f98babe01b14e706baac183e2df0"
     },
     {
       "changes": [
@@ -2745,9 +3482,17 @@
             "task-prompt.v1",
             "task-successors.v1",
             "statistics-cost-model.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2773,14 +3518,62 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "invalid-s05-missing-workflow-live-activity.json",
-      "previous_sha256": "c09866929c85882028f5711719655385e0dcb239ab1cf13475c0266cc6a8541c",
-      "sha256": "a970dd9a26fa161622790428bd4defd357ccaa5dc777fc9ebdb5c93bb7611ade"
+      "previous_sha256": "a970dd9a26fa161622790428bd4defd357ccaa5dc777fc9ebdb5c93bb7611ade",
+      "sha256": "cda84ddc0f0b496df074f3824bb527366c0df86a48dd06d37e5eb4cc54a812ae"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-builder.json",
+      "previous_sha256": null,
+      "sha256": "e367c4d78ed30a3cd76fa459d24a21168855d40942d79c60ce19cd815f1f9f5e"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-orchestrator.json",
+      "previous_sha256": null,
+      "sha256": "79f91add98858279dbf61e94caf10368296709eb3ada0e86c4d5bee586985993"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-read.json",
+      "previous_sha256": null,
+      "sha256": "8ed5fb401d99771e8899a3996d7629e47967b1ebb8c4b5bf899847126e48888d"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-replan.json",
+      "previous_sha256": null,
+      "sha256": "84e0098a78361df07a09f075f985752ff29f82b39b385a72b86df081dbf71425"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-window.json",
+      "previous_sha256": null,
+      "sha256": "e1d2318af4342515926f666f07982c5894d8f1a59ac9d0d8c4a72d3cfc0825ed"
+    },
+    {
+      "added_family": "negative-handshake",
+      "changes": [],
+      "classification": "added",
+      "file": "invalid-steering-missing-workflow-steering-worker.json",
+      "previous_sha256": null,
+      "sha256": "45d25a06905f70577b322001dac71afb84245c58925b4e0b6699b0941f86d633"
     },
     {
       "changes": [],
@@ -2885,9 +3678,17 @@
             "workflow-live-activity.v1",
             "statistics-cost-model.v1",
             "task-changes.v1",
+            "task-list-watch.v1",
             "future-capability.v99"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2915,14 +3716,14 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "version-info-s05-additive.json",
-      "previous_sha256": "7917e3886f65ef31f9a6c4685621a43c358aa6c2592dffa191b9255ae032ca84",
-      "sha256": "374d127d228666bf77c9f7d674c2d490708e1e9ef936f0d97839cc59d6ef65e8"
+      "previous_sha256": "374d127d228666bf77c9f7d674c2d490708e1e9ef936f0d97839cc59d6ef65e8",
+      "sha256": "1c168ca11acc3f3f24334e4886da35245695036acf30cb4f48f9d9213d4891d4"
     },
     {
       "changes": [
@@ -2949,9 +3750,17 @@
             "task-successors.v1",
             "workflow-live-activity.v1",
             "statistics-cost-model.v1",
-            "task-changes.v1"
+            "task-changes.v1",
+            "task-list-watch.v1"
           ],
           [
+            "conversation-delivery.v1",
+            "workflow-steering-replan.v1",
+            "workflow-steering-worker.v1",
+            "workflow-steering-window.v1",
+            "workflow-steering-read.v1",
+            "workflow-steering-builder.v1",
+            "workflow-steering-orchestrator.v1",
             "workflow-shared-interactions.v1",
             "interaction-events.v1",
             "workflow-attention-checkpoints.v1",
@@ -2978,26 +3787,20 @@
         ],
         [
           "/product_version",
-          "0.0.7",
-          "0.0.10"
+          "0.0.10",
+          "0.0.11"
         ]
       ],
       "classification": "capability-list",
       "file": "version-info.json",
-      "previous_sha256": "b8083e115596866b3ca4f21495e05639fc505d52a0da4bd8aed20f824d9bc790",
-      "sha256": "37f3e1fc7abb775c94ce9331d86a59e88e35b179f38711b2d261c285494045ef"
+      "previous_sha256": "37f3e1fc7abb775c94ce9331d86a59e88e35b179f38711b2d261c285494045ef",
+      "sha256": "e97ae0ffb7c5b6a107afca26da5c9d19bc8d879359830d91aceeb1088a77c24c"
     },
     {
-      "changes": [
-        [
-          "/product_version",
-          "0.0.7+fixture",
-          "0.0.8+fixture"
-        ]
-      ],
-      "classification": "product-version-only",
+      "changes": [],
+      "classification": "unchanged",
       "file": "workflow-definition-patch.json",
-      "previous_sha256": "47f50395f2371a652dec8a6a612c1db95dbabffb43ede363e32369620a6c516d",
+      "previous_sha256": "dec7079d69e46ff4d63da100bb12fc3fbfc1f120057da1d7346dd1f8fad05625",
       "sha256": "dec7079d69e46ff4d63da100bb12fc3fbfc1f120057da1d7346dd1f8fad05625"
     },
     {
@@ -3022,14 +3825,21 @@
       "sha256": "ee491fc8c1f1da76ac4d59c0cd71b22a57416f727afe8defd701fa07c7b1edd7"
     }
   ],
-  "fixture_count": 207,
-  "manifest_sha256": "ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906",
-  "previous_fixture_count": 199,
-  "previous_manifest_sha256": "383ecf7a9b234a1ece18eb15585398f08a77205c02a43cb2a928a2819f76fee0",
-  "previous_source_commit": "b0185be855fd13acc94cb2d2008400d285d15df2",
+  "fixture_count": 291,
+  "history": {
+    "path": "tests/fixtures/provenance/contracts-v1-0.0.10.json",
+    "sha256": "70d9ae6bc588609d25dbc74c563e38dcfc230a6197f5dc3140bbb169b6ec37a0"
+  },
+  "manifest_sha256": "cd58a5ef8bae565513669dcf4d4ac9179ea327d5093de4461806d7be8dae1873",
+  "previous_fixture_count": 207,
+  "previous_manifest_sha256": "ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906",
+  "public_version": "0.0.11",
+  "release_prerelease": true,
+  "release_url": "https://github.com/Harflow-Dev/HarflowMCP/releases/tag/v0.0.11",
   "removed": [],
-  "sdist_sha256": "5b887fa4e26d3a61dd6db416e946149b7d0561fe4d8e23c4578fa102ccdb35e9",
-  "source_commit": "8a936de61b5f9f2fdff671b65b5384259267350b",
-  "tag": "v0.0.10",
-  "wheel_sha256": "c6ada9fd00c1ff85faf9fd94165b84820777bfcda5be5641bf00d300163ac8b9"
+  "sdist_sha256": "bdf02ad4a28dbc5d17c02e01a5006613e877171e246a873906bf3f2fa1641c4a",
+  "source_commit": "6195e619499003301e4b20bacc3da86b5dbe371a",
+  "source_identity_basis": "Verified GitHub tag v0.0.11 resolves to source commit 6195e619499003301e4b20bacc3da86b5dbe371a; the published wheel Python files and sdist contracts/v1 files also byte-match that exact commit.",
+  "tag": "v0.0.11",
+  "wheel_sha256": "8ec421d1e21894f0fc9504f2d928eb02cef7c1d245fecd6fc5ba69204a346dfc"
 }
