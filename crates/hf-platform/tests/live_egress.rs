@@ -28,6 +28,7 @@ fn assert_relay_snapshot(snapshot: RelayDirectionSnapshot, expected: usize) {
 }
 
 #[test]
+#[ignore = "requires the pinned vendor binary on this host"]
 fn live_profile_adds_only_the_credentials_file_write_denial() {
     let root = FixtureRoot::create().unwrap();
     let base = hf_platform::qualification::recorded_vendor_profile(

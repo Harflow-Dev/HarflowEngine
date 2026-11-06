@@ -5,6 +5,7 @@ permissions:
 jobs:
   checks:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -20,7 +21,7 @@ jobs:
       - run: cargo fmt --check
       - run: cargo check --workspace --locked
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - run: cargo test --workspace --locked
+      - run: cargo test --workspace --locked --no-fail-fast
       - run: python scripts/check-architecture.py
       - run: python scripts/check-legacy-names.py
       - run: python -m unittest discover -s tests
