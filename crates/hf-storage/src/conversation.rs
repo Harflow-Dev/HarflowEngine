@@ -79,7 +79,13 @@ impl Store {
         })
     }
     pub fn conversation_observe(&self, id: &Id, deadline: Instant) -> Result<Ledger> {
-        transaction(self, deadline, |tx| data::load(self, tx, id))
+        let mut connection = self.admit(deadline)?;
+        let tx = connection.transaction()?;
+        ownership_schema::check(&tx, &self.identity.generation)?;
+        let ledger = data::load(self, &tx, id)?;
+        self.binding.check()?;
+        connection::check_deadline(deadline)?;
+        Ok(ledger)
     }
     pub fn conversation_apply(
         &self,
@@ -124,7 +130,7 @@ fn transition(
         Command::Acknowledge(c) => ledger.acknowledge(&c)?,
         Command::Unknown(c) => ledger.unknown(&c)?,
         Command::Close(w) => ledger.close(&w)?,
-        Command::RuntimeFault => ledger.runtime_fault = true,
+        Command::RuntimeFault { generation, turn } => ledger.fault(generation, &turn)?,
     }
     Ok(None)
 }

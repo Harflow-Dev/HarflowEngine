@@ -4,6 +4,20 @@ use super::{
 };
 impl Ledger {
     pub fn validate(&self) -> Result<()> {
+        self.validate_header()?;
+        self.validate_boundary()?;
+        let ids = self.validate_messages()?;
+        self.validate_claims()?;
+        self.validate_floor()?;
+        self.validate_active()?;
+        for (index, id) in ids.iter().enumerate() {
+            if ids[..index].contains(id) {
+                return Err(Error::Invalid);
+            }
+        }
+        Ok(())
+    }
+    fn validate_header(&self) -> Result<()> {
         let e = &self.enrollment;
         if e.source.operation != e.fence.operation
             || e.source.generation != e.fence.generation
@@ -25,9 +39,16 @@ impl Ledger {
                 .checked_add(self.messages.len() as u64)
                 != Some(self.next_sequence - 1)
             || self.history_gaps != (self.retired_messages != 0)
+            || self.ledger_epoch > self.retired_messages
+            || (self.retired_messages != 0 && self.ledger_epoch == 0)
+            || self.cumulative_issuances > self.next_sequence - 1
         {
             return Err(Error::Invalid);
         }
+        Ok(())
+    }
+    fn validate_boundary(&self) -> Result<()> {
+        let e = &self.enrollment;
         if let Some(b) = &self.boundary
             && ((b.expected.conversation != e.conversation
                 || b.expected.head_task != e.head_task
@@ -40,9 +61,11 @@ impl Ledger {
         {
             return Err(Error::Invalid);
         }
+        Ok(())
+    }
+    fn validate_messages(&self) -> Result<Vec<&Id>> {
         let mut ids: Vec<&Id> = Vec::new();
         let mut sequence = 0;
-        let mut active = 0;
         for message in &self.messages {
             if message.sequence <= sequence
                 || message.sequence >= self.next_sequence
@@ -61,21 +84,62 @@ impl Ledger {
             if let Some(c) = &message.cancellation {
                 ids.push(&c.request);
             }
-            active += usize::from(
-                message.state == MessageState::Claimed || message.state == MessageState::Unknown,
-            );
         }
+        Ok(ids)
+    }
+    fn validate_claims(&self) -> Result<()> {
+        let mut claims: u64 = 0;
+        let mut previous: Option<u64> = None;
+        let mut queued = false;
+        for message in &self.messages {
+            queued |= message.state == MessageState::Queued;
+            let Some(claim) = &message.claim else {
+                continue;
+            };
+            let live =
+                message.state == MessageState::Claimed || message.state == MessageState::Unknown;
+            if queued
+                || previous.is_some_and(|g| claim.generation <= g)
+                || (live && (claim.generation != self.generation || claim.turn != self.turn))
+                || (claim.generation == self.generation && claim.turn != self.turn)
+            {
+                return Err(Error::Invalid);
+            }
+            previous = Some(claim.generation);
+            claims = claims.checked_add(1).ok_or(Error::Invalid)?;
+        }
+        if self.cumulative_issuances < claims {
+            return Err(Error::Invalid);
+        }
+        Ok(())
+    }
+    fn validate_floor(&self) -> Result<()> {
+        // O(retained): sequences are strictly increasing and below next_sequence,
+        // so the first mismatch from the top is the highest absent sequence.
+        let mut candidate = self.next_sequence - 1;
+        for message in self.messages.iter().rev() {
+            if message.sequence != candidate {
+                break;
+            }
+            candidate = candidate.checked_sub(1).ok_or(Error::Invalid)?;
+        }
+        if self.history_floor != candidate.checked_add(1).ok_or(Error::Invalid)? {
+            return Err(Error::Invalid);
+        }
+        Ok(())
+    }
+    fn validate_active(&self) -> Result<()> {
+        let active = self
+            .messages
+            .iter()
+            .filter(|m| m.state == MessageState::Claimed || m.state == MessageState::Unknown)
+            .count();
         if active > 1
             || (self.boundary.is_some() && active != 0)
             || (self.closed
                 && (self.outstanding() != 0 || self.boundary.is_none() || self.runtime_fault))
         {
             return Err(Error::Invalid);
-        }
-        for (index, id) in ids.iter().enumerate() {
-            if ids[..index].contains(id) {
-                return Err(Error::Invalid);
-            }
         }
         Ok(())
     }

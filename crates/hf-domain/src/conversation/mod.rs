@@ -106,6 +106,8 @@ pub struct Ledger {
     pub next_sequence: u64,
     pub cumulative_issuances: u64,
     pub unavailable_usage: u64,
+    /// One past the highest retired sequence. Protected entries may remain
+    /// retained below it, because retirement is not strictly oldest-first.
     pub history_floor: u64,
     pub retired_messages: u64,
     pub history_gaps: bool,

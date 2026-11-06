@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use hf_application::conversation::{
     BoundaryEvidencePort, Command, ConversationService, ConversationStorePort, ReceiptEvidencePort,
     Route, Scope,
@@ -105,16 +106,41 @@ fn fifo_claims_one_per_positive_boundary_and_ack_is_not_consumption() {
 }
 
 #[test]
-fn unknown_claim_blocks_issuance_but_allows_bounded_queue_admission() {
+fn open_claim_blocks_boundary_and_issuance_in_claimed_and_unknown_states() {
     let mut ledger = Ledger::new(enrollment()).unwrap();
     ledger.send(send(&ledger, 20, "one")).unwrap();
     ledger.record_boundary(boundary(&ledger)).unwrap();
     let issued = ledger.claim(claim(&ledger, 30)).unwrap().unwrap();
-    ledger.unknown(&issued).unwrap();
-    assert_eq!(ledger.messages[0].state, MessageState::Unknown);
+    assert!(ledger.boundary.is_none());
+    for state in [MessageState::Claimed, MessageState::Unknown] {
+        if state == MessageState::Unknown {
+            ledger.unknown(&issued).unwrap();
+        }
+        assert_eq!(ledger.messages[0].state, state);
+        assert_eq!(
+            ledger.record_boundary(boundary(&ledger)),
+            Err(Error::Blocked),
+            "{state:?}"
+        );
+        // A boundary forced in by hand must still not allow a second claim.
+        let mut forced = ledger.clone();
+        forced.boundary = Some(boundary(&ledger));
+        assert_eq!(
+            forced.claim(claim(&forced, 31)),
+            Err(Error::Blocked),
+            "{state:?}"
+        );
+        assert_eq!(forced.cumulative_issuances, 1);
+    }
     ledger.send(send(&ledger, 21, "two")).unwrap();
-    assert_eq!(ledger.claim(claim(&ledger, 31)), Err(Error::Blocked));
     assert_eq!(ledger.unavailable_usage, 1);
+    ledger
+        .receipt(Receipt {
+            claim: issued,
+            evidence: id(13),
+        })
+        .unwrap();
+    ledger.record_boundary(boundary(&ledger)).unwrap();
 }
 
 #[test]
@@ -139,16 +165,40 @@ fn only_exact_correlated_receipt_consumes_and_replay_does_not_increment_usage() 
 fn cancellation_is_queued_only_and_has_separate_idempotency_identity() {
     let mut ledger = Ledger::new(enrollment()).unwrap();
     ledger.send(send(&ledger, 20, "one")).unwrap();
+    ledger.send(send(&ledger, 21, "two")).unwrap();
     let cancel = CancelIntent {
         request: id(22),
         message: id(20),
         expected: ledger.witness(),
     };
     ledger.cancel(cancel.clone()).unwrap();
-    ledger.cancel(cancel).unwrap();
+    ledger.cancel(cancel.clone()).unwrap();
     assert_eq!(ledger.messages[0].state, MessageState::Cancelled);
+    // A conflicting identity: same request, different target.
+    let mut other_target = cancel.clone();
+    other_target.message = id(21);
+    assert_eq!(ledger.cancel(other_target), Err(Error::Conflict));
+    // Request ids are shared across sends, cancels and claims.
+    let mut reused = cancel.clone();
+    reused.request = id(20);
+    assert_eq!(ledger.cancel(reused), Err(Error::Conflict));
+    assert_eq!(ledger.send(send(&ledger, 22, "x")), Err(Error::Conflict));
+    assert_eq!(ledger.claim(claim(&ledger, 22)), Err(Error::Conflict));
+    // An already cancelled message cannot be cancelled again under a new id.
+    let mut again = cancel;
+    again.request = id(23);
+    assert_eq!(ledger.cancel(again), Err(Error::AlreadyClaimed));
+    // A claimed message cannot be cancelled either.
     ledger.record_boundary(boundary(&ledger)).unwrap();
-    assert_eq!(ledger.close(&ledger.witness()), Ok(()));
+    let issued = ledger.claim(claim(&ledger, 30)).unwrap().unwrap();
+    assert_eq!(issued.message, id(21));
+    let claimed_cancel = CancelIntent {
+        request: id(24),
+        message: id(21),
+        expected: ledger.witness(),
+    };
+    assert_eq!(ledger.cancel(claimed_cancel), Err(Error::AlreadyClaimed));
+    assert_eq!(ledger.messages[1].state, MessageState::Claimed);
 }
 
 #[test]
@@ -211,9 +261,18 @@ fn retained_send_replay_precedes_stale_witness_but_changed_payload_conflicts() {
     ledger.send(original.clone()).unwrap();
     let mut changed = original.clone();
     changed.text.push('!');
-    assert_eq!(ledger.send(changed), Err(Error::Conflict));
+    assert_eq!(ledger.send(changed.clone()), Err(Error::Conflict));
     ledger.record_boundary(boundary(&ledger)).unwrap();
+    ledger.claim(claim(&ledger, 30)).unwrap().unwrap();
+    // The generation advanced, so the original witness is now stale.
+    assert_ne!(original.expected, ledger.witness());
+    let mut fresh_request = original.clone();
+    fresh_request.request = id(21);
+    assert_eq!(ledger.send(fresh_request), Err(Error::Stale));
+    let before = ledger.clone();
     assert_eq!(ledger.send(original), Ok(()));
+    assert_eq!(ledger, before);
+    assert_eq!(ledger.send(changed), Err(Error::Conflict));
 }
 
 struct MemoryStore {

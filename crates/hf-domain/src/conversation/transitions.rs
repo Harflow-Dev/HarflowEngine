@@ -184,7 +184,7 @@ impl Ledger {
         Ok(Some(claim))
     }
     pub(super) fn expected(&self, expected: &Witness) -> Result<()> {
-        if expected.ledger_epoch < self.ledger_epoch {
+        if expected.ledger_epoch != self.ledger_epoch {
             return Err(Error::Expired);
         }
         if *expected != self.witness() {

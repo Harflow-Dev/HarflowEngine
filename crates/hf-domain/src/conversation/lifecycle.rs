@@ -1,8 +1,11 @@
 use super::{
-    BoundaryEvidence, Claim, Error, Ledger, Message, MessageState, Receipt, Result, Witness,
+    BoundaryEvidence, Claim, Error, Id, Ledger, Message, MessageState, Receipt, Result, Witness,
 };
 impl Ledger {
     pub fn acknowledge(&mut self, claim: &Claim) -> Result<()> {
+        if self.closed {
+            return Err(Error::Closed);
+        }
         let message = self.matching_claim(claim)?;
         if message.state != MessageState::Claimed
             && message.state != MessageState::Unknown
@@ -40,11 +43,15 @@ impl Ledger {
                 message.state = MessageState::Unknown;
                 Ok(())
             }
+            MessageState::Consumed => Ok(()),
             _ => Err(Error::Invalid),
         }
     }
     pub fn record_boundary(&mut self, evidence: BoundaryEvidence) -> Result<()> {
         self.expected(&evidence.expected)?;
+        if self.closed {
+            return Err(Error::Closed);
+        }
         if evidence.context != self.enrollment.context
             || evidence.profile != self.enrollment.profile
         {
@@ -58,7 +65,26 @@ impl Ledger {
         {
             return Err(Error::Blocked);
         }
+        if let Some(old) = &self.boundary {
+            // First evidence wins and stays immutable, including its epoch.
+            return if old.evidence == evidence.evidence {
+                Ok(())
+            } else {
+                Err(Error::Conflict)
+            };
+        }
         self.boundary = Some(evidence);
+        Ok(())
+    }
+    /// Sticky and idempotent. The report must name the current generation and turn.
+    pub fn fault(&mut self, generation: u64, turn: &Id) -> Result<()> {
+        if self.generation != generation || self.turn != *turn {
+            return Err(Error::Stale);
+        }
+        if self.closed {
+            return Err(Error::Closed);
+        }
+        self.runtime_fault = true;
         Ok(())
     }
     pub fn close(&mut self, expected: &Witness) -> Result<()> {

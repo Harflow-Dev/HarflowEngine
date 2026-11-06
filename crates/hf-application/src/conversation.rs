@@ -19,6 +19,9 @@ pub enum Route {
     Fresh,
     Resume,
     Automatic,
+    Interrupt,
+    Workflow,
+    Steering,
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error<E> {
@@ -37,7 +40,7 @@ pub enum Command {
     Acknowledge(Claim),
     Unknown(Claim),
     Close(Witness),
-    RuntimeFault,
+    RuntimeFault { generation: u64, turn: Id },
 }
 pub trait ConversationStorePort {
     type Error;
@@ -203,10 +206,16 @@ where
     pub fn runtime_fault(
         &self,
         conversation: &Id,
+        generation: u64,
+        turn: Id,
         deadline: S::Deadline,
     ) -> Result<Ledger, Error<S::Error>> {
-        self.apply(conversation, Command::RuntimeFault, deadline)
-            .map(|o| o.ledger)
+        self.apply(
+            conversation,
+            Command::RuntimeFault { generation, turn },
+            deadline,
+        )
+        .map(|o| o.ledger)
     }
     fn apply(
         &self,

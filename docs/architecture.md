@@ -107,3 +107,8 @@ The separate [two-tunnel fake-only TLS control](claude-two-tunnel-negative.md) i
 owner-approved bounded diagnostic. It adds no real-provider route, credential
 access, public capability or production admission; its own receipt determines
 whether the stricter negative-control evidence is qualified.
+
+The private [R06-A conversation ledger](migration-receipts/R06-A.md) is an offline,
+same-context, Queue-only fixture over injected ports and reserved `__r06/` fixture
+records. It adds no delivery transport, public capability or production evidence
+adapter. Every other route refuses before port I/O.
