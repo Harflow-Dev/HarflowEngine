@@ -11,7 +11,7 @@ base = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(base)
 
 
-def admit(selector, sessions, listener, context, accepted):
+def admit(selector, sessions, listener, context, accepted, register=None):
     connection, peer = listener.accept()
     if len(sessions) >= 2:
         connection.close()
@@ -24,10 +24,12 @@ def admit(selector, sessions, listener, context, accepted):
         raise
     sessions[secure] = (accepted + 1, peer, False)
     selector.register(secure, selectors.EVENT_READ)
+    if register is not None:
+        register(secure, accepted + 1, peer)
     return accepted + 1
 
 
-def serve_wave(context):
+def serve_wave(context, register=None):
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     selector = selectors.DefaultSelector()
     sessions = {}
@@ -47,7 +49,7 @@ def serve_wave(context):
                     base.progress(selector, sessions, key.fileobj)
             for key, _ in ready:
                 if key.fileobj is listener:
-                    accepted = admit(selector, sessions, listener, context, accepted)
+                    accepted = admit(selector, sessions, listener, context, accepted, register)
                     if accepted == 4:
                         selector.unregister(listener)
                         listener.close()

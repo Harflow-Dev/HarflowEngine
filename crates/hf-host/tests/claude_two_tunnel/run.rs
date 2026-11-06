@@ -20,6 +20,8 @@ mod codec;
 mod evidence;
 #[path = "../claude_live/identity.rs"]
 mod identity;
+#[allow(dead_code)] // Each integration target selects only its own diagnostic entry.
+mod milestone_codec;
 #[path = "../claude_live/pins.rs"]
 mod pins;
 mod support;
@@ -45,22 +47,28 @@ pub(super) fn run_replacement_wave() {
     run_mode(Mode::ReplacementWave);
 }
 #[allow(dead_code)]
+pub(super) fn run_handshake_diagnostic() {
+    run_mode(Mode::HandshakeDiagnostic);
+}
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 enum Mode {
     TwoTunnel,
     ReplacementWave,
+    HandshakeDiagnostic,
 }
 impl Mode {
     fn maximum(self) -> usize {
         match self {
             Self::TwoTunnel => 2,
-            Self::ReplacementWave => 4,
+            Self::ReplacementWave | Self::HandshakeDiagnostic => 4,
         }
     }
     fn gate(self) -> &'static str {
         match self {
             Self::TwoTunnel => "HARFLOW_RUN_TWO_TUNNEL_TLS_NEGATIVE",
             Self::ReplacementWave => "HARFLOW_RUN_REPLACEMENT_WAVE_TLS_NEGATIVE",
+            Self::HandshakeDiagnostic => "HARFLOW_RUN_HANDSHAKE_EOF_DIAGNOSTIC",
         }
     }
 }
@@ -206,7 +214,8 @@ fn require_proxy(
             && upstreams.len() == outcome.accepted
             && match mode {
                 Mode::TwoTunnel => codec::bound_rejection(verdict, &upstreams),
-                Mode::ReplacementWave => codec::bound_wave_rejection(verdict, &upstreams),
+                Mode::ReplacementWave | Mode::HandshakeDiagnostic =>
+                    codec::bound_wave_rejection(verdict, &upstreams),
             },
         "bound explicit certificate rejection required for every admitted session"
     );

@@ -20,6 +20,10 @@ pub(super) fn start(root: &FixtureRoot, until: Instant, mode: Mode) -> FakeTls {
                     env!("CARGO_MANIFEST_DIR"),
                     "/tests/claude_two_tunnel/wave_tls.py"
                 ),
+                Mode::HandshakeDiagnostic => concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/claude_two_tunnel/eof_tls.py"
+                ),
             }
             .into(),
             directory.into_os_string(),
@@ -69,6 +73,10 @@ impl FakeTls {
         let verdict = match self.mode {
             Mode::TwoTunnel => codec::parse(&captured.stdout),
             Mode::ReplacementWave => codec::parse_wave(&captured.stdout),
+            Mode::HandshakeDiagnostic => milestone_codec::parse(&captured.stdout).map(|value| {
+                eprintln!("phase=handshake-milestones verdict={value:?}");
+                value.verdict
+            }),
         };
         eprintln!("phase=two-tunnel-helper verdict={verdict:?}");
         (captured, verdict)

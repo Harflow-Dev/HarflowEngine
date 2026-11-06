@@ -21,7 +21,9 @@ impl Attempt {
         let nonce = identity::nonce_from_root(root.root());
         let proxy = match mode {
             Mode::TwoTunnel => TwoTunnelProxy::start(address, &nonce, until),
-            Mode::ReplacementWave => TwoTunnelProxy::start_replacement_wave(address, &nonce, until),
+            Mode::ReplacementWave | Mode::HandshakeDiagnostic => {
+                TwoTunnelProxy::start_replacement_wave(address, &nonce, until)
+            }
         }
         .expect("exclusive loopback proxy pair");
         let profile = hf_platform::qualification::live::live_profile(&root, proxy.port())
