@@ -16,6 +16,10 @@ mod actors;
 mod attempt;
 #[path = "../claude_live/canary.rs"]
 mod canary;
+#[allow(dead_code)]
+mod client_preload_metadata;
+#[allow(dead_code)]
+mod client_preload_probe;
 mod codec;
 mod evidence;
 #[path = "../claude_live/identity.rs"]
@@ -256,4 +260,9 @@ fn budget_witness(outcome: &hf_platform::qualification::live::TwoTunnelOutcome) 
                 })
                 .is_some_and(|total| total <= 262144)
         })
+}
+
+#[allow(dead_code)]
+pub(super) fn run_client_preload_probe() {
+    client_preload_probe::run();
 }

@@ -19,3 +19,5 @@ pub fn live_profile(root: &FixtureRoot, port: u16) -> io::Result<String> {
 
 mod two_tunnel;
 pub use two_tunnel::*;
+mod observer_file;
+pub use observer_file::ObserverFile;

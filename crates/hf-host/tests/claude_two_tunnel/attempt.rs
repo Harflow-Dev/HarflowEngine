@@ -79,6 +79,9 @@ impl Attempt {
         pins::unchanged(&before, version_until);
         evidence::version(self);
     }
+    pub(super) fn preflight_only(&self, until: Instant) {
+        self.preflight(until);
+    }
     fn preflight(&self, until: Instant) {
         let until = until.min(Instant::now() + Duration::from_secs(5));
         self.spawn_control(until);

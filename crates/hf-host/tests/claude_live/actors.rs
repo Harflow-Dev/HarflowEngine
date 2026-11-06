@@ -13,6 +13,8 @@ pub(super) struct Captured {
     pub(super) stdout: Vec<u8>,
     pub(super) stderr: Vec<u8>,
     pub(super) identity: String,
+    #[allow(dead_code)] // Only the inert preload target binds metadata to this identity.
+    pub(super) original_identity: Option<hf_domain::process::ProcessIdentity>,
     pub(super) complete: bool,
     pub(super) status: ObservationStatus,
 }
@@ -81,6 +83,7 @@ impl Original {
         if !observed {
             self.retain_until_settled();
         }
+        let original_identity = self.0.registered_identity().cloned();
         let identity = format!("{:?}", self.0.registered_identity());
         let exit = self.0.exit();
         let (stdout, stderr) = self.0.take_capture_bytes();
@@ -89,6 +92,7 @@ impl Original {
             stdout,
             stderr,
             identity,
+            original_identity,
             complete,
             status,
         }
