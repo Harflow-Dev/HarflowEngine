@@ -21,7 +21,7 @@ impl Attempt {
         let nonce = identity::nonce_from_root(root.root());
         let proxy = match mode {
             Mode::TwoTunnel => TwoTunnelProxy::start(address, &nonce, until),
-            Mode::ReplacementWave | Mode::HandshakeDiagnostic => {
+            Mode::ReplacementWave | Mode::HandshakeDiagnostic | Mode::ClientReason => {
                 TwoTunnelProxy::start_replacement_wave(address, &nonce, until)
             }
         }

@@ -1,7 +1,7 @@
 # Client-side TLS reason: preload observability qualification
 
-Status: inert support probe implemented; final checks and independent source
-review passed. No pinned-Claude probe or TLS request has run in this stage.
+Status: inert support probe passed against the exact pinned Claude runtime.
+No TLS request or client-error observer has run in this stage.
 The [native milestone diagnosis](claude-handshake-eof-milestones.md) remains
 unchanged: client closure before observed key exchange is not certificate proof.
 
@@ -77,10 +77,48 @@ this scoped claim because of the preserved unrelated ST04 peer lint. All 17
 protected peer/tracker files remain byte-identical.
 
 Independent final review closed clean for exactly one inert pinned version-only
-probe. That probe is pending. No TLS observer or fallback is qualified by these
-checks. Kim's configured GLM model and Bash policy were rechecked; the unchanged
+probe. It passed in 2.13 seconds with exact version, process-bound READY marker,
+original Code(0), complete physical EOFs and no deadline expiration. Original
+stdout was 22 bytes and stderr was empty. Proxy accepted/connect counts were
+zero; source/vendor/ICU bookends, canaries, quiet listeners and bounded scan all
+passed before assertions. The owned successful root was removed after custody.
+This establishes preload execution only; no TLS observer or fallback is qualified.
+Kim's configured GLM model and Bash policy were rechecked; the unchanged
 broad allowlist prevented write preflight. Native Sol low implemented the bounded
 probe and a dedicated Luna medium writer supplied regressions, with primary
 integration and final verification. No Vibe task/configuration change followed.
 No credentials, provider calls, production admission, install, selected pin change,
 push or release is selected by this work.
+
+## Reviewed client-error observer boundary
+
+The approved follow-on diagnostic observes only the first four global fetch calls.
+A function Proxy forwards original arguments, receiver and properties, including
+`preconnect`; the native function is invoked exactly once. Synchronous throws and
+promise rejections preserve the original error object. Observer failures cannot
+replace native outcomes. Promise identity, timing and unhandled-rejection behavior
+can change, so this is an instrumented diagnostic rather than stock-runtime
+qualification. Native paths outside global fetch may remain unobserved.
+
+Only bounded own data-property `code` and one own data-property `cause.code` are
+mapped through a fixed allowlist. Getters, coercions, messages, stacks, request
+arguments and response data are excluded. Outer and cause categories remain
+separate; missing, accessor and unknown values are explicit. Separate nonce/PID
+metadata never enters the original CLI certificate classifier.
+
+Distinct version and negative metadata files each retain the existing 512-byte
+limit. The new mode reserves these 1024 bytes from the original 4096-byte helper
+metadata budget, leaving 3072 for the unchanged milestone helper. It preserves
+four total/two concurrent connections, network bounds, profile and deadlines.
+The helper's 25 seconds begin at its original spawn; observer overhead cannot
+restart or extend it. A missing healthy version completion blocks the negative
+run. Missing final metadata after termination permits only an incomplete
+diagnostic prefix, never observer qualification. The original CLI refusal and
+per-session certificate-alert gates remain mandatory.
+
+The final recorder-health field covers observation through the final append; it
+is not an independent witness that its subsequent close succeeded. Original-child
+exit settles process-owned descriptors. Overflow reports calls outside the first
+four-call observation window and cannot establish coverage of those calls.
+An incomplete prefix has no known total call count; its default count is not
+evidence that no fetch calls occurred.

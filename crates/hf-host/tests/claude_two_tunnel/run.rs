@@ -20,6 +20,12 @@ mod canary;
 mod client_preload_metadata;
 #[allow(dead_code)]
 mod client_preload_probe;
+#[allow(dead_code)]
+mod client_reason;
+#[allow(dead_code)]
+mod client_reason_metadata;
+#[allow(dead_code)]
+mod client_reason_sources;
 mod codec;
 mod evidence;
 #[path = "../claude_live/identity.rs"]
@@ -60,12 +66,13 @@ enum Mode {
     TwoTunnel,
     ReplacementWave,
     HandshakeDiagnostic,
+    ClientReason,
 }
 impl Mode {
     fn maximum(self) -> usize {
         match self {
             Self::TwoTunnel => 2,
-            Self::ReplacementWave | Self::HandshakeDiagnostic => 4,
+            Self::ReplacementWave | Self::HandshakeDiagnostic | Self::ClientReason => 4,
         }
     }
     fn gate(self) -> &'static str {
@@ -73,6 +80,7 @@ impl Mode {
             Self::TwoTunnel => "HARFLOW_RUN_TWO_TUNNEL_TLS_NEGATIVE",
             Self::ReplacementWave => "HARFLOW_RUN_REPLACEMENT_WAVE_TLS_NEGATIVE",
             Self::HandshakeDiagnostic => "HARFLOW_RUN_HANDSHAKE_EOF_DIAGNOSTIC",
+            Self::ClientReason => "HARFLOW_RUN_CLIENT_REASON_DIAGNOSTIC",
         }
     }
 }
@@ -218,7 +226,7 @@ fn require_proxy(
             && upstreams.len() == outcome.accepted
             && match mode {
                 Mode::TwoTunnel => codec::bound_rejection(verdict, &upstreams),
-                Mode::ReplacementWave | Mode::HandshakeDiagnostic =>
+                Mode::ReplacementWave | Mode::HandshakeDiagnostic | Mode::ClientReason =>
                     codec::bound_wave_rejection(verdict, &upstreams),
             },
         "bound explicit certificate rejection required for every admitted session"
@@ -265,4 +273,9 @@ fn budget_witness(outcome: &hf_platform::qualification::live::TwoTunnelOutcome) 
 #[allow(dead_code)]
 pub(super) fn run_client_preload_probe() {
     client_preload_probe::run();
+}
+
+#[allow(dead_code)]
+pub(super) fn run_client_reason() {
+    client_reason::run();
 }

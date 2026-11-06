@@ -20,7 +20,7 @@ pub(super) fn start(root: &FixtureRoot, until: Instant, mode: Mode) -> FakeTls {
                     env!("CARGO_MANIFEST_DIR"),
                     "/tests/claude_two_tunnel/wave_tls.py"
                 ),
-                Mode::HandshakeDiagnostic => concat!(
+                Mode::HandshakeDiagnostic | Mode::ClientReason => concat!(
                     env!("CARGO_MANIFEST_DIR"),
                     "/tests/claude_two_tunnel/eof_tls.py"
                 ),
@@ -30,7 +30,11 @@ pub(super) fn start(root: &FixtureRoot, until: Instant, mode: Mode) -> FakeTls {
             "25".into(),
         ],
         environment: environment(&[]),
-        capture_limit: 4096,
+        capture_limit: if matches!(mode, Mode::ClientReason) {
+            3072
+        } else {
+            4096
+        },
     };
     let child = RetainedOwnedChild::spawn(
         spec,
@@ -73,10 +77,12 @@ impl FakeTls {
         let verdict = match self.mode {
             Mode::TwoTunnel => codec::parse(&captured.stdout),
             Mode::ReplacementWave => codec::parse_wave(&captured.stdout),
-            Mode::HandshakeDiagnostic => milestone_codec::parse(&captured.stdout).map(|value| {
-                eprintln!("phase=handshake-milestones verdict={value:?}");
-                value.verdict
-            }),
+            Mode::HandshakeDiagnostic | Mode::ClientReason => {
+                milestone_codec::parse(&captured.stdout).map(|value| {
+                    eprintln!("phase=handshake-milestones verdict={value:?}");
+                    value.verdict
+                })
+            }
         };
         eprintln!("phase=two-tunnel-helper verdict={verdict:?}");
         (captured, verdict)
