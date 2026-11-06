@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+autobins = false
+default-run = "harflow-ctl"
 
 [lints]
 workspace = true
@@ -19,3 +21,7 @@ hf-interfaces = { path = "../hf-interfaces" }
 [[bin]]
 name = "harflow-engine-scaffold"
 path = "src/main.rs"
+
+[[bin]]
+name = "harflow-ctl"
+path = "src/ctl/main.rs"

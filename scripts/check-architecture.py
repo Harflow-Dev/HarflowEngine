@@ -1,6 +1,7 @@
 """Enforce workspace inventory, dependency edges, lint inheritance and file size."""
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -14,6 +15,40 @@ EDGES = {
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
 }
+BINS = {
+    "hf-host": {"harflow-engine-scaffold": "src/main.rs", "harflow-ctl": "src/ctl/main.rs"},
+    "hf-architecture": {"hf-architecture": "src/main.rs"},
+}
+# Every layer keeps its public ctl code in a `ctl` module: the module root `src/ctl.rs`
+# and the tree `src/ctl/`. This is a text screen, not a proof: it rejects the names of
+# the private fixture, owner-runtime and storage-qualification machinery, module
+# redirection and file inclusion, and any `hf_storage` path in the host ctl tree that is
+# not allowlisted. It does not analyse what permitted code does.
+CTL_CRATES = ("hf-domain", "hf-application", "hf-platform", "hf-interfaces", "hf-host")
+CTL_TREES = [f"crates/{crate}/src/ctl" for crate in CTL_CRATES]
+CTL_ROOTS = [f"crates/{crate}/src/ctl.rs" for crate in CTL_CRATES]
+CTL_FORBIDDEN = re.compile(r"fixture|owner_runtime|st04|qualification|probe", re.IGNORECASE)
+CTL_REDIRECT = re.compile(r"#\s*!?\s*\[\s*path\b|\binclude(_str|_bytes)?\s*!")
+HOST_CTL_TREE = "crates/hf-host/src/ctl"
+# Widening this list is a deliberate edit: a new opener or writer must be reviewed here.
+HOST_STORAGE_ALLOWED = {"hf_storage::SCHEMA_VERSION", "hf_storage::APPLICATION_ID"}
+HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
+
+def check_ctl_sources(root):
+    files = [root / path for path in CTL_ROOTS if (root / path).is_file()]
+    for tree in CTL_TREES:
+        files.extend((root / tree).rglob("*.rs"))
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        found = CTL_FORBIDDEN.search(text)
+        if found:
+            raise ValueError(f"Forbidden name {found.group(0)!r} in ctl code: {path}")
+        if CTL_REDIRECT.search(text):
+            raise ValueError(f"Module redirection or file inclusion in ctl code: {path}")
+    for path in (root / HOST_CTL_TREE).rglob("*.rs"):
+        for found in HOST_STORAGE_PATH.findall(path.read_text(encoding="utf-8")):
+            if re.sub(r"\s+", "", found) not in HOST_STORAGE_ALLOWED:
+                raise ValueError(f"hf_storage path {found!r} is not allowlisted for host ctl code: {path}")
 
 def validate(metadata, root):
     members = set(metadata["workspace_members"])
@@ -48,7 +83,9 @@ def validate(metadata, root):
             os_wrappers = {
                 "libproc": ("=0.14.11", []),
                 "sysctl": ("=0.7.1", []),
-                "nix": ("=0.31.3", ["fs", "poll", "process", "signal", "socket"]),
+                # "dir" lets the state observer list directories from a pinned descriptor
+                # (nix's dir module is feature-gated; the feature adds no crate).
+                "nix": ("=0.31.3", ["dir", "fs", "poll", "process", "signal", "socket"]),
             }
             if dependency["name"] in os_wrappers:
                 version, features = os_wrappers[dependency["name"]]
@@ -91,13 +128,25 @@ def validate(metadata, root):
                 raise ValueError("Domain build scripts are forbidden")
         manifest = manifest_path.read_text(encoding="utf-8")
         import tomllib
-        if tomllib.loads(manifest).get("lints") != {"workspace": True}:
+        parsed = tomllib.loads(manifest)
+        if parsed.get("lints") != {"workspace": True}:
             raise ValueError(f"Workspace lint inheritance missing: {package['name']}")
+        bins = {
+            target["name"]: Path(target["src_path"]).resolve().relative_to(manifest_path.parent.resolve()).as_posix()
+            for target in package["targets"] if "bin" in target["kind"]
+        }
+        if bins != BINS.get(package["name"], {}):
+            raise ValueError(f"Binary inventory changed: {package['name']}")
+        if package["name"] == "hf-host":
+            settings = parsed.get("package", {})
+            if settings.get("autobins") is not False or settings.get("default-run") != "harflow-ctl":
+                raise ValueError("hf-host requires autobins = false and default-run = harflow-ctl")
     for folder in [root / "crates", root / "tools"]:
         for path in folder.rglob("*.rs"):
             count = sum(bool(line.strip()) and not line.strip().startswith("//") for line in path.read_text(encoding="utf-8").splitlines())
             if count > 400:
                 raise ValueError(f"File exceeds 400 substantive lines: {path}")
+    check_ctl_sources(root)
 
 def main():
     metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT, encoding="utf-8"))

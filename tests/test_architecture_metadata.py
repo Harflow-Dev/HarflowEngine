@@ -8,6 +8,7 @@ SPEC = importlib.util.spec_from_file_location("check_architecture", SCRIPT)
 ARCHITECTURE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ARCHITECTURE)
 EDGES = ARCHITECTURE.EDGES
+BINS = ARCHITECTURE.BINS
 validate = ARCHITECTURE.validate
 
 
@@ -19,13 +20,18 @@ class ArchitectureMetadataTests(unittest.TestCase):
         for name in EDGES:
             folder = self.root / ("tools" if name == "hf-architecture" else "crates") / name
             folder.mkdir(parents=True)
-            (folder / "Cargo.toml").write_text('[lints]\nworkspace = true\n', encoding="utf-8")
+            manifest = '[lints]\nworkspace = true\n'
+            if name == "hf-host":
+                manifest = '[package]\nautobins = false\ndefault-run = "harflow-ctl"\n\n' + manifest
+            (folder / "Cargo.toml").write_text(manifest, encoding="utf-8")
+            targets = [{"kind": ["lib"], "src_path": str(folder / "src/lib.rs")}] if name == "hf-domain" else []
+            targets += [{"kind": ["bin"], "name": bin_name, "src_path": str(folder / source)} for bin_name, source in BINS.get(name, {}).items()]
             self.packages.append({
                 "id": name,
                 "name": name,
                 "manifest_path": str(folder / "Cargo.toml"),
                 "dependencies": [],
-                "targets": ([{"kind": ["lib"], "src_path": str(folder / "src/lib.rs")}] if name == "hf-domain" else []),
+                "targets": targets,
             })
         domain = self.root / "crates/hf-domain/src"
         domain.mkdir()
@@ -192,7 +198,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
         reviewed = {
             "libproc": ("=0.14.11", []),
             "sysctl": ("=0.7.1", []),
-            "nix": ("=0.31.3", ["fs", "poll", "process", "signal", "socket"]),
+            "nix": ("=0.31.3", ["dir", "fs", "poll", "process", "signal", "socket"]),
         }
         def dependency(name, version, features):
             return {
@@ -219,7 +225,8 @@ class ArchitectureMetadataTests(unittest.TestCase):
             ]
             if name == "nix":
                 changes.append({"features": ["fs", "poll", "signal"]})
-                changes.append({"features": ["fs", "poll", "process", "signal"]})
+                changes.append({"features": ["fs", "poll", "process", "signal", "socket"]})
+                changes.append({"features": ["dir", "fs", "poll", "process", "signal"]})
             for change in changes:
                 platform["dependencies"] = [dict(accepted, **change)]
                 with self.subTest(name=name, change=change), self.assertRaisesRegex(ValueError, name):
@@ -241,6 +248,77 @@ class ArchitectureMetadataTests(unittest.TestCase):
         oversized.write_text("\n".join(f"let value{index} = {index};" for index in range(401)), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "400 substantive lines"):
             validate(self.metadata, self.root)
+
+    def test_binary_inventory_is_exact_and_host_cargo_settings_are_required(self):
+        host = next(package for package in self.packages if package["name"] == "hf-host")
+        extra = {"kind": ["bin"], "name": "extra", "src_path": str(self.root / "crates/hf-host/src/extra.rs")}
+        host["targets"].append(extra)
+        with self.assertRaisesRegex(ValueError, "Binary inventory changed"):
+            validate(self.metadata, self.root)
+        host["targets"].remove(extra)
+        removed = host["targets"].pop()
+        with self.assertRaisesRegex(ValueError, "Binary inventory changed"):
+            validate(self.metadata, self.root)
+        host["targets"].append({**removed, "src_path": str(self.root / "crates/hf-host/src/other.rs")})
+        with self.assertRaisesRegex(ValueError, "Binary inventory changed"):
+            validate(self.metadata, self.root)
+        host["targets"].pop()
+        host["targets"].append(removed)
+        validate(self.metadata, self.root)
+        manifest = Path(host["manifest_path"])
+        for text in ('[package]\ndefault-run = "harflow-ctl"\n', '[package]\nautobins = false\n',
+                     '[package]\nautobins = false\ndefault-run = "harflow-engine-scaffold"\n'):
+            manifest.write_text(text + "\n[lints]\nworkspace = true\n", encoding="utf-8")
+            with self.subTest(text=text), self.assertRaisesRegex(ValueError, "autobins = false"):
+                validate(self.metadata, self.root)
+
+    def test_ctl_code_may_not_name_private_fixture_or_storage_machinery(self):
+        for tree in ARCHITECTURE.CTL_TREES:
+            folder = self.root / tree
+            folder.mkdir(parents=True, exist_ok=True)
+            for word in ("fixture", "owner_runtime", "st04", "Qualification", "probe", "initialize_fixture"):
+                path = folder / "bad.rs"
+                path.write_text(f"// uses {word}\n", encoding="utf-8")
+                with self.subTest(tree=tree, word=word), self.assertRaisesRegex(ValueError, "ctl code"):
+                    validate(self.metadata, self.root)
+                path.unlink()
+            (folder / "good.rs").write_text("pub fn inspect() {}\n", encoding="utf-8")
+        validate(self.metadata, self.root)
+
+    def test_ctl_module_roots_are_scanned(self):
+        for relative in ARCHITECTURE.CTL_ROOTS:
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("pub mod fixture;\n", encoding="utf-8")
+            with self.subTest(root=relative), self.assertRaisesRegex(ValueError, "ctl code"):
+                validate(self.metadata, self.root)
+            path.write_text("pub mod state;\n", encoding="utf-8")
+        validate(self.metadata, self.root)
+
+    def test_ctl_code_may_not_redirect_modules_or_include_files(self):
+        folder = self.root / ARCHITECTURE.CTL_TREES[0]
+        folder.mkdir(parents=True, exist_ok=True)
+        for text in ('#[path = "../x.rs"]\nmod x;\n', '# [ path = "x.rs" ] mod x;', 'const A: &str = include_str!("x");',
+                     'include!("x.rs");', 'include_bytes! ("x")'):
+            path = folder / "redirect.rs"
+            path.write_text(text, encoding="utf-8")
+            with self.subTest(text=text), self.assertRaisesRegex(ValueError, "redirection or file inclusion"):
+                validate(self.metadata, self.root)
+            path.unlink()
+        (folder / "ok.rs").write_text("// a path of its own\npub fn include_all() {}\n", encoding="utf-8")
+        validate(self.metadata, self.root)
+
+    def test_host_ctl_storage_paths_are_allowlisted(self):
+        folder = self.root / ARCHITECTURE.HOST_CTL_TREE
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / "services.rs"
+        path.write_text("let a = hf_storage::SCHEMA_VERSION; let b = hf_storage :: APPLICATION_ID;\n", encoding="utf-8")
+        validate(self.metadata, self.root)
+        for text in ("hf_storage::Store::open(x)", "use hf_storage::{SCHEMA_VERSION};", "use hf_storage;",
+                     "hf_storage::SCHEMA_VERSION_EXTRA", "let s = hf_storage::TaskFixture::new();"):
+            path.write_text(text, encoding="utf-8")
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                validate(self.metadata, self.root)
 
 
 if __name__ == "__main__":
