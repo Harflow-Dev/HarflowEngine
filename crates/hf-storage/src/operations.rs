@@ -40,6 +40,9 @@ impl Store {
                 }
                 Mutation::Delete { key } => (key, 0),
             };
+            if key.starts_with("__r06/") {
+                return Err(Error::InvalidOwnership);
+            }
             bytes = bytes
                 .checked_add(key.len())
                 .and_then(|size| size.checked_add(value))

@@ -31,3 +31,5 @@ pub mod backend;
 pub mod prepared_launch;
 
 pub mod claude_qualification;
+
+pub mod conversation;

@@ -47,6 +47,7 @@ pub const SCHEMA_VERSION: u32 = 5;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
+    Conversation(hf_domain::conversation::Error),
     TaskWatchUnavailable,
     InvalidOwnership,
     OwnershipConflict,
@@ -266,3 +267,8 @@ mod participant;
 pub use participant::ParticipantIdentity;
 mod digest;
 pub use digest::{DigestSizeLimit, Sha256Digest, Sha256Stream};
+
+mod conversation;
+pub use conversation::FreshGrant;
+mod conversation_codec;
+mod conversation_data;
