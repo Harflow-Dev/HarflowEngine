@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use hf_application::{
