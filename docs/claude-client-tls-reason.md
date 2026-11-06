@@ -1,7 +1,7 @@
 # Client-side TLS reason: preload observability qualification
 
-Status: inert support probe passed against the exact pinned Claude runtime.
-No TLS request or client-error observer has run in this stage.
+Status: inert support probe passed; the single reviewed fake-only client-error
+measurement ran and remains unqualified. No client TLS failure reason was captured.
 The [native milestone diagnosis](claude-handshake-eof-milestones.md) remains
 unchanged: client closure before observed key exchange is not certificate proof.
 
@@ -122,3 +122,46 @@ exit settles process-owned descriptors. Overflow reports calls outside the first
 four-call observation window and cannot establish coverage of those calls.
 An incomplete prefix has no known total call count; its default count is not
 evidence that no fetch calls occurred.
+
+## Single instrumented measurement
+
+Implementation: `3fdb29e`. On 2026-11-06 the separately gated release-mode
+`fake_only_client_reason` measurement failed in 18.33 seconds. The instrumented
+version phase passed: exact original 22-byte version output, empty stderr,
+Code(0), complete observation/EOFs and a healthy 94-byte metadata completion with
+zero version fetch calls. This was part of the one measurement, not another inert
+support probe.
+
+The metadata-only measurement log has SHA-256
+`e974e722a0893580e2781991c718a05620165ce59d3f92bf974c7c418d4187fd`.
+
+The negative original PID 82743, start 1793960887.690838, wrote a valid 43-byte
+READY prefix bound to its retained identity and fresh nonce. It wrote no error,
+overflow or final record. It reached the original 15-second observation deadline
+with empty original stdout/stderr and no observed exit; retained cleanup settled
+the original with Signal(9). Missing completion leaves the total fetch-call count
+and observer health unknown. It does not prove that fetch was unused, that no TLS
+error occurred, or that callbacks were suppressed. Native preconnect/other paths,
+unsettled observed promises and other coverage limitations remain unresolved.
+
+All four admitted sessions again reported handshake/TransportEof after native
+server Certificate/ServerHelloDone write milestones, without observed client key
+exchange, CCS, Finished or alert. Each forwarded 1482 bytes toward the helper and
+1132 toward the client, with complete draining, EOF/half-close and owned socket
+closure. Peak active sessions remained two. A fifth accept was rejected as
+ExcessConnection at 2,720,536 microseconds; it was not admitted upstream. The proxy
+joined with four retired slots and all owned sockets closed. The strict gate
+failed at the original negative proxy deadline; original CLI refusal, per-session
+certificate-alert and observer-completion predicates remain unsatisfied.
+
+The original helper PID 82618 exited Code(0), with complete observation, both
+physical EOFs, 479 bytes stdout and empty stderr. Source/vendor/ICU bookends,
+canaries, denied IPv4/IPv6 listeners and bounded fake-token scan passed before
+failure assertions. The failed root and outside canary remain retained:
+`harflow-os-measurement-43d21140385c7f814a864b58404acef1`.
+
+No request contents, raw error text, credentials or provider calls were captured.
+No fallback, rerun, broader observer, gate relaxation or production admission
+followed. The closed category observer is not proven to cover the failing native
+TLS path. A future observation would first need a separately reviewed way to
+distinguish hook invocation from pending completion within the same budget.
