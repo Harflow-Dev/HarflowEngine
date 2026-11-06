@@ -1,4 +1,4 @@
-use super::ProxyOutcome;
+use super::{ProxyFailureStage as Stage, ProxyOutcome, diagnostics::observed};
 use std::{
     io::{self, Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
@@ -6,8 +6,17 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-fn check(until: Instant, stop: &AtomicBool) -> io::Result<()> {
-    if Instant::now() >= until || stop.load(Ordering::SeqCst) {
+fn check(until: Instant, stop: &AtomicBool, outcome: &mut ProxyOutcome) -> io::Result<()> {
+    let expired = Instant::now() >= until;
+    if expired || stop.load(Ordering::SeqCst) {
+        outcome.failure(
+            if expired {
+                Stage::Deadline
+            } else {
+                Stage::ControllerStop
+            },
+            Some(io::ErrorKind::Other),
+        );
         Err(io::Error::other("proxy stopped"))
     } else {
         Ok(())
@@ -18,10 +27,11 @@ fn write(
     bytes: &[u8],
     until: Instant,
     stop: &AtomicBool,
+    outcome: &mut ProxyOutcome,
 ) -> io::Result<()> {
     let mut offset = 0;
     while offset < bytes.len() {
-        check(until, stop)?;
+        check(until, stop, outcome)?;
         match stream.write(&bytes[offset..]) {
             Ok(0) => return Err(io::Error::other("proxy write closed")),
             Ok(n) => offset += n,
@@ -33,11 +43,16 @@ fn write(
     }
     Ok(())
 }
-fn header(client: &mut TcpStream, until: Instant, stop: &AtomicBool) -> io::Result<String> {
+fn header(
+    client: &mut TcpStream,
+    until: Instant,
+    stop: &AtomicBool,
+    outcome: &mut ProxyOutcome,
+) -> io::Result<String> {
     let mut bytes = Vec::new();
     let mut byte = [0];
     while bytes.len() < 8192 {
-        check(until, stop)?;
+        check(until, stop, outcome)?;
         match client.read(&mut byte) {
             Ok(0) => break,
             Ok(_) => {
@@ -96,47 +111,61 @@ pub(super) fn handle(
     outcome: &mut ProxyOutcome,
     listeners: (&TcpListener, &TcpListener, &AtomicBool),
 ) -> io::Result<()> {
-    client.set_nonblocking(true)?;
-    let connect = route(&header(client, until, stop)?, nonce)?;
+    observed(outcome, Stage::ClientSetup, client.set_nonblocking(true))?;
+    let request = header(client, until, stop, outcome);
+    let request = observed(outcome, Stage::HeaderRead, request)?;
+    let connect = observed(outcome, Stage::RouteValidation, route(&request, nonce))?;
     if !connect {
         if outcome.preflights != 0 {
+            outcome.failure(Stage::PreflightValidation, Some(io::ErrorKind::Other));
             return Err(io::Error::other("duplicate proxy preflight"));
         }
         outcome.preflights += 1;
-        write(
+        let response = write(
             client,
             b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\nConnection: close\r\n\r\npreflight-ok",
             until,
             stop,
-        )?;
+            outcome,
+        );
+        observed(outcome, Stage::PreflightResponse, response)?;
         return Ok(());
     }
     if outcome.preflights != 1 {
+        outcome.failure(Stage::PreflightValidation, Some(io::ErrorKind::Other));
         return Err(io::Error::other("proxy preflight absent"));
     }
     outcome.connects += 1;
-    let address = upstream.ok_or_else(|| io::Error::other("proxy upstream refused"))?;
-    check(until, stop)?;
-    let mut remote = TcpStream::connect_timeout(
+    let address = observed(
+        outcome,
+        Stage::UpstreamSelection,
+        upstream.ok_or_else(|| io::Error::other("proxy upstream refused")),
+    )?;
+    check(until, stop, outcome)?;
+    let remote = TcpStream::connect_timeout(
         &address,
         until
             .saturating_duration_since(Instant::now())
             .min(Duration::from_secs(5)),
-    )?;
-    check(until, stop)?;
-    let peer = remote.peer_addr()?;
-    check(until, stop)?;
+    );
+    let mut remote = observed(outcome, Stage::UpstreamConnect, remote)?;
+    check(until, stop, outcome)?;
+    let peer = observed(outcome, Stage::UpstreamPeer, remote.peer_addr())?;
+    check(until, stop, outcome)?;
     if peer != address {
+        outcome.failure(Stage::UpstreamPeer, Some(io::ErrorKind::Other));
         return Err(io::Error::other("proxy upstream peer mismatch"));
     }
     outcome.upstream_peer = Some(peer);
-    remote.set_nonblocking(true)?;
-    write(
+    observed(outcome, Stage::UpstreamSetup, remote.set_nonblocking(true))?;
+    let response = write(
         client,
         b"HTTP/1.1 200 Connection Established\r\n\r\n",
         until,
         stop,
-    )?;
+        outcome,
+    );
+    observed(outcome, Stage::ConnectResponse, response)?;
     let result = tunnel(client, &mut remote, until, stop, outcome, listeners);
     let _ = remote.shutdown(Shutdown::Both);
     let _ = client.shutdown(Shutdown::Both);
@@ -210,8 +239,7 @@ fn tunnel(
         for (listener, is6) in [(listeners.0, false), (listeners.1, true)] {
             if let Ok((stream, _)) = listener.accept() {
                 drop(stream);
-                outcome.rejected_connections += 1;
-                outcome.failed = true;
+                outcome.reject(Stage::ActiveTunnelExtraAccept);
                 if is6 {
                     listeners.2.store(true, Ordering::SeqCst);
                     outcome.ipv6_connections += 1;
@@ -221,8 +249,8 @@ fn tunnel(
         if outcome.failed {
             return Err(io::Error::other("additional proxy connection refused"));
         }
-        outgoing.step(client, remote)?;
-        incoming.step(remote, client)?;
+        observed(outcome, Stage::RelayOutgoing, outgoing.step(client, remote))?;
+        observed(outcome, Stage::RelayIncoming, incoming.step(remote, client))?;
         outcome.client_eof = outgoing.eof;
         outcome.remote_eof = incoming.eof;
         outcome.client_to_upstream_flushed = outgoing.eof && outgoing.buffer.is_empty();
@@ -232,7 +260,7 @@ fn tunnel(
         if stop.load(Ordering::SeqCst) && outgoing.closed && incoming.buffer.is_empty() {
             return Ok(());
         }
-        check(until, stop)?;
+        check(until, stop, outcome)?;
         thread::sleep(Duration::from_millis(20));
     }
 }

@@ -4,7 +4,8 @@
 use hf_platform::qualification::{
     FixtureRoot,
     live::{
-        OriginalActorsSettled, Proxy, ProxyMode, live_profile, remove_matched_files, scan_secret,
+        OriginalActorsSettled, Proxy, ProxyFailureStage, ProxyMode, live_profile,
+        remove_matched_files, scan_secret,
     },
 };
 use std::{
@@ -153,6 +154,65 @@ fn proxy_poison_closes_after_an_invalid_route_without_a_second_connect() {
     assert_eq!(outcome.preflights, 0);
     assert_eq!(outcome.connects, 0);
     assert!(outcome.rejected_connections <= 1);
+    assert_eq!(
+        outcome.first_failure.unwrap().stage,
+        ProxyFailureStage::RouteValidation
+    );
+}
+
+#[test]
+fn proxy_classifies_an_extra_ipv4_connection_during_an_active_tunnel() {
+    let upstream = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let address = upstream.local_addr().unwrap();
+    let (accepted_tx, accepted_rx) = mpsc::channel();
+    let server = thread::spawn(move || {
+        let (mut socket, _) = upstream.accept().unwrap();
+        accepted_tx.send(()).unwrap();
+        let mut received = Vec::new();
+        socket.read_to_end(&mut received).unwrap();
+    });
+    let proxy = Proxy::start(
+        ProxyMode::UntrustedTls(address),
+        NONCE,
+        Instant::now() + Duration::from_secs(5),
+    )
+    .unwrap();
+    let mut probe = TcpStream::connect(("127.0.0.1", proxy.port())).unwrap();
+    probe
+        .write_all(b"GET /a1b2c3d4e5f60718/preflight HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+        .unwrap();
+    let mut preflight = Vec::new();
+    probe.read_to_end(&mut preflight).unwrap();
+    assert!(
+        preflight
+            .windows(12)
+            .any(|window| window == b"preflight-ok")
+    );
+    let mut client = TcpStream::connect(("127.0.0.1", proxy.port())).unwrap();
+    client
+        .write_all(b"CONNECT api.anthropic.com:443 HTTP/1.1\r\nHost: api.anthropic.com:443\r\n\r\n")
+        .unwrap();
+    let mut response = [0; 39];
+    client.read_exact(&mut response).unwrap();
+    assert!(response.starts_with(b"HTTP/1.1 200 Connection Established"));
+    accepted_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+    let mut extra = TcpStream::connect(("127.0.0.1", proxy.port())).unwrap();
+    extra
+        .set_read_timeout(Some(Duration::from_secs(1)))
+        .unwrap();
+    let mut closed = [0; 1];
+    assert_eq!(extra.read(&mut closed).unwrap(), 0);
+    drop(extra);
+    let outcome = proxy.stop_and_join().unwrap();
+    server.join().unwrap();
+    assert_eq!(outcome.rejection_counts.active_tunnel_extra_accept, 1);
+    assert_eq!(
+        outcome.first_failure.unwrap().stage,
+        ProxyFailureStage::ActiveTunnelExtraAccept
+    );
+    assert_eq!(outcome.connects, 1);
+    assert!(outcome.failed && outcome.owned_sockets_closed);
 }
 
 #[test]

@@ -152,3 +152,59 @@ those green checks. Live authentication and production admission remain blocked.
 The next discriminating work is metadata-only classification of the proxy rejection
 and relay failure, without recording request contents or expanding network access.
 Existing credential/billing authorization remains unexercised in this cycle.
+
+## Proxy rejection classification
+
+A separate owner-authorized fake-token-only follow-up at base `7459939` added
+fixed rejection-site counters and a write-once first-failure stage/error kind.
+Request contents, raw errors and rejected sockets are not logged or parsed.
+Independent source diagnoses agreed on the competing sites; plan and final source
+reviews approved the unchanged acceptance, relay, poisoning and cleanup behavior.
+No deadline, grant, pin or qualification predicate changed.
+
+One optimized run on 2026-11-06 ended with the unchanged TLS assertion failing in
+**18.07 seconds**. The observed proxy result was:
+
+| Witness | Result |
+| --- | --- |
+| Preflight / CONNECT | 1 / 1 |
+| Outer acceptance-guard rejections | 0 |
+| Active-tunnel extra-socket rejections | 1 |
+| Final-drain rejections | 0 |
+| First failure | `ActiveTunnelExtraAccept`, no underlying I/O error kind |
+| IPv6 connections | 0 |
+| Owned sockets | closed after stop/join |
+
+This classifies the rejection as an additional accepted IPv4 socket during the
+active first tunnel. The proxy's one-connection rule caused its first observed
+failure and stopped forwarding. It was not a header/route-validation rejection or
+a socket found only during final drain. The extra socket was closed unread, so
+its destination, request purpose and retry intent remain unknown. The observation
+does not justify admitting another connection or weakening the TLS oracle.
+
+Claude initialized Ready but remained without an observed exit or pipe EOF at its
+negative deadline, with zero captured bytes and no observed capture/wait faults.
+Original cleanup subsequently observed `Signal(9)`. The helper had complete
+zero-exit capture and reported TCP accepted, no explicit certificate-rejection
+alert and no application data, collected after controller stop. EOF fields in the
+proxy are last published relay snapshots, not proof of every subsequent socket
+state. These facts do not establish certificate acceptance or rejection. Live
+qualification and production admission remain refused. No credential read, broker,
+real upstream, paid call or second diagnostic run occurred in this cycle.
+
+Log: `/private/tmp/harflow-proxy-classification/run.log`, SHA-256
+`5620905c466309fbd0ff66b651638dc0f52b87afe3576ab8175a060a53a1a1ab`.
+Retained root: `/private/var/folders/cx/wx59rnx154n9dl6qp7nyl_sw0000gp/T/harflow-os-measurement-60d10bedacfda64aab82dc6bacd0b038`,
+device 16777230, inode 603923837, mode0700. Proxy/helper ports: `57641`/`57640`.
+Profile SHA-256: `537570d2c4e18851c0c185ef5f964f97a074b87f48e2de77d672270355ff8cd4`.
+Vendor and ICU pins/bookends and preflight isolation controls passed unchanged.
+
+Primary final verification passed formatting, architecture and legacy guards,
+locked workspace check, scoped platform library/egress and host-test Clippy,
+22 Python tests, six optimized egress regressions and two optimized native-input
+regressions (two vendor probes ignored). The new deterministic local-socket test
+checks active-tunnel rejection classification; the existing invalid-route test
+checks its distinct failure stage. No final-drain race test was added. Full
+all-target Clippy still encounters the unrelated concurrent ST04 lint noted above.
+Concurrent ST04 code and migration trackers were preserved; this is not a clean
+release build or hosted CI result. No push or release occurred.

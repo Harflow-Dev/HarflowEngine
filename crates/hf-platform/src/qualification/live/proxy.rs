@@ -8,6 +8,9 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+#[path = "diagnostics.rs"]
+mod diagnostics;
+pub use diagnostics::{ProxyFailure, ProxyFailureStage, RejectionCounts};
 #[path = "relay.rs"]
 mod relay;
 #[derive(Clone, Copy, Debug)]
@@ -22,6 +25,8 @@ pub struct ProxyOutcome {
     pub preflights: usize,
     pub connects: usize,
     pub rejected_connections: usize,
+    pub rejection_counts: RejectionCounts,
+    pub first_failure: Option<ProxyFailure>,
     pub ipv6_connections: usize,
     pub client_eof: bool,
     pub remote_eof: bool,
@@ -151,8 +156,7 @@ fn serve(
                         outcome.ipv6_connections += 1;
                     }
                     if outcome.connects > 0 || ipv6 {
-                        outcome.rejected_connections += 1;
-                        outcome.failed = true;
+                        outcome.reject(ProxyFailureStage::ServeAcceptanceGuard);
                         break 'serve;
                     }
                     if relay::handle(
@@ -171,8 +175,8 @@ fn serve(
                     }
                 }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
-                Err(_) => {
-                    outcome.failed = true;
+                Err(error) => {
+                    outcome.failure(ProxyFailureStage::ServeAccept, Some(error.kind()));
                     break 'serve;
                 }
             }
@@ -185,16 +189,15 @@ fn serve(
             match listener.accept() {
                 Ok((stream, _)) => {
                     drop(stream);
-                    outcome.rejected_connections += 1;
-                    outcome.failed = true;
+                    outcome.reject(ProxyFailureStage::FinalDrain);
                     if is6 {
                         seen6.store(true, Ordering::SeqCst);
                         outcome.ipv6_connections += 1;
                     }
                 }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
-                Err(_) => {
-                    outcome.failed = true;
+                Err(error) => {
+                    outcome.failure(ProxyFailureStage::FinalDrainAccept, Some(error.kind()));
                     break;
                 }
             }
