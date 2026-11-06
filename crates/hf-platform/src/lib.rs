@@ -11,3 +11,6 @@ pub mod recovery;
 pub mod lease;
 
 pub mod qualification;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub mod prepared_launch;

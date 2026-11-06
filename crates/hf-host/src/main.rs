@@ -23,7 +23,8 @@ fn main() {
         if let Some(mode) = mode.to_str()
             && matches!(
                 mode,
-                "--internal-parent-fixture-v1"
+                "--fixture-fixed-protocol-helper"
+                    | "--internal-parent-fixture-v1"
                     | "--internal-owner-fixture-v1"
                     | "--internal-effect-fixture-v1"
                     | "--internal-effect-saturation-fixture-v1"

@@ -14,3 +14,5 @@ fn timely(deadline: Instant) -> Result<(), RecoveryError> {
         Ok(())
     }
 }
+mod exact;
+pub use exact::ExactRawCaptureReader;

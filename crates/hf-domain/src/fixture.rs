@@ -86,6 +86,7 @@ pub enum ReportKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Frame {
     Hello(ProcessIdentity),
+    CaptureAccepted(Box<crate::prepared_launch::CaptureAccepted>),
     Invitation(Invitation),
     Ready(Invitation),
     Prepared(Prepared),

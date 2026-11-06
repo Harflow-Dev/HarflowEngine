@@ -23,7 +23,7 @@ impl Writer {
         {
             return Err("storage original parent/writer mismatch".into());
         }
-        hf_interfaces::owner_preparation::validate(&b.request, &b.participant, &Sha256Digest)
+        hf_interfaces::prepared_launch::validate(&b.request, &b.participant, &Sha256Digest)
             .map_err(error)?;
         let root = Path::new(&b.root);
         let parent = root.parent().ok_or("storage root parent")?;

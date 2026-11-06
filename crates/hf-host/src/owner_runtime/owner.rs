@@ -64,10 +64,38 @@ pub(super) fn run() -> Result<(), String> {
         .coordinator
         .snapshot()
         .ok_or("owner snapshot absent")?;
-    let frame = Frame::Accepted {
-        invitation: owner.prepared.invitation.clone(),
-        fence: snapshot.fence().ok_or("owner fence absent")?,
-        child: snapshot.child.clone().ok_or("owner child absent")?,
+    let frame = if super::launch::check(
+        &owner.prepared,
+        Some(owner.resources.hold.source_stamp()),
+        until,
+    )?
+    .is_some()
+    {
+        if owner.actor.coordinator.is_poisoned()
+            || owner.resources.exits() != (ProcessExit::Code(0), ProcessExit::Code(0))
+        {
+            return Err("prepared capture children unsuccessful".into());
+        }
+        let (stdout_digest, stderr_digest) = owner.capture.commitment()?;
+        Frame::CaptureAccepted(Box::new(hf_domain::prepared_launch::CaptureAccepted {
+            invitation: owner.prepared.invitation.clone(),
+            source: owner.resources.hold.source_stamp().clone(),
+            ownership: snapshot.clone(),
+            capture: owner
+                .actor
+                .coordinator
+                .capture()
+                .cloned()
+                .ok_or("capture absent")?,
+            stdout_digest,
+            stderr_digest,
+        }))
+    } else {
+        Frame::Accepted {
+            invitation: owner.prepared.invitation.clone(),
+            fence: snapshot.fence().ok_or("owner fence absent")?,
+            child: snapshot.child.clone().ok_or("owner child absent")?,
+        }
     };
     channel
         .write_packet(&wire::encode(&frame).map_err(error)?)
@@ -149,10 +177,19 @@ impl OwnerLoop {
         Ok(())
     }
     fn spawn_agent(&mut self) -> Result<(), String> {
-        let envelope = prep::decode(&self.prepared.request, &Sha256Digest).map_err(error)?;
-        let mode = match envelope.assignment {
-            FixtureAssignment::FixedEffect => "--internal-effect-fixture-v1",
-            FixtureAssignment::SaturatedEffect => "--internal-effect-saturation-fixture-v1",
+        let launch = super::launch::check(
+            &self.prepared,
+            Some(self.resources.hold.source_stamp()),
+            self.until,
+        )?;
+        let mode = if launch.is_some() {
+            hf_domain::prepared_launch::FIXED_PROTOCOL_ARG
+        } else {
+            let envelope = prep::decode(&self.prepared.request, &Sha256Digest).map_err(error)?;
+            match envelope.assignment {
+                FixtureAssignment::FixedEffect => "--internal-effect-fixture-v1",
+                FixtureAssignment::SaturatedEffect => "--internal-effect-saturation-fixture-v1",
+            }
         };
         self.resources.agent = Some(setup::spawn_at(
             mode,

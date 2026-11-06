@@ -7,8 +7,10 @@ use hf_domain::{
 };
 use hf_interfaces::fixture;
 use hf_platform::process::{CaptureBatch, PrivateFixtureCaptureReader, ReaderFinal};
+
 #[derive(Default)]
 pub(super) struct Capture {
+    hashes: Option<(hf_storage::Sha256Stream, hf_storage::Sha256Stream)>,
     batch: Option<CaptureBatch>,
     awaiting: Option<(Stream, usize)>,
     protocol: Vec<u8>,
@@ -23,6 +25,30 @@ pub(super) struct Capture {
     pub(super) loss_sent: bool,
 }
 impl Capture {
+    pub(super) fn enable_commitment(&mut self) -> Result<(), String> {
+        self.hashes = Some((
+            hf_storage::Sha256Stream::with_limit(65536).map_err(error)?,
+            hf_storage::Sha256Stream::with_limit(65536).map_err(error)?,
+        ));
+        Ok(())
+    }
+    pub(super) fn commitment(
+        &mut self,
+    ) -> Result<(hf_domain::ownership::Digest, hf_domain::ownership::Digest), String> {
+        if !self.reconciled()
+            || self.loss_sent
+            || self.abandoned != (0, 0)
+            || self.uncertain != (0, 0)
+            || !self.eof_sent
+        {
+            return Err("capture commitment incomplete".into());
+        }
+        let (stdout, stderr) = self.hashes.take().ok_or("capture commitment absent")?;
+        Ok((
+            stdout.finish().map_err(error)?,
+            stderr.finish().map_err(error)?,
+        ))
+    }
     pub(super) fn abandon_unknown(&mut self, pending_append: bool) -> ((u64, u64), (u64, u64)) {
         if let Some((stream, count)) = self.awaiting.take() {
             let target = if pending_append {
@@ -171,6 +197,13 @@ impl Capture {
             } else {
                 (Stream::Stderr, std::mem::take(&mut batch.stderr))
             };
+            if let Some((stdout, stderr)) = &mut self.hashes {
+                match stream {
+                    Stream::Stdout => stdout.update(&bytes),
+                    Stream::Stderr => stderr.update(&bytes),
+                }
+                .map_err(error)?;
+            }
             self.awaiting = Some((stream, bytes.len()));
             return actor.submit(StorageCommand::Append {
                 stream,

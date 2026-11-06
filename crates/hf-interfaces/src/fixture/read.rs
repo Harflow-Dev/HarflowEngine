@@ -14,6 +14,14 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Frame, CodecError> {
     }
     let frame = match r.byte()? {
         1 => Frame::Hello(r.process()?),
+        10 => {
+            let invitation = r.invitation()?;
+            let body = r.blob(MAX_FRAME)?;
+            Frame::CaptureAccepted(Box::new(
+                crate::owner_storage_codec::decode_capture_receipt(invitation, &body)
+                    .map_err(|_| CodecError::Value)?,
+            ))
+        }
         2 => Frame::Invitation(r.invitation()?),
         3 => Frame::Ready(r.invitation()?),
         4 => Frame::Prepared(r.prepared()?),

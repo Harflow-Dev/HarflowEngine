@@ -1,6 +1,7 @@
 //! Private fixed-helper composition. No public execution or permission admission.
 mod actor;
 mod capture;
+mod launch;
 mod owner;
 mod retention;
 mod writer;

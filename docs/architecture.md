@@ -89,3 +89,9 @@ The [offline Claude foundation](claude-offline-foundation.md) separates bounded
 JSONL transport decoding, pure backend reduction, declared context correlation and
 read-only owner observation. Synthetic completion evidence never admits a
 production route or changes the fixed-helper launch contract.
+
+The [prepared fixed-helper launch foundation](prepared-launch-foundation.md)
+adds a distinct closed preparation and original-owner byte commitment, composed
+with exact current raw-source validation. It preserves one-use handoff, claim CAS
+and unknown-outcome boundaries. The linked real-Claude experiment is a proposal;
+no backend dispatch or production admission follows from these private mechanics.

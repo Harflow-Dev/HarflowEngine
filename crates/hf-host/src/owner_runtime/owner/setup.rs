@@ -30,7 +30,12 @@ pub(super) fn handshake(channel: &PrivateIo) -> Result<Prepared, String> {
     Ok(prepared)
 }
 fn validate(p: &Prepared) -> Result<(), String> {
-    let e = prep::decode(&p.request, &Sha256Digest).map_err(error)?;
+    let decoded = hf_interfaces::prepared_launch::decode_preparation(&p.request, &Sha256Digest)
+        .map_err(error)?;
+    let e = match &decoded {
+        hf_interfaces::prepared_launch::DecodedPreparation::Legacy(e) => e,
+        hf_interfaces::prepared_launch::DecodedPreparation::FixedProtocol(e) => &e.policy,
+    };
     if current_parent_identity().as_ref() != Some(&e.authority.caller)
         || MacIdentity.identity(std::process::id()).as_ref() != Some(&p.invitation.process)
         || p.invitation.operation != p.request.operation
@@ -65,9 +70,11 @@ pub(super) fn start_at(
     executable: &Path,
 ) -> Result<OwnerLoop, String> {
     validate(&prepared)?;
+    super::super::launch::check(&prepared, None, until)?;
     let root = Path::new(&prepared.root);
     let cwd = root.parent().ok_or("owner root parent")?.to_path_buf();
     let hold = RootHold::open(root, until, hf_platform::lease::shared()).map_err(error)?;
+    super::super::launch::check(&prepared, Some(hold.source_stamp()), until)?;
     if hold.source_stamp().generation != prepared.request.generation {
         return Err("owner root generation".into());
     }
@@ -81,13 +88,17 @@ pub(super) fn start_at(
             return Err(e);
         }
     };
+    let mut capture = Capture::default();
+    if super::super::launch::decode(&prepared)?.is_some() {
+        capture.enable_commitment()?;
+    }
     Ok(OwnerLoop {
         resources,
         actor,
         prepared,
         cwd,
         executable,
-        capture: Capture::default(),
+        capture,
         input: None,
         input_done: false,
         accepted: false,
@@ -117,7 +128,13 @@ fn actor(
         nonce: p.invitation.nonce.clone(),
         process: p.invitation.process.clone(),
     };
-    let envelope = prep::decode(&p.request, &Sha256Digest).map_err(error)?;
+    let envelope =
+        match hf_interfaces::prepared_launch::decode_preparation(&p.request, &Sha256Digest)
+            .map_err(error)?
+        {
+            hf_interfaces::prepared_launch::DecodedPreparation::Legacy(e) => *e,
+            hf_interfaces::prepared_launch::DecodedPreparation::FixedProtocol(e) => e.policy,
+        };
     let participant = StorageParticipant {
         source: resources.hold.source_stamp().clone(),
         operation: p.request.operation.clone(),

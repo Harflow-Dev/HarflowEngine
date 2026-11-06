@@ -52,3 +52,21 @@ impl Sha256Stream {
         Ok(Digest::from_sha256_bytes(self.hash.finalize().into()))
     }
 }
+
+impl hf_application::prepared_launch::StreamDigestPort for Sha256Stream {
+    fn update(&mut self, bytes: &[u8]) -> Result<(), hf_application::recovery::RecoveryError> {
+        self.update(bytes)
+            .map_err(|_| hf_application::recovery::RecoveryError::Refused)
+    }
+    fn finish(self) -> Result<Digest, hf_application::recovery::RecoveryError> {
+        self.finish()
+            .map_err(|_| hf_application::recovery::RecoveryError::Refused)
+    }
+}
+impl hf_application::prepared_launch::StreamingDigestFactory for Sha256Digest {
+    type Stream = Sha256Stream;
+    fn start(&self, limit: usize) -> Result<Self::Stream, hf_application::recovery::RecoveryError> {
+        Sha256Stream::with_limit(limit)
+            .map_err(|_| hf_application::recovery::RecoveryError::Refused)
+    }
+}

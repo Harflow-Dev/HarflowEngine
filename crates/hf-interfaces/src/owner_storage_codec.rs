@@ -142,3 +142,55 @@ pub fn encoded_identity(
         command_digest,
     })
 }
+
+/// Private fixture receipt payload, not a storage-row conversion.
+pub(crate) fn encode_capture_receipt(
+    v: &hf_domain::prepared_launch::CaptureAccepted,
+) -> Result<Vec<u8>, CodecError> {
+    let mut w = write::Writer(Vec::new());
+    w.snapshot(&v.ownership)?;
+    w.capture(&v.capture);
+    w.0.extend_from_slice(v.source.generation.as_str().as_bytes());
+    for i in [
+        &v.source.root,
+        &v.source.database,
+        &v.source.marker,
+        &v.source.store_lock,
+        &v.source.io_lock,
+    ] {
+        w.0.extend_from_slice(&i.device.to_be_bytes());
+        w.0.extend_from_slice(&i.inode.to_be_bytes());
+    }
+    w.0.extend_from_slice(&raw_digest(&v.stdout_digest)?);
+    w.0.extend_from_slice(&raw_digest(&v.stderr_digest)?);
+    Ok(w.0)
+}
+pub(crate) fn decode_capture_receipt(
+    invitation: hf_domain::fixture::Invitation,
+    bytes: &[u8],
+) -> Result<hf_domain::prepared_launch::CaptureAccepted, CodecError> {
+    let mut r = read::Reader { bytes, at: 0 };
+    let ownership = r.snapshot()?;
+    let capture = r.capture()?;
+    let source = hf_domain::recovery::SourceStamp {
+        generation: r.id()?,
+        root: r.file()?,
+        database: r.file()?,
+        marker: r.file()?,
+        store_lock: r.file()?,
+        io_lock: r.file()?,
+    };
+    let stdout_digest = r.digest()?;
+    let stderr_digest = r.digest()?;
+    if r.at != bytes.len() {
+        return Err(CodecError::Shape);
+    }
+    Ok(hf_domain::prepared_launch::CaptureAccepted {
+        invitation,
+        source,
+        ownership,
+        capture,
+        stdout_digest,
+        stderr_digest,
+    })
+}

@@ -4,6 +4,8 @@ mod effect;
 mod owned;
 mod owner;
 mod parent;
+mod receipt;
+mod retention;
 mod store;
 #[cfg(test)]
 pub(crate) mod test_support;
@@ -30,7 +32,7 @@ pub(super) fn run(mode: &str) -> io::Result<()> {
     let budget = match mode {
         PARENT => 10,
         OWNER => 8,
-        EFFECT | SATURATION => 4,
+        EFFECT | SATURATION | hf_domain::prepared_launch::FIXED_PROTOCOL_ARG => 4,
         _ => return Err(invalid()),
     };
     let deadline = Instant::now() + Duration::from_secs(budget);
@@ -38,7 +40,10 @@ pub(super) fn run(mode: &str) -> io::Result<()> {
     match mode {
         PARENT => parent::run(channel, deadline),
         OWNER => owner::run(channel, deadline),
-        EFFECT | SATURATION => effect::run(channel, deadline, mode == SATURATION),
+        EFFECT | SATURATION => effect::run(channel, deadline, mode == SATURATION, false),
+        hf_domain::prepared_launch::FIXED_PROTOCOL_ARG => {
+            effect::run(channel, deadline, false, true)
+        }
         _ => Err(invalid()),
     }
 }

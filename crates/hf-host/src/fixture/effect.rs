@@ -1,7 +1,12 @@
 use super::*;
 use hf_platform::fixture::{append_effect, qualify_ledger};
 use hf_storage::{Limits, Mutation, Store};
-pub(super) fn run(channel: PrivateIo, until: Instant, saturation: bool) -> io::Result<()> {
+pub(super) fn run(
+    channel: PrivateIo,
+    until: Instant,
+    saturation: bool,
+    protocol: bool,
+) -> io::Result<()> {
     let Frame::Start(start) = receive(&channel)? else {
         return Err(invalid());
     };
@@ -43,6 +48,7 @@ pub(super) fn run(channel: PrivateIo, until: Instant, saturation: bool) -> io::R
         {
             return Err(invalid());
         }
+        validate_protocol(protocol, &stored.request, &start, &parent, until)?;
         map(store.apply_batch(
             &[Mutation::Insert {
                 key: format!("r03-b2-probe:{}", start.operation.as_str()),
@@ -65,6 +71,9 @@ pub(super) fn run(channel: PrivateIo, until: Instant, saturation: bool) -> io::R
             process: actual,
         },
     )?;
+    if protocol {
+        return hf_platform::fixture::write_all(&std::io::stdout(), b"{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"fixed-protocol\"}\n{\"type\":\"assistant\",\"session_id\":\"fixed-protocol\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"fixed helper text\"}]}}\n{\"type\":\"result\",\"subtype\":\"success\",\"session_id\":\"fixed-protocol\",\"is_error\":false,\"result\":\"fixed helper text\"}\n", until);
+    }
     if saturation {
         return saturated_output(until);
     }
@@ -85,6 +94,41 @@ fn saturated_output(until: Instant) -> io::Result<()> {
     for length in [16384, 16384, 16384, 16384, 8192] {
         hf_platform::fixture::write_all(&std::io::stdout(), &bytes[..length], until)?;
         hf_platform::fixture::write_all(&std::io::stderr(), &bytes[..length], until)?;
+    }
+    Ok(())
+}
+
+fn validate_protocol(
+    protocol: bool,
+    request: &hf_domain::ownership::PreparedRequest,
+    start: &EffectStart,
+    parent: &Path,
+    until: Instant,
+) -> io::Result<()> {
+    if protocol {
+        let launch = hf_interfaces::prepared_launch::decode(request, &hf_storage::Sha256Digest)
+            .map_err(|_| invalid())?;
+        let pin = hf_platform::prepared_launch::observe_binary(
+            &std::env::current_exe()?,
+            &hf_storage::Sha256Digest,
+            until,
+        )
+        .map_err(|_| invalid())?;
+        if launch.binary != pin
+            || Path::new(&launch.cwd) != parent
+            || launch.ledger != start.ledger
+            || map(hf_storage::RootHold::open(
+                &start.root,
+                until,
+                hf_platform::lease::shared(),
+            ))?
+            .source_stamp()
+                != &launch.source
+        {
+            return Err(invalid());
+        }
+    } else if request.payload.starts_with(b"HFPL") {
+        return Err(invalid());
     }
     Ok(())
 }

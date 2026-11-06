@@ -4,6 +4,9 @@ pub(super) fn encode(frame: &Frame) -> Result<Vec<u8>, CodecError> {
     let mut w = Writer(Vec::new());
     w.0.extend_from_slice(b"HFB2\x01");
     match frame {
+        Frame::CaptureAccepted(v) => {
+            w.receipt(v)?;
+        }
         Frame::Hello(p) => {
             w.0.push(1);
             w.process(p);
@@ -79,6 +82,17 @@ pub(super) fn encode(frame: &Frame) -> Result<Vec<u8>, CodecError> {
 }
 struct Writer(Vec<u8>);
 impl Writer {
+    fn receipt(
+        &mut self,
+        v: &hf_domain::prepared_launch::CaptureAccepted,
+    ) -> Result<(), CodecError> {
+        self.0.push(10);
+        self.invitation(&v.invitation);
+        self.blob(
+            &crate::owner_storage_codec::encode_capture_receipt(v)
+                .map_err(|_| CodecError::Value)?,
+        )
+    }
     fn u64(&mut self, v: u64) {
         self.0.extend_from_slice(&v.to_be_bytes());
     }

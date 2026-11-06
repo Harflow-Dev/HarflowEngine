@@ -16,6 +16,23 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     send(&channel, &result)
 }
 fn execute(plan: &mut ParentPlan, until: Instant) -> io::Result<Frame> {
+    let fixed = plan.request.payload.starts_with(b"HFPL");
+    if fixed {
+        if plan.initialize {
+            return Err(invalid());
+        }
+        let launch = map(hf_interfaces::prepared_launch::decode(
+            &plan.request,
+            &hf_storage::Sha256Digest,
+        ))?;
+        if hf_platform::process::MacIdentity
+            .identity(std::process::id())
+            .as_ref()
+            != Some(&launch.policy.authority.caller)
+        {
+            return Err(invalid());
+        }
+    }
     let cwd = root_parent(&plan.root)?;
     bootstrap_cwd(&cwd)?;
     let gate = gate_config(&plan.root, &plan.gate)?;
@@ -32,6 +49,7 @@ fn execute(plan: &mut ParentPlan, until: Instant) -> io::Result<Frame> {
         &plan.nonce,
         until,
     )?;
+    validate_fixed(plan, fixed, &cwd, until)?;
     let prepared = store::Commands::new(&plan.root, until).prepare(plan)?;
     let kind = match prepared {
         PrepareResult::Existing(_) => Some(ReportKind::Existing),
@@ -57,10 +75,22 @@ fn execute(plan: &mut ParentPlan, until: Instant) -> io::Result<Frame> {
         &plan.nonce,
         until,
     )?;
-    let mut child = spawn(OWNER, &cwd, until)?;
+    let mut child = spawn(
+        if fixed {
+            "--internal-isolated-owner-fixture-v1"
+        } else {
+            OWNER
+        },
+        &cwd,
+        until,
+    )?;
     // Every path after spawn goes through cleanup, including unknown initialization.
     let result = handoff(&mut child, plan, &gate, until);
-    let cleaned = cleanup(&mut child);
+    let cleaned = if fixed {
+        super::retention::settle(&mut child)
+    } else {
+        cleanup(&mut child)
+    };
     match (result, cleaned) {
         (Ok(frame), Ok(())) => Ok(frame),
         _ => Err(invalid()),
@@ -108,7 +138,14 @@ fn handoff(
         until,
     )?;
     child.close_stdin();
-    let frame = child_receive(child, until)?;
+    let frame = if plan.request.payload.starts_with(b"HFPL") {
+        captured_frame(child, plan, &invitation, until)?
+    } else {
+        child_receive(child, until)?
+    };
+    if matches!(frame, Frame::CaptureAccepted(_)) {
+        return validate_receipt(frame, plan, &invitation, &actual, until);
+    }
     let Frame::Accepted {
         invitation: echoed,
         fence,
@@ -132,4 +169,97 @@ fn handoff(
         &stored,
     ))?;
     Ok(frame)
+}
+
+fn echoed_owner(receipt: &hf_domain::prepared_launch::CaptureAccepted) -> Option<&ProcessIdentity> {
+    receipt.ownership.owner.as_ref().map(|o| &o.process)
+}
+
+fn validate_fixed(plan: &ParentPlan, fixed: bool, cwd: &Path, until: Instant) -> io::Result<()> {
+    if fixed {
+        let launch = map(hf_interfaces::prepared_launch::decode(
+            &plan.request,
+            &hf_storage::Sha256Digest,
+        ))?;
+        let hold = map(hf_storage::RootHold::open(
+            &plan.root,
+            until,
+            hf_platform::lease::shared(),
+        ))?;
+        let binary = map(hf_platform::prepared_launch::observe_binary(
+            &std::env::current_exe()?,
+            &hf_storage::Sha256Digest,
+            until,
+        ))?;
+        if hold.source_stamp() != &launch.source
+            || binary != launch.binary
+            || Path::new(&launch.cwd) != cwd
+            || launch.ledger != plan.ledger
+        {
+            return Err(invalid());
+        }
+    }
+    Ok(())
+}
+
+fn validate_receipt(
+    frame: Frame,
+    plan: &ParentPlan,
+    invitation: &Invitation,
+    actual: &ProcessIdentity,
+    until: Instant,
+) -> io::Result<Frame> {
+    if let Frame::CaptureAccepted(receipt) = &frame {
+        if !plan.request.payload.starts_with(b"HFPL") || echoed_owner(receipt) != Some(actual) {
+            return Err(invalid());
+        }
+        if &receipt.invitation != invitation
+            || receipt.ownership.request != plan.request
+            || receipt.source.generation != plan.request.generation
+            || receipt.capture.exit != hf_domain::process::ProcessExit::Code(0)
+        {
+            return Err(invalid());
+        }
+        let stored = store::Commands::new(&plan.root, until).observe(&plan.request.operation)?;
+        if stored != receipt.ownership {
+            return Err(invalid());
+        }
+        return Ok(frame);
+    }
+    Err(invalid())
+}
+
+fn captured_frame(
+    child: &RetainedOwnedChild,
+    plan: &ParentPlan,
+    invitation: &Invitation,
+    until: Instant,
+) -> io::Result<Frame> {
+    use hf_application::prepared_launch::{CaptureContext, ExactCaptureReader};
+    let launch = map(hf_interfaces::prepared_launch::decode(
+        &plan.request,
+        &hf_storage::Sha256Digest,
+    ))?;
+    let parent = root_parent(&plan.root)?;
+    let reader = ExactCaptureReader::new(
+        hf_storage::RecoveryReadSession::new(
+            &plan.root,
+            parent,
+            hf_storage::Limits::default(),
+            hf_platform::lease::shared(),
+        ),
+        hf_platform::recovery::ExactRawCaptureReader::new(&plan.root),
+        hf_storage::Sha256Digest,
+    );
+    let delivery = super::receipt::Delivery::new(child);
+    let source = map(reader.read(
+        CaptureContext {
+            invitation,
+            request: &plan.request,
+            source: &launch.source,
+        },
+        &delivery,
+        until,
+    ))?;
+    Ok(Frame::CaptureAccepted(Box::new(source.receipt)))
 }
