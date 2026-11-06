@@ -33,3 +33,38 @@ pub(super) fn real(
         outcome
     );
 }
+
+pub(super) fn fake_capture(phase: &'static str, result: &actors::Captured) {
+    let status = result.status;
+    eprintln!(
+        "phase={phase} original={} initialization={:?} exit-before-cleanup={:?} exit-after-cleanup={:?} observation-complete={} deadline-expired={} pump-error={} wait-error={} stdout-eof={} stderr-eof={} stdout-overflow={} stderr-overflow={} stdout-error-present={} stderr-error-present={} stdout-length={} stderr-length={}",
+        result.identity,
+        status.initialization,
+        status.exit_before_cleanup,
+        result.exit,
+        result.complete,
+        status.deadline_expired,
+        status.pump_error,
+        status.wait_error,
+        status.stdout_eof,
+        status.stderr_eof,
+        status.stdout_overflow,
+        status.stderr_overflow,
+        status.stdout_error_present,
+        status.stderr_error_present,
+        result.stdout.len(),
+        result.stderr.len()
+    );
+}
+pub(super) fn certificate_error(present: bool) {
+    eprintln!("phase=fake-only-capture static-certificate-error={present}");
+}
+pub(super) fn fake_proxy(outcome: &hf_platform::qualification::live::ProxyOutcome) {
+    eprintln!("phase=fake-only-proxy controller-stop-and-join=completed proxy={outcome:?}");
+}
+pub(super) fn fake_tls(verdict: &super::tls::TlsVerdict) {
+    eprintln!(
+        "phase=fake-only-TLS accepted={} certificate-rejected={} application-data={} timing=helper-result-after-controller-stop pre-stop-result=not-established",
+        verdict.accepted, verdict.certificate_rejected, verdict.application_data
+    );
+}

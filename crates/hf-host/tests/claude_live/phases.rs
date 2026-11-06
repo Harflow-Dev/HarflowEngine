@@ -53,6 +53,15 @@ pub(super) fn run() {
     real(overall);
 }
 
+pub(super) fn run_tls_negative_diagnostic() {
+    assert_eq!(
+        env::var("HARFLOW_RUN_TLS_NEGATIVE_DIAGNOSTIC").as_deref(),
+        Ok("1"),
+        "explicit fake-only diagnostic gate required"
+    );
+    negative(Instant::now() + Duration::from_secs(130));
+}
+
 fn negative(overall: Instant) {
     let selected = identity::selection();
     let negative_root = FixtureRoot::create().expect("fresh negative fixture root");
@@ -84,6 +93,11 @@ fn negative(overall: Instant) {
         overall.min(Instant::now() + Duration::from_secs(15)),
         1_048_576,
     );
+    evidence::fake_capture("fake-only-vendor", &refused);
+    evidence::certificate_error(certificate_error(&refused.stdout, &refused.stderr));
+    let outcome = negative.proxy.take().unwrap().stop_and_join().unwrap();
+    evidence::fake_proxy(&outcome);
+    let verdict = fake.finish(overall);
     assert!(
         actors::is_refusal(&refused),
         "untrusted TLS negative did not refuse"
@@ -92,17 +106,7 @@ fn negative(overall: Instant) {
         certificate_error(&refused.stdout, &refused.stderr),
         "CLI did not report a static certificate-verification failure"
     );
-    let outcome = negative.proxy.take().unwrap().stop_and_join().unwrap();
-    let verdict = fake.finish(overall);
     assert!(proxy_witness(&outcome, 1));
-    eprintln!(
-        "phase=fake-TLS accepted={} certificate-rejected={} application-data={} original-vendor={} proxy={:?}",
-        verdict.accepted,
-        verdict.certificate_rejected,
-        verdict.application_data,
-        refused.identity,
-        outcome
-    );
     assert!(
         verdict.accepted && verdict.certificate_rejected && !verdict.application_data,
         "fake TLS negative lacked independent rejection/no-data witnesses"

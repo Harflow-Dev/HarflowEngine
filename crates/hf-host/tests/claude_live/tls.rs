@@ -1,4 +1,4 @@
-use super::{PYTHON, TLS_HELPER, actors, environment};
+use super::{PYTHON, TLS_HELPER, actors, environment, evidence};
 use hf_platform::{
     process::{MacIdentity, RetainedOwnedChild},
     qualification::FixtureRoot,
@@ -60,13 +60,16 @@ pub(super) struct TlsVerdict {
 impl FakeTls {
     pub(super) fn finish(mut self, until: Instant) -> TlsVerdict {
         let result = self.child.take().unwrap().collect(until);
+        evidence::fake_capture("fake-TLS-helper", &result);
         actors::require_clean(&result, "fake-TLS-helper");
         assert!(result.stderr.is_empty(), "fake TLS helper stderr forbidden");
         let output = String::from_utf8(result.stdout).expect("static helper verdict");
-        TlsVerdict {
+        let verdict = TlsVerdict {
             accepted: output.contains("\"accepted\": true"),
             certificate_rejected: output.contains("\"certificate_rejected\": true"),
             application_data: output.contains("\"application_data\": true"),
-        }
+        };
+        evidence::fake_tls(&verdict);
+        verdict
     }
 }

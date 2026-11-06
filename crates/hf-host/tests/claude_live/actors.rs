@@ -14,6 +14,23 @@ pub(super) struct Captured {
     pub(super) stderr: Vec<u8>,
     pub(super) identity: String,
     pub(super) complete: bool,
+    pub(super) status: ObservationStatus,
+}
+
+/// Safe original observation metadata, sampled before active cleanup.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct ObservationStatus {
+    pub(super) initialization: SpawnInitialization,
+    pub(super) exit_before_cleanup: ProcessExit,
+    pub(super) deadline_expired: bool,
+    pub(super) pump_error: bool,
+    pub(super) wait_error: bool,
+    pub(super) stdout_eof: bool,
+    pub(super) stderr_eof: bool,
+    pub(super) stdout_overflow: bool,
+    pub(super) stderr_overflow: bool,
+    pub(super) stdout_error_present: bool,
+    pub(super) stderr_error_present: bool,
 }
 
 /// Sole original waiter; every return and unwind retains active custody until
@@ -26,9 +43,16 @@ impl Original {
     }
     pub(super) fn collect(&mut self, until: Instant) -> Captured {
         let mut observed = false;
+        let mut pump_error = false;
+        let mut wait_error = false;
         if self.0.initialization() == SpawnInitialization::Ready {
             while Instant::now() < until {
-                if self.0.pump(until, 8192).is_err() || self.0.try_wait().is_err() {
+                if self.0.pump(until, 8192).is_err() {
+                    pump_error = true;
+                    break;
+                }
+                if self.0.try_wait().is_err() {
+                    wait_error = true;
                     break;
                 }
                 if settled(&self.0) {
@@ -40,6 +64,20 @@ impl Original {
         // Record failure before cleanup: killing the original never repairs an
         // expired/failed observation into qualification success.
         let complete = observed && capture_clean(&self.0);
+        let capture = self.0.capture();
+        let status = ObservationStatus {
+            initialization: self.0.initialization(),
+            exit_before_cleanup: self.0.exit(),
+            deadline_expired: Instant::now() >= until,
+            pump_error,
+            wait_error,
+            stdout_eof: capture.stdout.eof,
+            stderr_eof: capture.stderr.eof,
+            stdout_overflow: capture.stdout.overflow,
+            stderr_overflow: capture.stderr.overflow,
+            stdout_error_present: capture.stdout.error.is_some(),
+            stderr_error_present: capture.stderr.error.is_some(),
+        };
         if !observed {
             self.retain_until_settled();
         }
@@ -52,6 +90,7 @@ impl Original {
             stderr,
             identity,
             complete,
+            status,
         }
     }
     fn retain_until_settled(&mut self) {

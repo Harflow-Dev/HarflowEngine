@@ -9,3 +9,9 @@ mod phases;
 fn installed_claude_live_authentication_egress() {
     phases::run();
 }
+
+#[test]
+#[ignore = "fake-token-only TLS diagnosis; cannot reach the real credential branch"]
+fn installed_claude_fake_token_tls_diagnostic() {
+    phases::run_tls_negative_diagnostic();
+}

@@ -112,10 +112,43 @@ library Clippy passed. Full all-target Clippy remains blocked by the untouched
 concurrent ST04 `tests/st04_helpers/support/case.rs:209` unbuffered-bytes lint.
 No hosted CI, other platform or other backend is qualified.
 
-The next useful experiment is **fake-token-only startup/TLS diagnosis** with capture
-status, proxy and TLS-helper metadata collected before any failure assertion.
-Give it an explicit entry point that cannot call the credential broker or real
-branch, preserve the existing strict TLS oracle, and keep all current grants,
-deadlines and pins. No further authenticated attempt is justified until that
-control produces actual rejection/no-application-data evidence. Existing owner
-authorization for credentials and billing remains valid; it was not exercised here.
+## Fake-token diagnostic follow-up
+
+The owner authorized a fresh diagnostic-only review cycle. Plan review and final
+source review approved the separate ignored entry
+`installed_claude_fake_token_tls_diagnostic`; its call graph reaches only the
+negative control, with no credential broker or live route. Safe capture metadata
+is sampled before cleanup and logged before strict assertions. No grants, pins,
+deadlines or success predicates changed.
+
+One optimized run on 2026-11-06 failed in **17.40 seconds**. Preflight isolation,
+exact vendor/ICU hashes and version bookends passed. The vendor initialized Ready,
+but its original exit was unobserved when the negative deadline expired. Both
+output pipes lacked EOF, with zero captured bytes and no observed pump, wait,
+overflow or pipe errors. Cleanup subsequently observed `Signal(9)`; that does not
+repair the incomplete observation or establish a clean refusal.
+
+The joined proxy recorded one preflight, one CONNECT to the loopback TLS helper,
+one rejected connection, failure and closed owned sockets. Neither client nor
+remote EOF was observed. The helper exited zero with complete capture and reported
+TCP accepted, certificate-rejected false and application-data false. Its verdict
+was collected after controller stop, not established before stop. These witnesses
+locate the failed gate at bounded vendor completion and also expose a proxy
+rejection; they do not establish the rejected connection's cause, certificate
+acceptance, or certificate rejection. No authenticated request or credential read
+occurred in this diagnostic cycle. No second probe or boundary relaxation followed.
+
+Log: `/private/tmp/harflow-tls-diagnostic/run.log`, SHA-256
+`5f75bdf37a7fea9d348fa3a433b0032b1ac304f2db07bf29ea2648bbbad0177c`.
+Retained fixture suffix: `harflow-os-measurement-8cb95eeac3cf43ab25c820a4845840c4`;
+nonce `8cb95eeac3cf43ab25c820a4845840c4`, proxy port `56065`, helper port `56064`,
+profile SHA-256 `995462c9a554cd758e92d2a4e8103a82ae7dbaa103af1245c0cac94b0967d1f0`.
+Base was `1ef4528`, with concurrent ST04 changes preserved during the build.
+
+Final affected checks passed: formatting, architecture guard, scoped host-test
+Clippy with warnings denied, and both optimized native input regressions (two
+vendor measurements ignored). The opt-in diagnostic failure is separate from
+those green checks. Live authentication and production admission remain blocked.
+The next discriminating work is metadata-only classification of the proxy rejection
+and relay failure, without recording request contents or expanding network access.
+Existing credential/billing authorization remains unexercised in this cycle.
