@@ -143,7 +143,7 @@ pub(crate) fn open_source(
     deadline: Instant,
 ) -> Result<Connection> {
     binding.check()?;
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     crate::tests::stage("before_source_open");
     self::check_deadline(deadline)?;
     let connection = Connection::open_with_flags(
@@ -151,7 +151,7 @@ pub(crate) fn open_source(
         rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
     )?;
     self::suppress_checkpoints(&connection)?;
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     crate::tests::stage("after_source_open");
     if self::identity(&connection, deadline)? != *identity {
         return Err(Error::Replaced);

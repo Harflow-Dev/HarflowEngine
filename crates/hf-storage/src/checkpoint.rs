@@ -18,7 +18,7 @@ fn checkpoint(
     } else {
         "PRAGMA wal_checkpoint(PASSIVE)"
     };
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     crate::tests::stage("before_checkpoint");
     connection::timeout(connection, deadline)?;
     let (busy, log_frames, checkpointed_frames) = connection.query_row(sql, [], |row| {
@@ -28,7 +28,7 @@ fn checkpoint(
             row.get::<_, i64>(2)?,
         ))
     })?;
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     crate::tests::stage("after_checkpoint");
     Ok(Checkpoint {
         busy,
