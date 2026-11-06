@@ -8,6 +8,19 @@ use std::{
 };
 #[path = "transfer.rs"]
 mod transfer;
+#[derive(Clone, Copy)]
+pub(super) enum Mode {
+    Original,
+    ReplacementWave,
+}
+impl Mode {
+    fn total(self) -> usize {
+        match self {
+            Self::Original => 2,
+            Self::ReplacementWave => 4,
+        }
+    }
+}
 pub(super) struct Slot {
     client: TcpStream,
     remote: Option<TcpStream>,
@@ -21,6 +34,16 @@ pub(super) struct Slot {
     observation: TwoTunnelSlotOutcome,
 }
 impl Slot {
+    fn retirable(&self) -> bool {
+        self.finished
+            && (self.preflight
+                || (self.observation.client_to_upstream.eof
+                    && self.observation.upstream_to_client.eof
+                    && self.observation.client_to_upstream.write_half_closed
+                    && self.observation.upstream_to_client.write_half_closed
+                    && self.outgoing.is_empty()
+                    && self.incoming.is_empty()))
+    }
     fn new(client: TcpStream, ordinal: usize) -> io::Result<Self> {
         client.set_nonblocking(true)?;
         Ok(Self {
@@ -158,12 +181,12 @@ impl Context<'_> {
         !out.failed
     }
 }
-fn complete(slots: &[Slot], out: &TwoTunnelOutcome) -> bool {
+fn complete(slots: &[Option<Slot>; 2], out: &TwoTunnelOutcome) -> bool {
     !out.failed
         && out.preflights == 1
         && out.connects > 0
         && out.connects == out.accepted
-        && slots.iter().all(|slot| slot.finished)
+        && slots.iter().flatten().all(|slot| slot.finished)
 }
 pub(super) fn serve(
     v4: TcpListener,
@@ -171,10 +194,10 @@ pub(super) fn serve(
     target: SocketAddr,
     nonce: String,
     until: Instant,
-    signals: (&AtomicBool, &AtomicBool),
-    seen6: &AtomicBool,
+    signals: (&AtomicBool, &AtomicBool, &AtomicBool),
+    mode: Mode,
 ) -> TwoTunnelOutcome {
-    let (stop, settled) = signals;
+    let (stop, settled, seen6) = signals;
     let context = Context {
         until,
         stop,
@@ -182,7 +205,7 @@ pub(super) fn serve(
         began: Instant::now(),
     };
     let mut out = TwoTunnelOutcome::default();
-    let mut slots = Vec::new();
+    let mut slots = [None, None];
     let mut scratch = [0; 16384];
     loop {
         if Instant::now() >= until {
@@ -196,24 +219,27 @@ pub(super) fn serve(
             break;
         }
         settled.store(false, Ordering::Release);
-        accept(&v4, &v6, seen6, &mut slots, &mut out, context.began);
+        accept(&v4, &v6, seen6, &mut slots, &mut out, context.began, mode);
         for index in 0..slots.len() {
+            let Some(slot) = slots[index].as_mut() else {
+                continue;
+            };
             if !context.check(&mut out) {
                 break;
             }
-            if let Err(reason) = slots[index].header_step(target, &nonce, &mut out, until) {
+            if let Err(reason) = slot.header_step(target, &nonce, &mut out, until) {
                 out.fail(reason, None, context.began);
             }
             if !context.check(&mut out) {
                 break;
             }
-            if let Err(e) = slots[index].reply_step() {
+            if let Err(e) = slot.reply_step() {
                 out.fail(TwoTunnelFailureReason::Io, Some(e.kind()), context.began);
             }
             for outgoing in [true, false] {
                 // Listener/deadline checks precede every payload write/read step.
                 settled.store(false, Ordering::Release);
-                accept(&v4, &v6, seen6, &mut slots, &mut out, context.began);
+                accept(&v4, &v6, seen6, &mut slots, &mut out, context.began, mode);
                 if !context.check(&mut out) {
                     break;
                 }
@@ -228,20 +254,11 @@ pub(super) fn serve(
         thread::sleep(Duration::from_millis(1));
     }
     settled.store(false, Ordering::Release);
-    accept(&v4, &v6, seen6, &mut slots, &mut out, context.began);
-    for mut slot in slots {
-        let _ = slot.client.shutdown(Shutdown::Both);
-        slot.observation.client_closed = true;
-        if let Some(remote) = slot.remote.take() {
-            let _ = remote.shutdown(Shutdown::Both);
-            drop(remote);
-        }
-        slot.observation.upstream_closed = true;
-        drop(slot.client);
-        if slot.observation.ordinal != 0 {
-            out.slots.push(slot.observation);
-        }
+    accept(&v4, &v6, seen6, &mut slots, &mut out, context.began, mode);
+    for slot in slots.into_iter().flatten() {
+        close_slot(slot, &mut out, false);
     }
+    out.slots.sort_by_key(|slot| slot.ordinal);
     drop(v4);
     drop(v6);
     out.owned_sockets_closed = true;
@@ -251,12 +268,14 @@ fn accept(
     v4: &TcpListener,
     v6: &TcpListener,
     seen6: &AtomicBool,
-    slots: &mut Vec<Slot>,
+    slots: &mut [Option<Slot>; 2],
     out: &mut TwoTunnelOutcome,
     began: Instant,
+    mode: Mode,
 ) {
     for (listener, ipv6) in [(v4, false), (v6, true)] {
         for _ in 0..4 {
+            retire(slots, out);
             match listener.accept() {
                 Ok((client, _)) => {
                     if ipv6 {
@@ -272,11 +291,27 @@ fn accept(
                             out.accepted += 1;
                             out.accepted
                         };
-                        if ordinal > 2 || (ordinal == 0 && !slots.is_empty()) {
+                        if ordinal > mode.total()
+                            || slots.iter().all(Option::is_some)
+                            || (ordinal == 0 && slots.iter().any(Option::is_some))
+                        {
                             out.fail(TwoTunnelFailureReason::ExcessConnection, None, began);
                         } else {
                             match Slot::new(client, ordinal) {
-                                Ok(slot) => slots.push(slot),
+                                Ok(slot) => {
+                                    if let Some(empty) =
+                                        slots.iter_mut().find(|slot| slot.is_none())
+                                    {
+                                        *empty = Some(slot);
+                                        out.peak_active_slots = out.peak_active_slots.max(
+                                            slots
+                                                .iter()
+                                                .flatten()
+                                                .filter(|slot| slot.observation.ordinal != 0)
+                                                .count(),
+                                        );
+                                    }
+                                }
                                 Err(e) => {
                                     out.fail(TwoTunnelFailureReason::Io, Some(e.kind()), began)
                                 }
@@ -291,5 +326,34 @@ fn accept(
                 }
             }
         }
+    }
+}
+
+fn retire(slots: &mut [Option<Slot>; 2], out: &mut TwoTunnelOutcome) {
+    for slot in slots {
+        if slot.as_ref().is_some_and(Slot::retirable)
+            && let Some(slot) = slot.take()
+        {
+            close_slot(slot, out, true);
+        }
+    }
+}
+fn close_slot(mut slot: Slot, out: &mut TwoTunnelOutcome, retired: bool) {
+    let _ = slot.client.shutdown(Shutdown::Both);
+    slot.observation.client_closed = true;
+    if let Some(remote) = slot.remote.take() {
+        let _ = remote.shutdown(Shutdown::Both);
+        drop(remote);
+    }
+    slot.observation.upstream_closed = true;
+    drop(slot.client);
+    drop(slot.header);
+    drop(slot.outgoing);
+    drop(slot.incoming);
+    if slot.observation.ordinal != 0 {
+        if retired {
+            out.retired_slots_closed += 1;
+        }
+        out.slots.push(slot.observation);
     }
 }

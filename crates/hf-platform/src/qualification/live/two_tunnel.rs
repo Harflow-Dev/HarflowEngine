@@ -24,6 +24,21 @@ pub struct TwoTunnelProxy {
 }
 impl TwoTunnelProxy {
     pub fn start(target: SocketAddr, nonce: &str, until: Instant) -> io::Result<Self> {
+        Self::start_mode(target, nonce, until, worker::Mode::Original)
+    }
+    pub fn start_replacement_wave(
+        target: SocketAddr,
+        nonce: &str,
+        until: Instant,
+    ) -> io::Result<Self> {
+        Self::start_mode(target, nonce, until, worker::Mode::ReplacementWave)
+    }
+    fn start_mode(
+        target: SocketAddr,
+        nonce: &str,
+        until: Instant,
+        mode: worker::Mode,
+    ) -> io::Result<Self> {
         if target.ip() != Ipv4Addr::LOCALHOST
             || target.port() == 0
             || nonce.is_empty()
@@ -48,7 +63,15 @@ impl TwoTunnelProxy {
         let seen6 = Arc::clone(&ipv6);
         let nonce = nonce.to_owned();
         let join = thread::spawn(move || {
-            worker::serve(v4, v6, target, nonce, until, (&stopped, &observed), &seen6)
+            worker::serve(
+                v4,
+                v6,
+                target,
+                nonce,
+                until,
+                (&stopped, &observed, &seen6),
+                mode,
+            )
         });
         Ok(Self {
             port,

@@ -1,6 +1,8 @@
 # Claude isolated transport: one replacement-wave candidate
 
-Status: proposed only. Not authorized, implemented or run. No production admission.
+Status: owner approved implementation and one fake-only measurement on 2026-11-06.
+Implementation is under review; the authorized vendor measurement has not run.
+No production admission.
 Claude support remains required. R06 independent work is paused at a plan-only
 checkpoint while this transport blocker is investigated.
 
@@ -32,7 +34,7 @@ That observation does not identify the pinned Claude EOF reason.
 
 ## Exact proposed changed boundary
 
-After those offline controls, authorize one separately reviewed fake-only
+After the offline controls, the owner authorized one separately reviewed fake-only
 measurement with **two concurrent, four total** post-preflight IPv4 sockets.
 Four total provides capacity for one hypothetical complete replacement wave for
 the two observed completed sessions. Their relationship is not established. It is not a general startup allowance or authority for subsequent waves.
@@ -87,9 +89,9 @@ passes. If explicit-alert behavior proves an invalid fixture assumption for the
 pinned client, a replacement verifier oracle requires its own evidence and review;
 this proposal does not preapprove one.
 
-Before requesting owner approval: finish offline local controls, review their
-actual results, freeze the complete implementation plan and consolidate remaining
-Claude qualification gates. No runtime execution is authorized by this document.
+Before the single authorized vendor run: finish the new offline controls, review
+their actual results and freeze the implementation. The approval covers only this
+changed-bound fake-only measurement, not any later run or further gate.
 
 ## Remaining Claude gates after this diagnostic
 

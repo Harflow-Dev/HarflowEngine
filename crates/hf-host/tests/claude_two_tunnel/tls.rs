@@ -2,9 +2,10 @@ use super::*;
 use hf_platform::process::{MacIdentity, RetainedOwnedChild, SpawnSpec};
 pub(super) struct FakeTls {
     child: actors::Original,
+    mode: Mode,
     pub(super) address: std::net::SocketAddr,
 }
-pub(super) fn start(root: &FixtureRoot, until: Instant) -> FakeTls {
+pub(super) fn start(root: &FixtureRoot, until: Instant, mode: Mode) -> FakeTls {
     let directory = root.outside().join("two-tunnel-tls");
     fs::create_dir(&directory).expect("fresh TLS directory");
     let spec = SpawnSpec {
@@ -13,7 +14,14 @@ pub(super) fn start(root: &FixtureRoot, until: Instant) -> FakeTls {
         args: vec![
             "-I".into(),
             "-S".into(),
-            TLS_HELPER.into(),
+            match mode {
+                Mode::TwoTunnel => TLS_HELPER,
+                Mode::ReplacementWave => concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/claude_two_tunnel/wave_tls.py"
+                ),
+            }
+            .into(),
             directory.into_os_string(),
             "25".into(),
         ],
@@ -37,6 +45,7 @@ pub(super) fn start(root: &FixtureRoot, until: Instant) -> FakeTls {
         {
             return FakeTls {
                 child,
+                mode,
                 address: ([127, 0, 0, 1], port).into(),
             };
         }
@@ -57,7 +66,10 @@ impl FakeTls {
     ) -> (actors::Captured, Result<codec::Verdict, &'static str>) {
         let captured = self.child.collect(until);
         evidence::fake_capture("two-tunnel-helper", &captured);
-        let verdict = codec::parse(&captured.stdout);
+        let verdict = match self.mode {
+            Mode::TwoTunnel => codec::parse(&captured.stdout),
+            Mode::ReplacementWave => codec::parse_wave(&captured.stdout),
+        };
         eprintln!("phase=two-tunnel-helper verdict={verdict:?}");
         (captured, verdict)
     }

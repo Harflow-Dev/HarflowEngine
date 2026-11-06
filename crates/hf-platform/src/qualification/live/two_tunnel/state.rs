@@ -38,6 +38,8 @@ pub struct TwoTunnelSlotOutcome {
 }
 #[derive(Clone, Debug, Default)]
 pub struct TwoTunnelOutcome {
+    pub peak_active_slots: usize,
+    pub retired_slots_closed: usize,
     pub preflights: usize,
     pub accepted: usize,
     pub connects: usize,

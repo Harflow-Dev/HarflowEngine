@@ -42,6 +42,13 @@ pub fn readiness(raw: &[u8]) -> Result<u16, &'static str> {
     Ok(port)
 }
 pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
+    parse_bounded(raw, 2)
+}
+#[allow(dead_code)] // Shared with test targets that exercise only the original mode.
+pub fn parse_wave(raw: &[u8]) -> Result<Verdict, &'static str> {
+    parse_bounded(raw, 4)
+}
+fn parse_bounded(raw: &[u8], maximum: usize) -> Result<Verdict, &'static str> {
     if raw.len() > 4096 || !raw.ends_with(b"\n") {
         return Err("invalid helper metadata bound");
     }
@@ -86,9 +93,9 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
                     phase: Phase::parse(phase)?,
                     category: Category::parse(category)?,
                 };
-                if sessions.len() == 2
+                if sessions.len() == maximum
                     || session.ordinal == 0
-                    || session.ordinal > 2
+                    || session.ordinal > maximum
                     || session.peer_port == 0
                     || sessions.iter().any(|s: &Session| {
                         s.ordinal == session.ordinal || s.peer_port == session.peer_port
@@ -107,7 +114,8 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
             _ => return Err("invalid helper record"),
         }
     }
-    if done != Some(sessions.len())
+    if sessions.is_empty()
+        || done != Some(sessions.len())
         || !(1..=sessions.len()).all(|ordinal| sessions.iter().any(|s| s.ordinal == ordinal))
     {
         return Err("incomplete helper coverage");
@@ -115,8 +123,19 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
     Ok(Verdict { port, sessions })
 }
 pub fn bound_rejection(verdict: &Verdict, upstreams: &[(usize, SocketAddr)]) -> bool {
+    bound_bounded_rejection(verdict, upstreams, 2)
+}
+#[allow(dead_code)] // Shared with test targets that exercise only the original mode.
+pub fn bound_wave_rejection(verdict: &Verdict, upstreams: &[(usize, SocketAddr)]) -> bool {
+    bound_bounded_rejection(verdict, upstreams, 4)
+}
+fn bound_bounded_rejection(
+    verdict: &Verdict,
+    upstreams: &[(usize, SocketAddr)],
+    maximum: usize,
+) -> bool {
     !upstreams.is_empty()
-        && upstreams.len() <= 2
+        && upstreams.len() <= maximum
         && verdict.sessions.len() == upstreams.len()
         && upstreams
             .iter()
@@ -131,7 +150,7 @@ pub fn bound_rejection(verdict: &Verdict, upstreams: &[(usize, SocketAddr)]) -> 
                     && verdict
                         .sessions
                         .iter()
-                        .filter(|s| s.peer_port == addr.port())
+                        .filter(|s| s.ordinal == *ordinal && s.peer_port == addr.port())
                         .count()
                         == 1
             })

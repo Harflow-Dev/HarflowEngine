@@ -104,7 +104,7 @@ def serve(context):
     print(f"DONE\t{accepted}", flush=True)
 
 
-def main():
+def main(serve_fn=serve):
     if len(sys.argv) != 3 or sys.argv[2] != "25":
         return 2
     cert = os.path.join(sys.argv[1], "certificate.pem")
@@ -119,7 +119,7 @@ def main():
         )
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
-        serve(context)
+        serve_fn(context)
         return 0
     except (OSError, ValueError, subprocess.SubprocessError):
         print("HELPER_ERROR", flush=True)

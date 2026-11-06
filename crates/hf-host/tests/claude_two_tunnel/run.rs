@@ -36,19 +36,52 @@ const TLS_HELPER: &str = concat!(
     "/tests/claude_two_tunnel/fake_tls.py"
 );
 
+#[allow(dead_code)]
 pub(super) fn run() {
+    run_mode(Mode::TwoTunnel);
+}
+#[allow(dead_code)]
+pub(super) fn run_replacement_wave() {
+    run_mode(Mode::ReplacementWave);
+}
+#[allow(dead_code)]
+#[derive(Clone, Copy)]
+enum Mode {
+    TwoTunnel,
+    ReplacementWave,
+}
+impl Mode {
+    fn maximum(self) -> usize {
+        match self {
+            Self::TwoTunnel => 2,
+            Self::ReplacementWave => 4,
+        }
+    }
+    fn gate(self) -> &'static str {
+        match self {
+            Self::TwoTunnel => "HARFLOW_RUN_TWO_TUNNEL_TLS_NEGATIVE",
+            Self::ReplacementWave => "HARFLOW_RUN_REPLACEMENT_WAVE_TLS_NEGATIVE",
+        }
+    }
+}
+fn run_mode(mode: Mode) {
     assert_eq!(
-        env::var("HARFLOW_RUN_TWO_TUNNEL_TLS_NEGATIVE").as_deref(),
+        env::var(mode.gate()).as_deref(),
         Ok("1"),
-        "explicit fake-only two-tunnel gate required"
+        "explicit fake-only gate required"
     );
+    eprintln!("phase=fake-only-mode total={} active=2", mode.maximum());
     let overall = Instant::now() + Duration::from_secs(130);
     let selected = identity::selection();
     let root = FixtureRoot::create().expect("fresh fake-only fixture root");
     prepare_dirs(&root);
-    let helper = tls::start(&root, overall.min(Instant::now() + Duration::from_secs(30)));
+    let helper = tls::start(
+        &root,
+        overall.min(Instant::now() + Duration::from_secs(30)),
+        mode,
+    );
     let helper_address = helper.address;
-    let mut attempt = Attempt::from_root(root, helper_address, overall, selected);
+    let mut attempt = Attempt::from_root(root, helper_address, overall, selected, mode);
     let captured =
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| vendor(&attempt, overall)));
     let (captured, negative_until) = match captured {
@@ -100,7 +133,7 @@ pub(super) fn run() {
         helper_address.port(),
         "helper readiness identity"
     );
-    require_proxy(&outcome, &verdict, helper_address);
+    require_proxy(&outcome, &verdict, helper_address, mode);
     assert!(
         scan.expect("bounded fake-token scan").is_empty(),
         "fake token persisted"
@@ -144,17 +177,19 @@ fn require_proxy(
     outcome: &hf_platform::qualification::live::TwoTunnelOutcome,
     verdict: &codec::Verdict,
     helper_address: std::net::SocketAddr,
+    mode: Mode,
 ) {
     assert!(
         outcome.preflights == 1
             && outcome.accepted > 0
-            && outcome.accepted <= 2
+            && outcome.accepted <= mode.maximum()
             && outcome.connects == outcome.accepted
             && outcome.slots.len() == outcome.accepted
             && outcome.ipv6_connections == 0
             && !outcome.failed
             && outcome.owned_sockets_closed
-            && outcome.worker_joined,
+            && outcome.worker_joined
+            && budget_witness(outcome),
         "all admitted proxy sessions must settle"
     );
     let upstreams: Vec<_> = outcome
@@ -169,7 +204,10 @@ fn require_proxy(
             && direction_settled(&s.client_to_upstream)
             && direction_settled(&s.upstream_to_client))
             && upstreams.len() == outcome.accepted
-            && codec::bound_rejection(verdict, &upstreams),
+            && match mode {
+                Mode::TwoTunnel => codec::bound_rejection(verdict, &upstreams),
+                Mode::ReplacementWave => codec::bound_wave_rejection(verdict, &upstreams),
+            },
         "bound explicit certificate rejection required for every admitted session"
     );
 }
@@ -189,4 +227,24 @@ fn direction_settled(value: &hf_platform::qualification::live::TwoTunnelDirectio
         && value.write_half_closed
         && value.buffered_bytes == 0
         && value.bytes_read == value.bytes_forwarded
+}
+
+fn budget_witness(outcome: &hf_platform::qualification::live::TwoTunnelOutcome) -> bool {
+    (1..=2).contains(&outcome.peak_active_slots)
+        && outcome.retired_slots_closed <= outcome.accepted
+        && outcome.peak_client_to_upstream_pending <= 16384
+        && outcome.peak_upstream_to_client_pending <= 16384
+        && [true, false].into_iter().all(|outgoing| {
+            outcome
+                .slots
+                .iter()
+                .try_fold(0usize, |total, slot| {
+                    total.checked_add(if outgoing {
+                        slot.client_to_upstream.bytes_read
+                    } else {
+                        slot.upstream_to_client.bytes_read
+                    })
+                })
+                .is_some_and(|total| total <= 262144)
+        })
 }

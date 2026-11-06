@@ -6,13 +6,13 @@ use std::{
 type Failure = (Reason, Option<io::ErrorKind>);
 
 pub(super) fn step(
-    slots: &mut [Slot],
+    slots: &mut [Option<Slot>; 2],
     index: usize,
     outgoing: bool,
     scratch: &mut [u8; 16384],
     outcome: &mut TwoTunnelOutcome,
 ) -> Result<(), Failure> {
-    let result = advance(slots, index, outgoing, scratch);
+    let result = advance(slots, index, outgoing, scratch, outcome);
     let (_, pending) = totals(slots, outgoing);
     let peak = if outgoing {
         &mut outcome.peak_client_to_upstream_pending
@@ -23,13 +23,17 @@ pub(super) fn step(
     result
 }
 fn advance(
-    slots: &mut [Slot],
+    slots: &mut [Option<Slot>; 2],
     index: usize,
     outgoing: bool,
     scratch: &mut [u8; 16384],
+    outcome: &TwoTunnelOutcome,
 ) -> Result<(), Failure> {
-    let (total, pending) = totals(slots, outgoing);
-    let slot = &mut slots[index];
+    let (active_total, pending) = totals(slots, outgoing);
+    let total = active_total + retired_total(outcome, outgoing);
+    let Some(slot) = slots[index].as_mut() else {
+        return Ok(());
+    };
     if slot.finished || slot.reply.is_empty() || slot.reply_offset != slot.reply.len() {
         return Ok(());
     }
@@ -100,9 +104,10 @@ fn advance(
     Ok(())
 }
 
-fn totals(slots: &[Slot], outgoing: bool) -> (usize, usize) {
+fn totals(slots: &[Option<Slot>; 2], outgoing: bool) -> (usize, usize) {
     let total: usize = slots
         .iter()
+        .flatten()
         .map(|s| {
             if outgoing {
                 s.observation.client_to_upstream.bytes_read
@@ -113,6 +118,7 @@ fn totals(slots: &[Slot], outgoing: bool) -> (usize, usize) {
         .sum();
     let pending: usize = slots
         .iter()
+        .flatten()
         .map(|s| {
             if outgoing {
                 s.outgoing.len()
@@ -122,4 +128,18 @@ fn totals(slots: &[Slot], outgoing: bool) -> (usize, usize) {
         })
         .sum();
     (total, pending)
+}
+
+fn retired_total(outcome: &TwoTunnelOutcome, outgoing: bool) -> usize {
+    outcome
+        .slots
+        .iter()
+        .map(|slot| {
+            if outgoing {
+                slot.client_to_upstream.bytes_read
+            } else {
+                slot.upstream_to_client.bytes_read
+            }
+        })
+        .sum()
 }

@@ -16,10 +16,14 @@ impl Attempt {
         address: std::net::SocketAddr,
         until: Instant,
         selected: identity::VendorSelection,
+        mode: Mode,
     ) -> Self {
         let nonce = identity::nonce_from_root(root.root());
-        let proxy =
-            TwoTunnelProxy::start(address, &nonce, until).expect("exclusive loopback proxy pair");
+        let proxy = match mode {
+            Mode::TwoTunnel => TwoTunnelProxy::start(address, &nonce, until),
+            Mode::ReplacementWave => TwoTunnelProxy::start_replacement_wave(address, &nonce, until),
+        }
+        .expect("exclusive loopback proxy pair");
         let profile = hf_platform::qualification::live::live_profile(&root, proxy.port())
             .expect("recorded profile plus credential denial");
         let denied = TcpListener::bind(("127.0.0.1", 0)).expect("denied-port control listener");
