@@ -1,5 +1,8 @@
 //! Strict capture-free helper metadata codec. Errors never contain input bytes.
 use std::net::SocketAddr;
+#[path = "codec_categories.rs"]
+mod categories;
+pub use categories::{Category, Phase};
 #[derive(Debug)]
 pub struct Session {
     pub ordinal: usize,
@@ -8,6 +11,8 @@ pub struct Session {
     pub application_data: bool,
     pub status: &'static str,
     pub closed: bool,
+    pub phase: Phase,
+    pub category: Category,
 }
 #[derive(Debug)]
 pub struct Verdict {
@@ -51,7 +56,7 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
         let fields: Vec<_> = line.split('\t').collect();
         match fields.as_slice() {
             [
-                "SESSION",
+                "SESSION_V2",
                 ordinal,
                 "127.0.0.1",
                 peer,
@@ -59,6 +64,8 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
                 application,
                 status,
                 closed,
+                phase,
+                category,
             ] => {
                 let status = match *status {
                     "cert_alert" => "cert_alert",
@@ -76,6 +83,8 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
                     application_data: boolean(application)?,
                     status,
                     closed: boolean(closed)?,
+                    phase: Phase::parse(phase)?,
+                    category: Category::parse(category)?,
                 };
                 if sessions.len() == 2
                     || session.ordinal == 0
@@ -84,6 +93,9 @@ pub fn parse(raw: &[u8]) -> Result<Verdict, &'static str> {
                     || sessions.iter().any(|s: &Session| {
                         s.ordinal == session.ordinal || s.peer_port == session.peer_port
                     })
+                    || !session.closed
+                    || session.category.status() != status
+                    || !session.category.permits_phase(session.phase)
                     || session.certificate_rejected != (status == "cert_alert")
                     || session.application_data != (status == "application_data")
                 {
@@ -124,6 +136,11 @@ pub fn bound_rejection(verdict: &Verdict, upstreams: &[(usize, SocketAddr)]) -> 
                         == 1
             })
         && verdict.sessions.iter().all(|s| {
-            s.certificate_rejected && !s.application_data && s.closed && s.status == "cert_alert"
+            s.certificate_rejected
+                && !s.application_data
+                && s.closed
+                && s.status == "cert_alert"
+                && s.category.status() == s.status
+                && s.category.permits_phase(s.phase)
         })
 }

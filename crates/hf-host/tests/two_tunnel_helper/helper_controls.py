@@ -1,4 +1,5 @@
 """Exercise the production two-session helper with offline loopback controls."""
+import importlib.util
 import os
 import queue
 import socket
@@ -7,6 +8,29 @@ import subprocess
 import sys
 import tempfile
 import threading
+
+
+def load_classifier(path):
+    spec = importlib.util.spec_from_file_location("offline_tls_helper", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.classify_error
+
+
+def verify_reason_table(helper_script):
+    path = os.path.join(os.path.dirname(__file__), "category_controls.py")
+    spec = importlib.util.spec_from_file_location("offline_tls_category_controls", path)
+    controls = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(controls)
+    controls.verify(helper_script)
+
+
+def verify_prehello_fixtures(helper_script):
+    path = os.path.join(os.path.dirname(__file__), "category_controls.py")
+    spec = importlib.util.spec_from_file_location("offline_tls_category_controls", path)
+    controls = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(controls)
+    controls.verify_prehello_fixtures(helper_script)
 
 
 def read_lines(stream, lines):
@@ -47,6 +71,7 @@ class Helper:
         self.reader.start()
         self.stderr.start()
         ready = self.next_line(8)
+        self.records = [ready]
         fields = ready.split("\t") if ready else []
         if len(fields) != 2 or fields[0] != "READY" or not fields[1].isdigit():
             self.stop()
@@ -68,10 +93,11 @@ class Helper:
 
     def session(self, timeout):
         line = self.next_line(timeout)
+        self.records.append(line)
         fields = line.split("\t") if line else []
-        if len(fields) != 8 or fields[0] != "SESSION":
+        if len(fields) != 10 or fields[0] != "SESSION_V2":
             raise AssertionError("helper session record missing")
-        ordinal, address, peer, certificate, application, status, closed = fields[1:]
+        ordinal, address, peer, certificate, application, status, closed, phase, category = fields[1:]
         if address != "127.0.0.1" or not peer.isdigit():
             raise AssertionError("helper peer identity invalid")
         return {
@@ -81,6 +107,8 @@ class Helper:
             "application": application == "1",
             "status": status,
             "closed": closed == "1",
+            "phase": phase,
+            "category": category,
         }
 
     def finish(self):
@@ -96,6 +124,7 @@ class Helper:
         done = self.next_line(1)
         if code != 0 or done != "DONE\t2":
             raise AssertionError("helper did not settle two sessions")
+        self.records.append(done)
 
     def controller_stop(self):
         self.process.terminate()
@@ -126,7 +155,7 @@ class Helper:
         self.stderr.join(timeout=2)
 
 
-def run_client(address, ca_file, mode, outcomes):
+def run_client(address, ca_file, mode, outcomes, classify_error):
     raw = socket.create_connection(address, timeout=5)
     local_port = raw.getsockname()[1]
     try:
@@ -147,8 +176,8 @@ def run_client(address, ca_file, mode, outcomes):
             try:
                 context.wrap_socket(raw, server_hostname="api.anthropic.com")
                 outcomes[mode] = (local_port, "unexpected_success")
-            except ssl.SSLCertVerificationError:
-                outcomes[mode] = (local_port, "verify_rejected")
+            except ssl.SSLCertVerificationError as error:
+                outcomes[mode] = (local_port, "verify_rejected", classify_error(error))
     except (OSError, ssl.SSLError):
         outcomes[mode] = (local_port, "client_io_failure")
     finally:
@@ -156,13 +185,20 @@ def run_client(address, ca_file, mode, outcomes):
 
 
 def positive_and_rejection(helper_script):
+    classify_error = load_classifier(helper_script)
     with tempfile.TemporaryDirectory(prefix="hf-two-tunnel-controls-") as directory:
         with Helper(helper_script, directory) as helper:
             outcomes = {}
             clients = [
                 threading.Thread(
                     target=run_client,
-                    args=(("127.0.0.1", helper.port), os.path.join(directory, "certificate.pem"), mode, outcomes),
+                    args=(
+                        ("127.0.0.1", helper.port),
+                        os.path.join(directory, "certificate.pem"),
+                        mode,
+                        outcomes,
+                        classify_error,
+                    ),
                 )
                 for mode in ("trusted", "default")
             ]
@@ -174,10 +210,15 @@ def positive_and_rejection(helper_script):
                 raise AssertionError("TLS controller clients did not settle")
             sessions = [helper.session(3), helper.session(3)]
             helper.finish()
+            for record in helper.records:
+                print(record)
             if outcomes.get("trusted", (0, ""))[1] != "application_data":
                 raise AssertionError("trusted TLS application-data control failed")
             if outcomes.get("default", (0, ""))[1] != "verify_rejected":
                 raise AssertionError("default certificate rejection control failed")
+            local = outcomes["default"][2]
+            if local != ("tls_error", "local_certificate_verification_failed", False):
+                raise AssertionError("local client verification was misclassified")
             if {item[0] for item in outcomes.values()} != {item["peer"] for item in sessions}:
                 raise AssertionError("controller and helper peer identities differ")
             if len({item["peer"] for item in sessions}) != 2:
@@ -185,9 +226,25 @@ def positive_and_rejection(helper_script):
             by_peer = {item["peer"]: item for item in sessions}
             trusted = by_peer[outcomes["trusted"][0]]
             rejected = by_peer[outcomes["default"][0]]
-            if not trusted["application"] or trusted["certificate"] or trusted["status"] != "application_data":
+            if (
+                not trusted["application"]
+                or trusted["certificate"]
+                or trusted["status"] != "application_data"
+                or trusted["phase"] != "application_read"
+                or trusted["category"] != "application_data"
+            ):
                 raise AssertionError("trusted session was not detected as application data")
-            if not rejected["certificate"] or rejected["application"] or rejected["status"] != "cert_alert":
+            if (
+                not rejected["certificate"]
+                or rejected["application"]
+                or rejected["status"] != "cert_alert"
+                or rejected["phase"] != "handshake"
+                or rejected["category"] not in {
+                    "certificate_alert_unknown_ca",
+                    "certificate_alert_bad_certificate",
+                    "certificate_alert_certificate_unknown",
+                }
+            ):
                 raise AssertionError("default client produced no explicit certificate alert")
             if not all(item["closed"] for item in sessions):
                 raise AssertionError("positive control sessions did not close")
@@ -202,16 +259,52 @@ def eof_and_idle_timeout(helper_script):
             eof_session = helper.session(5)
             if eof_session["certificate"] or eof_session["status"] == "cert_alert":
                 raise AssertionError("raw TCP EOF became certificate rejection")
+            if (
+                eof_session["phase"] != "handshake"
+                or eof_session["category"] not in {"transport_eof", "tls_unclassified"}
+            ):
+                raise AssertionError("raw TCP EOF phase or category changed")
             idle = socket.create_connection(("127.0.0.1", helper.port), timeout=5)
             idle_session = helper.session(27)
             idle.close()
             helper.finish()
             if idle_session["certificate"] or idle_session["status"] != "timeout":
                 raise AssertionError("idle timeout became certificate rejection")
+            if idle_session["phase"] != "handshake" or idle_session["category"] != "deadline_timeout":
+                raise AssertionError("idle timeout phase or category changed")
             if not eof_session["closed"] or not idle_session["closed"]:
                 raise AssertionError("EOF or timeout session did not close")
             if eof_session["peer"] == idle_session["peer"]:
                 raise AssertionError("EOF and idle peer identities were reused")
+            print("OBSERVED\traw_eof\t{}\t{}".format(eof_session["phase"], eof_session["category"]))
+            print("OBSERVED\tidle_timeout\t{}\t{}".format(idle_session["phase"], idle_session["category"]))
+
+
+def malformed_protocol(helper_script):
+    with tempfile.TemporaryDirectory(prefix="hf-two-tunnel-controls-") as directory:
+        with Helper(helper_script, directory) as helper:
+            malformed = socket.create_connection(("127.0.0.1", helper.port), timeout=5)
+            malformed.sendall(b"not-a-tls-record")
+            malformed.close()
+            eof = socket.create_connection(("127.0.0.1", helper.port), timeout=5)
+            eof.shutdown(socket.SHUT_WR)
+            eof.close()
+            sessions = [helper.session(5), helper.session(5)]
+            helper.finish()
+            invalid = next(item for item in sessions if item["ordinal"] == 1)
+            if (
+                invalid["phase"] != "handshake"
+                or invalid["certificate"]
+                or invalid["category"] != "protocol_unrecognized"
+            ):
+                raise AssertionError("malformed TLS protocol control was misclassified")
+            if any(item["certificate"] for item in sessions):
+                raise AssertionError("malformed protocol became certificate rejection")
+            print(
+                "OBSERVED\tmalformed_tls\t{}\t{}".format(
+                    invalid["phase"], invalid["category"]
+                )
+            )
 
 
 def trusted_handshake_only(address, ca_file):
@@ -234,6 +327,7 @@ def controller_stop_incomplete_session(helper_script):
                 os.path.join(directory, "certificate.pem"),
                 "trusted",
                 outcomes,
+                load_classifier(helper_script),
             )
             first = helper.session(5)
             if (
@@ -254,8 +348,8 @@ def controller_stop_incomplete_session(helper_script):
             second_records = [
                 line.split("\t")
                 for line in records
-                if line.startswith("SESSION\t")
-                and len(line.split("\t")) == 8
+                if line.startswith("SESSION_V2\t")
+                and len(line.split("\t")) == 10
                 and line.split("\t")[3] == str(second_peer)
             ]
             if any(record[4] == "1" or record[6] == "cert_alert" for record in second_records):
@@ -273,6 +367,8 @@ def main():
         return 2
     helper_script = os.path.abspath(sys.argv[1])
     try:
+        verify_reason_table(helper_script)
+        print("CONTROL\tstructured_reason_allowlist_table_only\tpass")
         positive_and_rejection(helper_script)
         print("CONTROL\ttrusted_application_data\tpass")
         print("CONTROL\tdefault_certificate_rejection\tpass")
@@ -282,6 +378,10 @@ def main():
         eof_and_idle_timeout(helper_script)
         print("CONTROL\traw_tcp_eof_not_certificate_rejection\tpass")
         print("CONTROL\tidle_timeout_not_certificate_rejection\tpass")
+        malformed_protocol(helper_script)
+        print("CONTROL\tmalformed_tls_protocol_unrecognized\tpass")
+        verify_prehello_fixtures(helper_script)
+        print("CONTROL\tprehello_protocol_unrecognized\tpass")
     except Exception:
         print("CONTROL\tcontrols\tfail", file=sys.stderr)
         return 1

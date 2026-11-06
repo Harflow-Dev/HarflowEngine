@@ -152,3 +152,9 @@ question is the fixed TLS-error category; a reviewed metadata-only classificatio
 would be needed before proposing another discriminating measurement. Repeating
 the same run or increasing the connection cap would not resolve that missing
 witness. No new experiment is selected or authorized by this receipt.
+
+## Offline classification follow-up
+
+[Closed TLS failure metadata](claude-tls-error-classification.md) adds offline-tested
+phase and category evidence for a separately authorized future measurement. It
+does not reclassify this historical run or authorize another installed-vendor run.
