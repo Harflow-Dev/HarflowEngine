@@ -139,6 +139,7 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
     transaction.execute_batch(crate::task_fixture::TASK_SCHEMA)?;
     transaction.execute_batch(crate::watch_meta::SCHEMA)?;
     transaction.execute_batch(crate::event_fixture::EVENT_SCHEMA)?;
+    transaction.execute_batch(crate::fixture_schema::FACTS_SCHEMA)?;
     timeout(&transaction, deadline)?;
     transaction
         .commit()

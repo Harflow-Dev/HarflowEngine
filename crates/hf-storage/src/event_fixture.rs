@@ -31,10 +31,26 @@ impl Store {
         let mut db = self.admit(deadline)?;
         let _io = self.binding.io(deadline)?;
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        require_schema(&tx)?;
-        let previous = crate::event_read::stream_optional(&tx, &fixture.task)?;
+        self.write_in(&tx, fixture, append, deadline)?;
+        self.binding.check()?;
+        connection::timeout(&tx, deadline)?;
+        tx.commit().map_err(|_| Error::CommitOutcomeUnknown)?;
+        self.binding
+            .check()
+            .map_err(|_| Error::CommitOutcomeUnknown)
+    }
+    /// The writes of one event fixture inside a caller-owned immediate transaction.
+    pub(crate) fn write_in(
+        &self,
+        tx: &Connection,
+        fixture: &EventFixture,
+        append: bool,
+        deadline: Instant,
+    ) -> Result<()> {
+        require_schema(tx)?;
+        let previous = crate::event_read::stream_optional(tx, &fixture.task)?;
         let (old_count, old_bytes) =
-            crate::event_checks::existing(self, &tx, &fixture.task, previous.as_ref(), deadline)?;
+            crate::event_checks::existing(self, tx, &fixture.task, previous.as_ref(), deadline)?;
         if append {
             self.check_bounds(
                 old_count.saturating_add(fixture.records.len()),
@@ -47,17 +63,17 @@ impl Store {
                 ),
             )?;
         }
-        let (end, generation) = prepare_stream(&tx, fixture, append, previous.as_ref())?;
-        connection::timeout(&tx, deadline)?;
+        let (end, generation) = prepare_stream(tx, fixture, append, previous.as_ref())?;
+        connection::timeout(tx, deadline)?;
         if !append {
             tx.execute(
                 "DELETE FROM event_records WHERE task=?1",
                 [fixture.task.as_str()],
             )?;
         }
-        write_stream(&tx, fixture, end, &generation)?;
+        write_stream(tx, fixture, end, &generation)?;
         for record in &fixture.records {
-            connection::timeout(&tx, deadline)?;
+            connection::timeout(tx, deadline)?;
             tx.execute(
                 "INSERT INTO event_records VALUES(?1,?2,?3,?4,?5,?6,?7)",
                 rusqlite::params![
@@ -71,13 +87,8 @@ impl Store {
                 ],
             )?;
         }
-        let _checked = crate::event_read::stream_optional(&tx, &fixture.task)?;
-        self.binding.check()?;
-        connection::timeout(&tx, deadline)?;
-        tx.commit().map_err(|_| Error::CommitOutcomeUnknown)?;
-        self.binding
-            .check()
-            .map_err(|_| Error::CommitOutcomeUnknown)
+        crate::event_read::stream_optional(tx, &fixture.task)?;
+        Ok(())
     }
 }
 fn prepare_stream(
@@ -156,7 +167,7 @@ pub(crate) fn class_number(class: RecordClass) -> i64 {
         RecordClass::Oversized => 3,
     }
 }
-fn validate(store: &Store, fixture: &EventFixture, deadline: Instant) -> Result<()> {
+pub(crate) fn validate(store: &Store, fixture: &EventFixture, deadline: Instant) -> Result<()> {
     let mut previous = fixture.records.first().map_or(0, |r| r.start);
     let mut bytes = 512usize;
     for record in &fixture.records {

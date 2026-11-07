@@ -43,7 +43,7 @@ use std::{
     time::Instant,
 };
 
-pub const SCHEMA_VERSION: u32 = 5;
+pub const SCHEMA_VERSION: u32 = 6;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
@@ -77,6 +77,11 @@ pub enum Error {
     EventReadUnavailable,
     InvalidEventQuery,
     ExpiredEventCursor,
+    /// Fixture writers only: the task already exists.
+    FixtureConflict,
+    /// Fixture writers only: the task or its log does not exist, or an append
+    /// targets a damaged task, whose stream facts have no source.
+    FixtureMissing,
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -283,3 +288,20 @@ mod conversation;
 pub use conversation::FreshGrant;
 mod conversation_codec;
 mod conversation_data;
+
+mod fixture_events;
+mod fixture_extras;
+mod fixture_schema;
+mod fixture_task;
+mod fixture_tx;
+pub use fixture_events::FixtureLine;
+pub use fixture_extras::FixtureArtifact;
+pub use fixture_task::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask};
+
+/// Whether `root` holds a readable store marker for this schema. Reads one file and
+/// opens nothing else; a missing, unreadable or foreign marker is `false`.
+pub fn marker_is_current(root: impl AsRef<Path>) -> bool {
+    let marker = root.as_ref().join("store.identity");
+    std::fs::symlink_metadata(&marker).is_ok_and(|m| m.is_file())
+        && wal::read_marker_at(root.as_ref(), true).is_ok()
+}

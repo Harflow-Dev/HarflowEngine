@@ -232,6 +232,17 @@ name = "hf-domain"
 version = "0.0.1"
 
 [[package]]
+name = "hf-fixture-seed"
+version = "0.0.1"
+dependencies = [
+ "hf-application",
+ "hf-domain",
+ "hf-interfaces",
+ "hf-platform",
+ "hf-storage",
+]
+
+[[package]]
 name = "hf-host"
 version = "0.0.1"
 dependencies = [

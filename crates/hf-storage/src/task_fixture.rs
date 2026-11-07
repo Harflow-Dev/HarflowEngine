@@ -11,6 +11,7 @@ pub struct TaskFixture {
 }
 impl Store {
     /// Explicit fixture replacement only; never creates or upgrades read tables.
+    /// Event streams belong to `replace_event_fixture` and are left in place.
     pub fn replace_task_fixture(&self, fixture: &TaskFixture, deadline: Instant) -> Result<()> {
         validate(self, fixture, deadline)?;
         let mut connection = self.admit(deadline)?;
@@ -21,7 +22,7 @@ impl Store {
         super::task_read::dataset_optional(&transaction)?;
         connection::timeout(&transaction, deadline)?;
         transaction.execute_batch(
-            "DELETE FROM task_headers; DELETE FROM task_pending; DELETE FROM task_dataset;",
+            "DELETE FROM task_headers; DELETE FROM task_pending; DELETE FROM task_dataset; DELETE FROM task_facts; DELETE FROM task_processes; DELETE FROM task_prompts; DELETE FROM artifact_manifests; DELETE FROM artifact_items;",
         )?;
         transaction.execute(
             "INSERT INTO task_dataset VALUES(1,1,lower(hex(randomblob(16))),?1,?2,?3)",

@@ -18,7 +18,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.packages = []
         for name in EDGES:
-            folder = self.root / ("tools" if name == "hf-architecture" else "crates") / name
+            folder = self.root / ("tools" if name in ("hf-architecture", "hf-fixture-seed") else "crates") / name
             folder.mkdir(parents=True)
             manifest = '[lints]\nworkspace = true\n'
             if name == "hf-host":

@@ -1,6 +1,6 @@
 # Architecture
 
-hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends contains diagnostic fixture construction without a production runtime and hf-platform owns bounded process/channel adapters. hf-interfaces maps transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The binaries are harflow-engine-scaffold and harflow-ctl. The scaffold's default invocation prints an unsupported diagnostic and reads/writes no engine state. harflow-ctl is the public read-only skeleton: it implements only `version-info` and `state-inspect` (a lease-free observer that opens no SQLite database and never creates anything), advertises only `ctl.v1` and `version-info.v1`, and answers every other path with `invalid choice`, exit 2. Its code lives in a `ctl` module per layer and may not name the private fixture modes below. R14's target is macOS arm64; Linux is W02 and Windows WIN02, so CI there covers platform-independent code only.  Explicit private fixture modes described below operate only on caller-supplied isolated Rust fixture roots.
+hf-domain owns pure values; hf-application owns ports and use cases and depends only on domain. hf-storage provides the internal fixture foundation described in [storage foundation](storage-foundation.md); hf-backends contains diagnostic fixture construction without a production runtime and hf-platform owns bounded process/channel adapters. hf-interfaces maps transports. hf-host composes adapters. hf-contracts is deliberately empty: canonical schemas remain in HarflowMCP. hf-architecture is build-time tooling only. Backend execution and client-registration adapters remain conceptually distinct. The binaries are harflow-engine-scaffold and harflow-ctl (hf-host) and the private tools hf-architecture and hf-fixture-seed. The scaffold's default invocation prints an unsupported diagnostic and reads/writes no engine state. harflow-ctl is the public read-only skeleton: it implements only `version-info` and `state-inspect` (a lease-free observer that opens no SQLite database and never creates anything), advertises only `ctl.v1` and `version-info.v1`, and answers every other path with `invalid choice`, exit 2. Its code lives in a `ctl` module per layer and may not name the private fixture modes below. R14's target is macOS arm64; Linux is W02 and Windows WIN02, so CI there covers platform-independent code only.  Explicit private fixture modes described below operate only on caller-supplied isolated Rust fixture roots.
 
 Target files below 250 substantive lines and functions below 50 code lines. Enforced production maxima are 400 and 80. Changes must preserve constructor injection, explicit errors and bounded work. No compatibility or migration claim follows from a successful build.
 
@@ -28,7 +28,7 @@ detached owner, public execution capability or descendant-containment guarantee.
 
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
 intent/reservation/claim transactions and fenced observations. The original B1 stage selected
-schema2; current fresh roots use schema5 as described below. No automatic upgrade,
+schema2; current fresh roots use schema6 as described in the fixture seed paragraph below. No automatic upgrade,
 detached runtime or public execution API is added.
 
 The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned
@@ -113,3 +113,18 @@ The private [R06-A conversation ledger](migration-receipts/R06-A.md) is an offli
 same-context, Queue-only fixture over injected ports and reserved `__r06/` fixture
 records. It adds no delivery transport, public capability or production evidence
 adapter. Every other route refuses before port I/O.
+
+Store schema 6 adds the typed fact tables for the read families (`task_facts`, `task_processes`,
+`task_prompts`, `artifact_manifests`, `artifact_items`) beside the unchanged `task_dataset`,
+`task_headers`, `event_streams` and `event_records`; there is no migration, and a schema 5 root is
+refused as `unsupported_layout`. The `task_headers` header and status blobs remain the served bytes.
+The fixture writers (`add_task_fixture`, `damage_task_fixture`, `append_prompt_blob_fixture`,
+`replace_artifacts_fixture`, `append_event_record_fixture`, `truncate_event_log_fixture`,
+`remove_event_log_fixture`) are internal to hf-storage's fixture surface and unreachable from
+`harflow-ctl`. `hf_interfaces::fixture_port` owns all JSON of the E1 conformance fixture port, and
+the private tool `tools/hf-fixture-seed` (`hf-fixture-seed OP --root ROOT`, one JSON object on
+stdin, one JSON value on stdout) implements its seventeen operations over typed values. It depends on
+hf-domain, hf-application, hf-storage, hf-platform and hf-interfaces, adds no direct `serde_json` or
+`sha2` edge, is not a dependency of hf-host and publishes nothing. The five `legacy_*` caller identity
+states answer `{"supported": false}`. `hf_domain::timestamp` parses ISO 8601 instants with an offset
+to microseconds and refuses naive values.

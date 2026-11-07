@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "tools/hf-architecture"]
+members = ["crates/*", "tools/hf-architecture", "tools/hf-fixture-seed"]
 
 [workspace.package]
 version = "0.0.1"

@@ -52,7 +52,10 @@ pub(crate) fn marker_distinct(binding: &Binding) -> Result<Identity> {
     read_marker(binding, true)
 }
 fn read_marker(binding: &Binding, distinct: bool) -> Result<Identity> {
-    let file = File::open(binding.root().join("store.identity"))?;
+    read_marker_at(binding.root(), distinct)
+}
+pub(crate) fn read_marker_at(root: &Path, distinct: bool) -> Result<Identity> {
+    let file = File::open(root.join("store.identity"))?;
     if file.metadata()?.len() > 128 {
         return Err(Error::Incompatible);
     }

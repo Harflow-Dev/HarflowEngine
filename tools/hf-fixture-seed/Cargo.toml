@@ -1,0 +1,21 @@
+[package]
+name = "hf-fixture-seed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+hf-domain = { path = "../../crates/hf-domain" }
+hf-application = { path = "../../crates/hf-application" }
+hf-storage = { path = "../../crates/hf-storage" }
+hf-platform = { path = "../../crates/hf-platform" }
+hf-interfaces = { path = "../../crates/hf-interfaces" }
+
+[[bin]]
+name = "hf-fixture-seed"
+path = "src/main.rs"

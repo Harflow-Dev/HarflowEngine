@@ -14,10 +14,12 @@ EDGES = {
     "hf-interfaces": ["hf-application", "hf-domain", "serde_json", "base64"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
+    "hf-fixture-seed": ["hf-domain", "hf-application", "hf-storage", "hf-platform", "hf-interfaces"],
 }
 BINS = {
     "hf-host": {"harflow-engine-scaffold": "src/main.rs", "harflow-ctl": "src/ctl/main.rs"},
     "hf-architecture": {"hf-architecture": "src/main.rs"},
+    "hf-fixture-seed": {"hf-fixture-seed": "src/main.rs"},
 }
 # Every layer keeps its public ctl code in a `ctl` module: the module root `src/ctl.rs`
 # and the tree `src/ctl/`. This is a text screen, not a proof: it rejects the names of
