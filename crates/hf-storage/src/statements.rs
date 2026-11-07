@@ -102,3 +102,85 @@ pub fn summary() -> &'static str {
     "SELECT id,substr(title,1,200),status,started_at,length(CAST(status AS BLOB)),\
      length(CAST(started_at AS BLOB)) FROM task_facts WHERE id=?1 AND valid=1"
 }
+
+/// The prompt row of a valid task, with the lengths of every value measured in SQL so
+/// nothing is copied before it is checked.
+pub fn prompt_meta() -> &'static str {
+    "SELECT p.form,coalesce(length(CAST(p.inline_text AS BLOB)),0),\
+     coalesce(length(CAST(p.preview AS BLOB)),0),coalesce(length(CAST(f.title AS BLOB)),0),\
+     coalesce(length(CAST(p.source_name AS BLOB)),0),typeof(p.blob),coalesce(length(p.blob),0) \
+     FROM task_prompts p JOIN task_facts f ON f.id=p.task WHERE p.task=?1 AND f.valid=1"
+}
+
+pub fn prompt_text() -> &'static str {
+    "SELECT f.title,p.inline_text,p.preview,p.source_name FROM task_prompts p \
+     JOIN task_facts f ON f.id=p.task WHERE p.task=?1"
+}
+
+pub fn prompt_blob() -> &'static str {
+    "SELECT substr(blob,1,?2) FROM task_prompts WHERE task=?1"
+}
+
+/// The manifest of a valid task and its item count, read up to 101.
+pub fn manifest() -> &'static str {
+    "SELECT m.header_valid,m.revision,(SELECT count(*) FROM \
+     (SELECT 1 FROM artifact_items i WHERE i.task=m.task LIMIT 101)) \
+     FROM artifact_manifests m JOIN task_facts f ON f.id=m.task WHERE m.task=?1 AND f.valid=1"
+}
+
+/// One page of references, by ordinal. The text columns are measured before they are read.
+pub fn artifact_items() -> &'static str {
+    "SELECT i.artifact_id,i.path,i.kind,i.note,i.registered_at,i.provenance_method,\
+     i.device,i.inode,i.size,i.mtime_ns,length(CAST(i.path AS BLOB)),length(CAST(i.note AS BLOB)),\
+     length(CAST(i.artifact_id AS BLOB))+length(CAST(i.kind AS BLOB))\
+     +length(CAST(i.registered_at AS BLOB))+length(CAST(i.provenance_method AS BLOB)) \
+     FROM artifact_items i JOIN task_facts f ON f.id=i.task AND f.valid=1 \
+     WHERE i.task=?1 ORDER BY i.ordinal LIMIT ?2 OFFSET ?3"
+}
+
+/// The link a valid task continues from; no row for a missing or damaged task.
+pub fn continuation() -> &'static str {
+    "SELECT continuation_of FROM task_facts WHERE id=?1 AND valid=1"
+}
+
+/// Stored bodies of valid event records inside `[?2, ?3]` of the complete log, newest
+/// first, with the real length of each. A body over the stored limit is not read.
+pub fn recent_bodies() -> &'static str {
+    "SELECT CASE WHEN typeof(body)='blob' THEN length(body) END,\
+     CASE WHEN typeof(body)='blob' AND length(body)<=16384 THEN body END \
+     FROM event_records INDEXED BY event_starts \
+     WHERE task=?1 AND start>=?2 AND end<=?3 AND class=0 ORDER BY start DESC"
+}
+
+/// The stored blobs' lengths, measured before any JSON is parsed.
+pub fn blob_lengths() -> &'static str {
+    "SELECT length(CAST(h.header AS BLOB)),coalesce(length(CAST(h.status AS BLOB)),0) \
+     FROM task_headers h WHERE h.id=?1"
+}
+
+/// Python truthiness of `workflow_builder` in one blob: true, a non-zero number, a
+/// non-empty string, a non-empty list or object. A blob that is not JSON says nothing.
+fn builder_of(column: &str) -> String {
+    let text = format!("CAST({column} AS TEXT)");
+    let path = "'$.workflow_builder'";
+    format!(
+        "CASE WHEN {column} IS NOT NULL AND json_valid({text}) THEN \
+         CASE json_type({text},{path}) \
+         WHEN 'true' THEN 1 \
+         WHEN 'integer' THEN json_extract({text},{path})<>0 \
+         WHEN 'real' THEN json_extract({text},{path})<>0 \
+         WHEN 'text' THEN json_extract({text},{path})<>'' \
+         WHEN 'array' THEN EXISTS(SELECT 1 FROM json_each({text},{path})) \
+         WHEN 'object' THEN EXISTS(SELECT 1 FROM json_each({text},{path})) \
+         ELSE 0 END ELSE 0 END"
+    )
+}
+
+/// Whether either stored blob says the task is a workflow builder.
+pub fn workflow_builder() -> String {
+    format!(
+        "SELECT ({}) OR ({}) FROM task_headers h WHERE h.id=?1",
+        builder_of("h.header"),
+        builder_of("h.status")
+    )
+}

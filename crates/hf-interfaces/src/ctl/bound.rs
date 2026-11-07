@@ -52,15 +52,25 @@ const METADATA: [&str; 9] = [
 
 /// The serialized size of `value` as Python's `json.dumps` with `ensure_ascii` writes it.
 pub fn python_size(value: &Value) -> usize {
+    sized(value, true)
+}
+
+/// As `python_size` with `ensure_ascii=False`: non-ASCII text counts as UTF-8 bytes.
+pub fn utf8_size(value: &Value) -> usize {
+    sized(value, false)
+}
+
+fn sized(value: &Value, ascii: bool) -> usize {
     match value {
-        Value::String(text) => string_size(text),
+        Value::String(text) => string_size(text, ascii),
         Value::Array(items) => {
-            2 + items.iter().map(python_size).sum::<usize>() + 2 * items.len().saturating_sub(1)
+            2 + items.iter().map(|item| sized(item, ascii)).sum::<usize>()
+                + 2 * items.len().saturating_sub(1)
         }
         Value::Object(map) => {
             let members: usize = map
                 .iter()
-                .map(|(key, item)| string_size(key) + 2 + python_size(item))
+                .map(|(key, item)| string_size(key, ascii) + 2 + sized(item, ascii))
                 .sum();
             2 + members + 2 * map.len().saturating_sub(1)
         }
@@ -68,13 +78,16 @@ pub fn python_size(value: &Value) -> usize {
     }
 }
 
-fn string_size(text: &str) -> usize {
+fn string_size(text: &str, ascii: bool) -> usize {
     2 + text
         .chars()
         .map(|ch| match ch {
             '"' | '\\' | '\n' | '\r' | '\t' | '\u{8}' | '\u{c}' => 2,
             ' '..='~' => 1,
-            // Control characters, DEL and every non-ASCII BMP character escape to \uXXXX.
+            // Control characters escape to \uXXXX; DEL and non-ASCII text escape only with
+            // `ensure_ascii`, as a surrogate pair above the BMP.
+            c if (c as u32) < 0x20 => 6,
+            c if !ascii => c.len_utf8(),
             c if (c as u32) < 0x10000 => 6,
             _ => 12,
         })
@@ -171,12 +184,14 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
-/// Python's `str(value)` for the values a session id can hold.
-fn python_str(value: &Value) -> String {
+/// Python's `str(value)` for scalars: text as it is, `True`, `False`, `None`, numbers. Lists
+/// and objects keep their compact JSON form, where Python writes its own `repr`.
+pub(super) fn python_str(value: &Value) -> String {
     match value {
         Value::String(text) => text.clone(),
         Value::Bool(true) => "True".to_owned(),
         Value::Bool(false) => "False".to_owned(),
+        Value::Null => "None".to_owned(),
         other => other.to_string(),
     }
 }

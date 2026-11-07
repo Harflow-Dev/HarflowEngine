@@ -1,10 +1,11 @@
 //! `status` and `status-batch`.
 use super::{
     ReadError, Reads, TaskView,
+    artifacts::summary,
     gate::{Entry, Family, Observer, enter_checked, guard},
     resolve::{drift, missing_resolution, resolve, valid_id},
 };
-use hf_domain::ctl::{caller::GatePath, state_root::StateRoot};
+use hf_domain::ctl::{caller::GatePath, history::ArtifactSummary, state_root::StateRoot};
 
 const BATCH_MAX: usize = 100;
 
@@ -13,12 +14,16 @@ pub struct StatusOut {
     pub view: TaskView,
     /// The input, when it was a prefix.
     pub resolved_from: Option<String>,
+    pub artifacts: ArtifactSummary,
+    /// For `--brief`: stored event bodies from the log's last megabyte, oldest first.
+    pub recent_bodies: Option<Vec<Vec<u8>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BatchRow {
     pub view: TaskView,
     pub resolved_from: Option<String>,
+    pub artifacts: ArtifactSummary,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -33,6 +38,16 @@ fn vanished(id: &hf_domain::task_read::TaskId) -> ReadError {
 }
 
 pub fn status(reads: &Reads<'_>, root: &StateRoot, raw: &str) -> Result<StatusOut, ReadError> {
+    status_with(reads, root, raw, false)
+}
+
+/// As `status`; with `brief` the recent event bodies are read in the same snapshot.
+pub fn status_with(
+    reads: &Reads<'_>,
+    root: &StateRoot,
+    raw: &str,
+    brief: bool,
+) -> Result<StatusOut, ReadError> {
     let syntax = || valid_id(raw).map(|_| ());
     let (marker, view) = match enter_checked(reads, root, GatePath::Managed, &syntax)? {
         Entry::NoStore => return Err(vanished(&valid_id(raw)?)),
@@ -53,9 +68,17 @@ pub fn status(reads: &Reads<'_>, root: &StateRoot, raw: &str) -> Result<StatusOu
             )?;
             let (found, resolved_from) = resolve(snapshot, raw)?;
             let record = snapshot.record(&found)?.ok_or_else(drift)?;
+            let artifacts = summary(snapshot, &record.facts)?;
+            let recent_bodies = if brief {
+                Some(snapshot.recent_event_bodies(&found)?)
+            } else {
+                None
+            };
             out = Some(StatusOut {
                 view: observer.view(record),
                 resolved_from,
+                artifacts,
+                recent_bodies,
             });
             Ok(())
         })?;
@@ -123,12 +146,14 @@ pub fn status_batch(
             for (raw, _) in &valid {
                 let found = resolve(snapshot, raw).and_then(|(id, from)| {
                     let record = snapshot.record(&id)?.ok_or_else(drift)?;
-                    Ok((record, from))
+                    let artifacts = summary(snapshot, &record.facts)?;
+                    Ok((record, from, artifacts))
                 });
                 match found {
-                    Ok((record, resolved_from)) => batch.rows.push(BatchRow {
+                    Ok((record, resolved_from, artifacts)) => batch.rows.push(BatchRow {
                         view: observer.view(record),
                         resolved_from,
+                        artifacts,
                     }),
                     Err(error @ ReadError::Store(_)) => return Err(error),
                     Err(error) => batch.errors.push((raw.to_string(), error)),

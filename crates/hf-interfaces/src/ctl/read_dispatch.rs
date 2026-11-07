@@ -3,7 +3,7 @@ use super::{
     cli::{PageArgs, Parsed},
     cursor,
     dispatch::{CtlServices, Outcome, invalid_choice},
-    read_docs,
+    history_dispatch, read_docs,
     read_errors::{ErrorDoc, ReadPath, describe, inconsistent},
     render,
     task_docs::Inconsistent,
@@ -12,7 +12,7 @@ use hf_application::ctl::task_reads::{self as reads, CursorArg, PageMode, PageRe
 use hf_domain::ctl::{identity::CTL_FORMAT, state_root::StateRoot};
 use serde_json::{Value, json};
 
-fn failure(json: bool, doc: &ErrorDoc) -> Outcome {
+pub(super) fn failure(json: bool, doc: &ErrorDoc) -> Outcome {
     let stdout = if json {
         render::line(&render::stamp(CTL_FORMAT, json!({"error": doc.object()})))
     } else {
@@ -26,7 +26,7 @@ fn failure(json: bool, doc: &ErrorDoc) -> Outcome {
 }
 
 /// `body` is the envelope payload; `plain` is what a run without `--json` prints.
-fn success(json: bool, body: Value, plain: Value) -> Outcome {
+pub(super) fn success(json: bool, body: Value, plain: Value) -> Outcome {
     let stdout = if json {
         render::line(&render::stamp(CTL_FORMAT, body))
     } else {
@@ -38,7 +38,7 @@ fn success(json: bool, body: Value, plain: Value) -> Outcome {
     }
 }
 
-fn rendered<T>(
+pub(super) fn rendered<T>(
     json: bool,
     root: &StateRoot,
     outcome: Result<T, ReadError>,
@@ -105,11 +105,12 @@ pub(super) fn run_read(parsed: &Parsed, root: &StateRoot, services: &dyn CtlServ
             json,
             task_id,
             observer_parent,
+            brief,
         } => {
-            let outcome = reads::status(&read, root, task_id);
+            let outcome = reads::status_with(&read, root, task_id, *brief);
             let parent = observer_parent.then(|| services.observer_parent());
             rendered(*json, root, outcome, ReadPath::Managed, |out| {
-                let task = read_docs::status_task(&out, now, &parent)?;
+                let task = read_docs::status_task(&out, now, &parent, *brief)?;
                 Ok((json!({"task": task.clone()}), task))
             })
         }
@@ -140,6 +141,9 @@ pub(super) fn run_read(parsed: &Parsed, root: &StateRoot, services: &dyn CtlServ
                 Ok((json!({"result": result.clone()}), result))
             })
         }
+        Parsed::Events(args) => history_dispatch::events(&read, root, args, now),
+        Parsed::Prompt(args) => history_dispatch::prompt(&read, root, args),
+        Parsed::Artifacts(args) => history_dispatch::artifacts(&read, root, args, services, now),
         other => invalid_choice(command_name(other), false),
     }
 }
@@ -150,6 +154,9 @@ fn command_name(parsed: &Parsed) -> &'static str {
         Parsed::Status { .. } => "status",
         Parsed::StatusBatch { .. } => "status-batch",
         Parsed::Page(_) => "task-list-page",
+        Parsed::Events(_) => "task-events",
+        Parsed::Prompt(_) => "task-prompt",
+        Parsed::Artifacts(_) => "task-artifacts",
         Parsed::StateInspect { .. } => "state-inspect",
         Parsed::VersionInfo { .. } => "version-info",
         Parsed::Help(_) => "help",

@@ -92,7 +92,7 @@ def validate(metadata, root):
                 "sysctl": ("=0.7.1", []),
                 # "dir" lets the state observer list directories from a pinned descriptor
                 # (nix's dir module is feature-gated; the feature adds no crate).
-                "nix": ("=0.31.3", ["dir", "fs", "poll", "process", "signal", "socket"]),
+                "nix": ("=0.31.3", ["dir", "fs", "poll", "process", "signal", "socket", "user"]),
             }
             if dependency["name"] in os_wrappers:
                 version, features = os_wrappers[dependency["name"]]

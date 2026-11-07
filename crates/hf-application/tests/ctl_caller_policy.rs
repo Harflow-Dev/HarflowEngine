@@ -115,13 +115,13 @@ fn marker_rule_per_path() {
         present: true,
         non_empty: true,
     };
-    for path in [GatePath::Managed, GatePath::Page, GatePath::Successors] {
+    for path in [GatePath::Managed, GatePath::Page, GatePath::DirectOnly] {
         assert_eq!(marker_refusal(path, none), None);
         assert!(marker_refusal(path, full).is_some());
     }
     assert_eq!(marker_refusal(GatePath::Managed, empty), None);
     assert_eq!(marker_refusal(GatePath::Page, empty), None);
-    assert!(marker_refusal(GatePath::Successors, empty).is_some());
+    assert!(marker_refusal(GatePath::DirectOnly, empty).is_some());
 }
 
 #[test]
@@ -185,7 +185,7 @@ fn the_agent_switch_applies_to_managed_and_page_reads_only() {
         assert_eq!(agent_refused(GatePath::Managed, refuse), refuse);
         assert_eq!(agent_refused(GatePath::Page, refuse), refuse);
         assert!(
-            agent_refused(GatePath::Successors, refuse),
+            agent_refused(GatePath::DirectOnly, refuse),
             "direct-only refuses an agent either way"
         );
     }
@@ -193,7 +193,7 @@ fn the_agent_switch_applies_to_managed_and_page_reads_only() {
 
 #[test]
 fn admission_by_path_never_admits_undecidable_and_always_refuses_a_successor_agent() {
-    for path in [GatePath::Managed, GatePath::Page, GatePath::Successors] {
+    for path in [GatePath::Managed, GatePath::Page, GatePath::DirectOnly] {
         assert_eq!(admit(path, CallerClass::NoAgentDetected), None);
         assert_eq!(
             admit(path, CallerClass::Undecidable),
@@ -201,7 +201,7 @@ fn admission_by_path_never_admits_undecidable_and_always_refuses_a_successor_age
         );
     }
     assert_eq!(
-        admit(GatePath::Successors, CallerClass::Agent),
+        admit(GatePath::DirectOnly, CallerClass::Agent),
         Some(RefusalKind::Agent)
     );
     // The managed and page answers follow the switch's current value, whichever it is.

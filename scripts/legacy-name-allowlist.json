@@ -1,1 +1,3 @@
-[]
+[
+  "crates/hf-platform/src/ctl/artifact_authority.rs"
+]

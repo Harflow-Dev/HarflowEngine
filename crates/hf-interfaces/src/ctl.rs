@@ -1,13 +1,21 @@
 //! Public ctl transport mapping: argv parsing, JSON documents and exit codes.
 mod bound;
+mod brief;
+mod brief_outcome;
 pub mod cli;
+mod cli_history;
 mod cli_scan;
 pub mod cursor;
 pub mod dispatch;
+mod event_cursor;
+mod event_docs;
+mod history_dispatch;
+mod history_docs;
 pub mod json_scan;
 mod read_dispatch;
 mod read_docs;
 mod read_errors;
+mod recent_activity;
 pub mod render;
 pub mod state_codec;
 mod task_docs;

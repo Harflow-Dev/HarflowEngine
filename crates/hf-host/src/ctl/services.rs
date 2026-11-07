@@ -2,7 +2,7 @@
 //! macOS arm64, the store-backed reads.
 use hf_application::ctl::{
     state_inspect::{StorePolicy, inspect_state},
-    task_reads::Reads,
+    task_reads::{ArtifactTargetPort, Reads},
 };
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use hf_domain::ctl::caller::EnvMarkers;
@@ -28,7 +28,22 @@ const READ_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
 static SYSTEM_PS: hf_platform::process::PsProcessView =
     hf_platform::process::PsProcessView::system();
 
-pub struct HostServices;
+/// The services of one command: what an artifact read keeps between its artifacts lives
+/// here and goes with the command.
+pub struct HostServices {
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    artifact_targets: hf_platform::ctl::artifact_target::CommandArtifactTargets,
+}
+
+impl HostServices {
+    pub fn new() -> Self {
+        Self {
+            #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+            artifact_targets: hf_platform::ctl::artifact_target::CommandArtifactTargets::new(),
+        }
+    }
+}
+
 impl CtlServices for HostServices {
     fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot> {
         resolve_state_root(std::env::var_os("HARFLOW_STATE_ROOT"))
@@ -63,6 +78,19 @@ impl CtlServices for HostServices {
         {
             None
         }
+    }
+    fn artifact_targets(&self) -> Option<&dyn ArtifactTargetPort> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            Some(&self.artifact_targets)
+        }
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            None
+        }
+    }
+    fn root_task_marker(&self) -> bool {
+        std::env::var_os("HARFLOW_ROOT_TASK_ID").is_some_and(|value| !value.is_empty())
     }
     fn now_micros(&self) -> Option<i64> {
         std::time::SystemTime::now()

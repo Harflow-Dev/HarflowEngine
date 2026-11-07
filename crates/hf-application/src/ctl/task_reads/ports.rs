@@ -1,5 +1,5 @@
 //! Ports of the task reads: the root classifier, the store snapshot and the process view.
-use super::ReadError;
+use super::{ReadError, history_ports::HistoryPort};
 use crate::ctl::state_inspect::RootClass;
 use hf_domain::{
     ctl::{
@@ -29,7 +29,7 @@ pub enum StoreFailure {
 }
 
 /// The named queries of one read transaction. Every answer comes from the same snapshot.
-pub trait TaskSnapshotPort {
+pub trait TaskSnapshotPort: HistoryPort {
     /// Whether any task record is damaged, root-wide.
     fn damaged(&self) -> Result<bool, StoreFailure>;
     /// Unfinished tasks whose recorded session is `session` or whose process is one of

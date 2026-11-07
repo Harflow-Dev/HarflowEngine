@@ -13,7 +13,7 @@ from reads_support import ENVELOPE, MISSING, ReadsCase, day
 from seed_support import A, B, C, D
 
 TASK_KEYS = {
-    "backend", "chain_root_task_id", "continuation_of_task_id", "duration_seconds", "exit_code",
+    "artifact_summary", "backend", "chain_root_task_id", "continuation_of_task_id", "duration_seconds", "exit_code",
     "finished_at", "freedom", "group", "model", "needs_reconciliation", "observation_mode",
     "observed_exit", "output_drained", "owner", "persisted_status", "phase_slots",
     "process_identity_state", "recovered", "repo_path", "session_id", "started_at", "status",

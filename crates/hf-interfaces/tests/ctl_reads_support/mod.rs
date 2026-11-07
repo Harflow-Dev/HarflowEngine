@@ -1,5 +1,6 @@
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 //! A scripted world behind the task-read ports, rendered through `dispatch`.
+mod history;
 use hf_application::ctl::{
     state_inspect::RootClass,
     task_reads::{
@@ -21,6 +22,8 @@ use hf_domain::{
     task_read::{Lookup, TaskId},
 };
 use hf_interfaces::ctl::dispatch::{CtlServices, dispatch};
+#[allow(unused_imports)]
+pub use history::{History, Targets, event_row, page_of};
 use serde_json::Value;
 use std::time::Instant;
 
@@ -42,6 +45,14 @@ pub struct Fake {
     pub clock: bool,
     /// A continuation link to a related task whose header is `related_extra`.
     pub related_extra: Option<&'static str>,
+    pub history: History,
+    /// Related caller rows the gate sees.
+    pub related: Vec<CallerRow>,
+    pub targets: Targets,
+    pub artifact_support: bool,
+    pub root_marker: bool,
+    /// Members added to the status blob, each as `,"key":value`.
+    pub status_extra: &'static str,
 }
 
 pub fn identity(pid: u32) -> ProcessIdentity {
@@ -69,7 +80,7 @@ impl Fake {
                 chain_root: None,
             },
             header: format!(r#"{{"task_id":"{ID}"{}}}"#, self.header_extra).into_bytes(),
-            status_blob: Some(format!(r#"{{"task_id":"{ID}","needs_reconciliation":true,"process_identity_state":"dead"}}"#).into_bytes()),
+            status_blob: Some(format!(r#"{{"task_id":"{ID}","needs_reconciliation":true,"process_identity_state":"dead"{}}}"#, self.status_extra).into_bytes()),
             process: Some(ProcessRecord { pid: 40, start: Some(identity(40)) }),
         }
     }
@@ -112,7 +123,7 @@ impl TaskSnapshotPort for Fake {
         _: &[u32],
         _: Option<usize>,
     ) -> Result<Vec<CallerRow>, StoreFailure> {
-        Ok(vec![])
+        Ok(self.related.clone())
     }
     fn lookup(&self, id: &TaskId) -> Result<Lookup, StoreFailure> {
         Ok(Lookup::Found(id.clone()))
@@ -194,6 +205,13 @@ impl CtlServices for Fake {
     fn observer_parent(&self) -> Option<ProcessIdentity> {
         self.parent.clone()
     }
+    fn artifact_targets(&self) -> Option<&dyn hf_application::ctl::task_reads::ArtifactTargetPort> {
+        self.artifact_support
+            .then_some(&self.targets as &dyn hf_application::ctl::task_reads::ArtifactTargetPort)
+    }
+    fn root_task_marker(&self) -> bool {
+        self.root_marker
+    }
 }
 
 pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
@@ -206,6 +224,12 @@ pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
         header_extra: "",
         clock: true,
         related_extra: None,
+        history: History::default(),
+        related: Vec::new(),
+        targets: Targets::default(),
+        artifact_support: true,
+        root_marker: false,
+        status_extra: "",
     }
 }
 

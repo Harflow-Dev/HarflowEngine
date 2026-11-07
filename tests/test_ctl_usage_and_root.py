@@ -44,7 +44,7 @@ class UsageTests(CtlCase):
         )
 
     def test_unknown_and_later_paths_are_invalid_choices(self):
-        later = ("state-recover", "task-events", "bogus", "setup")
+        later = ("state-recover", "recovery-activity", "bogus", "setup")
         for command in later if STORE_READS else ("list", "status") + later:
             with self.subTest(command=command):
                 result = self.ctl(command, "--json")

@@ -7,8 +7,8 @@
 use crate::process::ProcessIdentity;
 
 /// Agent callers whose workflow ownership cannot be read are refused on the managed reads
-/// (`Managed` and `Page` paths) until workflow ownership is readable. Direct-only reads
-/// (`Successors`) refuse an agent whatever this says. Turning it off also needs the
+/// (`Managed`, `Page` and `Artifacts` paths) until workflow ownership is readable. Direct-only
+/// reads (`DirectOnly`) refuse an agent whatever this says. Turning it off also needs the
 /// environment-id detection method, which is not built: a marker alone cannot be verified.
 pub const REFUSE_UNRESOLVED_AGENTS: bool = true;
 /// A read of a root that holds no store answers empty and creates nothing.
@@ -47,8 +47,11 @@ pub enum GatePath {
     Managed,
     /// The plain page read: a marker counts when it is non-empty.
     Page,
-    /// Successor discovery: any present marker counts, empty values included.
-    Successors,
+    /// Direct-only reads (successor discovery, task events and prompts): any present marker
+    /// counts, empty values included.
+    DirectOnly,
+    /// A task's artifact references: a marker counts when it is non-empty.
+    Artifacts,
 }
 
 /// What the environment says about the four marker variables.
@@ -75,15 +78,15 @@ impl EnvMarkers {
 /// Whether an agent is refused on `path` when unresolved agents are (`refuse_unresolved`) or
 /// are not refused on the managed reads. A direct-only read refuses an agent either way.
 pub fn agent_refused(path: GatePath, refuse_unresolved: bool) -> bool {
-    path == GatePath::Successors || refuse_unresolved
+    path == GatePath::DirectOnly || refuse_unresolved
 }
 
 /// The refusal an environment marker alone causes, before any lineage is read. A marker on a
 /// direct-only path is always an agent.
 pub fn marker_refusal(path: GatePath, markers: EnvMarkers) -> Option<RefusalKind> {
     let counts = match path {
-        GatePath::Successors => markers.present,
-        GatePath::Managed | GatePath::Page => markers.non_empty,
+        GatePath::DirectOnly => markers.present,
+        GatePath::Managed | GatePath::Page | GatePath::Artifacts => markers.non_empty,
     };
     if !counts {
         return None;

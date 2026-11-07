@@ -269,10 +269,10 @@ fn successors(
     raw: &str,
     size: ItemSize<'_>,
 ) -> Result<PageOut, ReadError> {
-    if let Some(kind) = marker_refusal(GatePath::Successors, reads.markers) {
+    if let Some(kind) = marker_refusal(GatePath::DirectOnly, reads.markers) {
         return Err(ReadError::Refused(kind));
     }
-    let (marker, view) = match enter(reads, root, GatePath::Successors)? {
+    let (marker, view) = match enter(reads, root, GatePath::DirectOnly)? {
         Entry::NoStore => return Err(ReadError::Resolution(missing_resolution(&valid_id(raw)?))),
         Entry::Store { marker, view } => (marker, view),
     };
@@ -283,7 +283,7 @@ fn successors(
         .with_snapshot(root, reads.deadline, &mut |snapshot| {
             check_damage(snapshot)?;
             authorize(
-                GatePath::Successors,
+                GatePath::DirectOnly,
                 snapshot,
                 marker,
                 &view,

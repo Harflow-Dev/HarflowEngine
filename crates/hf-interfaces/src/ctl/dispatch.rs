@@ -3,7 +3,7 @@ use super::{
     cli::{self, Parsed, UsageError},
     read_dispatch, render,
 };
-use hf_application::ctl::task_reads::Reads;
+use hf_application::ctl::task_reads::{ArtifactTargetPort, Reads};
 use hf_domain::{
     ctl::{
         identity::{CTL_FORMAT, HostIdentity, PRODUCT_VERSION, PROGRAM, VERSION_INFO_FORMAT},
@@ -26,6 +26,14 @@ pub trait CtlServices {
     /// The ports of the store-backed reads, with the deadline and markers of this invocation.
     fn reads(&self) -> Option<Reads<'_>> {
         None
+    }
+    /// The observer of artifact target files; without it `task-artifacts` is an invalid choice.
+    fn artifact_targets(&self) -> Option<&dyn ArtifactTargetPort> {
+        None
+    }
+    /// Whether the root task marker (`HARFLOW_ROOT_TASK_ID`) is set to a non-empty value.
+    fn root_task_marker(&self) -> bool {
+        false
     }
     /// The current instant, as microseconds since the Unix epoch; `None` when the clock is
     /// unavailable.

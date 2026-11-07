@@ -15,4 +15,4 @@ hf-domain = { path = "../hf-domain" }
 [target.'cfg(target_os = "macos")'.dependencies]
 libproc = { version = "=0.14.11", default-features = false }
 sysctl = { version = "=0.7.1", default-features = false }
-nix = { version = "=0.31.3", default-features = false, features = ["dir", "fs", "poll", "process", "signal", "socket"] }
+nix = { version = "=0.31.3", default-features = false, features = ["dir", "fs", "poll", "process", "signal", "socket", "user"] }

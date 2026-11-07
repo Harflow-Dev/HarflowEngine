@@ -3,6 +3,8 @@
 //! the ctl transport mapping and writes nothing to the state root.
 mod services;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod store_history;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod store_reads;
 use std::{io::Write, process::ExitCode};
 fn main() -> ExitCode {
@@ -10,7 +12,7 @@ fn main() -> ExitCode {
         .skip(1)
         .map(|argument| argument.to_string_lossy().into_owned())
         .collect();
-    let outcome = hf_interfaces::ctl::dispatch::dispatch(&argv, &services::HostServices);
+    let outcome = hf_interfaces::ctl::dispatch::dispatch(&argv, &services::HostServices::new());
     // Output failures such as a closed pipe must not panic or change the exit code.
     let _ = std::io::stdout().write_all(outcome.stdout.as_bytes());
     let _ = std::io::stderr().write_all(outcome.stderr.as_bytes());

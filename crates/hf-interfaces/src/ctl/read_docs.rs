@@ -1,11 +1,16 @@
 //! Success documents of the task reads.
 use super::{
     bound::{bound_header, needs_direct_lookup, python_size},
+    brief::brief_status,
     cursor,
+    history_docs::summary_json,
+    recent_activity::recent_lines,
     task_docs::{Inconsistent, task_document},
 };
 use hf_application::ctl::task_reads::{BatchOut, PageOut, StatusOut, TaskView};
-use hf_domain::{process::ProcessIdentity, timestamp::civil_from_days};
+use hf_domain::{
+    ctl::history::ArtifactSummary, process::ProcessIdentity, timestamp::civil_from_days,
+};
 use serde_json::{Map, Value, json};
 
 use super::read_errors::{ReadPath, describe};
@@ -82,13 +87,30 @@ pub fn list_body(views: &[TaskView], now: Option<i64>) -> Result<Value, Inconsis
     }))
 }
 
+/// `artifact_summary`, the same under the task's own id in every status document.
+fn with_summary(document: &mut Map<String, Value>, summary: &ArtifactSummary) {
+    let id = document
+        .get("task_id")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let value = summary_json(summary, id);
+    document.insert("artifact_summary".into(), value);
+}
+
+/// With `brief` the document is the bounded projection, with the recent activity.
 pub fn status_task(
     out: &StatusOut,
     now: Option<i64>,
     parent: &Option<Option<ProcessIdentity>>,
+    brief: bool,
 ) -> Result<Value, Inconsistent> {
     let mut document = task_document(&out.view, now)?;
     observe(&mut document, parent);
+    with_summary(&mut document, &out.artifacts);
+    if brief {
+        let lines = recent_lines(out.recent_bodies.as_deref().unwrap_or_default());
+        document = brief_status(&document, &lines);
+    }
     prefix_echo(&mut document, &out.resolved_from);
     Ok(Value::Object(document))
 }
@@ -104,6 +126,7 @@ pub fn batch_body(
     for row in &out.rows {
         let mut document = task_document(&row.view, now)?;
         observe(&mut document, parent);
+        with_summary(&mut document, &row.artifacts);
         prefix_echo(&mut document, &row.resolved_from);
         tasks.push(Value::Object(document));
     }

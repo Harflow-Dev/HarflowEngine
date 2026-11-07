@@ -187,7 +187,13 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
     // The store-backed reads exist on macOS arm64 only; elsewhere they are an invalid choice too.
     let mut commands = vec!["state-recover", "bogus"];
     if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        commands.extend(["list", "status"]);
+        commands.extend([
+            "list",
+            "status",
+            "task-events",
+            "task-prompt",
+            "task-artifacts",
+        ]);
     }
     for command in commands {
         let output = scratch.run(&[command], Some(&state));
@@ -202,6 +208,27 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
     assert_eq!(extra.status.code(), Some(2));
     assert!(stderr(&extra).contains("unrecognized arguments"));
     assert_eq!(scratch.tree(), before);
+}
+
+#[test]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn the_history_commands_print_their_usage_and_status_has_brief() {
+    let scratch = Scratch::new();
+    for (command, option) in [
+        ("task-events", "--all-kinds"),
+        ("task-prompt", "--max-bytes"),
+        ("task-artifacts", "--cursor"),
+        ("status", "--brief"),
+    ] {
+        let output = scratch.run(&[command, "-h"], None);
+        assert_eq!(output.status.code(), Some(0), "{command}");
+        let usage = stdout(&output);
+        assert!(
+            usage.starts_with(&format!("usage: harflow-ctl {command}")),
+            "{usage}"
+        );
+        assert!(usage.contains(option), "{command}: {usage}");
+    }
 }
 
 #[test]

@@ -1,5 +1,7 @@
 //! argparse-compatible parsing for the implemented paths. Every other path is an
 //! invalid choice. Accepts `--opt=value`, a `--` terminator and unique prefixes.
+use super::cli_history::{self, ARTIFACT_OPTIONS, EVENT_OPTIONS, PROMPT_OPTIONS};
+pub use super::cli_history::{ArtifactArgs, EventArgs, PromptArgs};
 use super::cli_scan::{Opt, Scan, duration_seconds, error, int_option, py_repr, scan};
 
 pub const PROGRAM: &str = "harflow-ctl";
@@ -7,7 +9,15 @@ pub const VERSION_PROGRAM: &str = "harflow-ctl version-info";
 /// Commands that need no store.
 pub const COMMANDS: [&str; 2] = ["version-info", "state-inspect"];
 /// Commands that read the store, in the order the usage text lists them.
-pub const READ_COMMANDS: [&str; 4] = ["list", "status", "status-batch", "task-list-page"];
+pub const READ_COMMANDS: [&str; 7] = [
+    "list",
+    "status",
+    "status-batch",
+    "task-list-page",
+    "task-events",
+    "task-prompt",
+    "task-artifacts",
+];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UsageError {
     pub program: String,
@@ -42,6 +52,7 @@ pub enum Parsed {
         json: bool,
         task_id: String,
         observer_parent: bool,
+        brief: bool,
     },
     StatusBatch {
         json: bool,
@@ -49,6 +60,9 @@ pub enum Parsed {
         observer_parent: bool,
     },
     Page(PageArgs),
+    Events(EventArgs),
+    Prompt(PromptArgs),
+    Artifacts(ArtifactArgs),
 }
 fn unrecognized(program: &str, extras: &[String]) -> UsageError {
     error(
@@ -99,6 +113,10 @@ const PAGE_OPTIONS: [Opt; 6] = [
         value: true,
     },
 ];
+const BRIEF: Opt = Opt {
+    flag: "--brief",
+    value: false,
+};
 const SINCE: Opt = Opt {
     flag: "--since",
     value: true,
@@ -202,7 +220,10 @@ fn split_command(argv: &[String]) -> Result<Option<Split<'_>>, UsageError> {
 }
 fn command_options(name: &str) -> Vec<Opt> {
     match name {
-        "status" => vec![OBSERVER],
+        "status" => vec![OBSERVER, BRIEF],
+        "task-events" => EVENT_OPTIONS.to_vec(),
+        "task-prompt" => PROMPT_OPTIONS.to_vec(),
+        "task-artifacts" => ARTIFACT_OPTIONS.to_vec(),
         "status-batch" => vec![TASK_IDS, OBSERVER],
         "list" => vec![SINCE],
         "task-list-page" => PAGE_OPTIONS.to_vec(),
@@ -226,6 +247,7 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
                 json: parsed.json,
                 task_id,
                 observer_parent: parsed.flag("--observer-parent"),
+                brief: parsed.flag("--brief"),
             };
             Ok((value, 1))
         }
@@ -238,6 +260,9 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
                 observer_parent: parsed.flag("--observer-parent"),
             })
         }
+        "task-events" => Ok((cli_history::events(program, parsed)?, 1)),
+        "task-prompt" => Ok((cli_history::prompt(program, parsed)?, 1)),
+        "task-artifacts" => Ok((cli_history::artifacts(program, parsed)?, 1)),
         _ => both(parse_page(program, parsed)?),
     }
 }
@@ -281,15 +306,36 @@ pub fn parse_ctl(argv: &[String], reads: bool) -> Result<Parsed, UsageError> {
         let message = "--predecessor-task-id cannot be combined with --task-ids".to_string();
         return Err(error(PROGRAM, message));
     }
+    cli_history::validate(&checked)?;
     Ok(checked)
 }
 pub fn help_text(command: Option<&str>) -> String {
     match command {
         Some("version-info") => "usage: harflow-ctl version-info [-h] [--json]\n".to_string(),
         Some("list") => "usage: harflow-ctl list [-h] [--since SINCE] [--json]\n".to_string(),
-        Some("status") => {
-            "usage: harflow-ctl status [-h] [--json] [--observer-parent] task_id\n".to_string()
-        }
+        Some("status") => concat!(
+            "usage: harflow-ctl status [-h] [--json] [--observer-parent] [--brief]\n",
+            "                          task_id\n"
+        )
+        .to_string(),
+        Some("task-events") => concat!(
+            "usage: harflow-ctl task-events [-h] [--from {newest,oldest} | --cursor CURSOR]\n",
+            "                               [--limit LIMIT] [--kinds KINDS | --all-kinds]\n",
+            "                               [--json]\n",
+            "                               task_id\n"
+        )
+        .to_string(),
+        Some("task-prompt") => concat!(
+            "usage: harflow-ctl task-prompt [-h] [--max-bytes MAX_BYTES] [--json]\n",
+            "                               task_id\n"
+        )
+        .to_string(),
+        Some("task-artifacts") => concat!(
+            "usage: harflow-ctl task-artifacts [-h] [--cursor CURSOR] [--limit LIMIT]\n",
+            "                                  [--json]\n",
+            "                                  task_id\n"
+        )
+        .to_string(),
         Some("status-batch") => concat!(
             "usage: harflow-ctl status-batch [-h] --task-ids TASK_IDS [--json]\n",
             "                                [--observer-parent]\n"

@@ -43,7 +43,7 @@ fn standard(reason: InspectReason) -> StoreFailure {
 
 /// Query errors are matched before the session's refusal table, whose default row would
 /// otherwise swallow them.
-fn failure(error: &Error) -> StoreFailure {
+pub(super) fn failure(error: &Error) -> StoreFailure {
     use InspectReason::{
         ForeignStore, InfrastructureUnavailable, InvalidMarker, NewerStore, UnsupportedLayout,
     };
@@ -53,7 +53,9 @@ fn failure(error: &Error) -> StoreFailure {
         | Error::MalformedRow
         | Error::TaskReadUnavailable
         | Error::InvalidTaskQuery
-        | Error::StaleTaskCursor => {
+        | Error::StaleTaskCursor
+        | Error::InvalidEventQuery
+        | Error::EventReadUnavailable => {
             return incompatible(
                 InfrastructureUnavailable,
                 "Task history cannot be read".to_string(),
@@ -85,11 +87,11 @@ fn failure(error: &Error) -> StoreFailure {
     }
 }
 
-fn read<T>(result: Result<T, Error>) -> Result<T, StoreFailure> {
+pub(super) fn read<T>(result: Result<T, Error>) -> Result<T, StoreFailure> {
     result.map_err(|error| failure(&error))
 }
 
-struct Snapshot<'a, 'b>(&'a TaskSnapshot<'b>);
+pub(super) struct Snapshot<'a, 'b>(pub(super) &'a TaskSnapshot<'b>);
 
 impl TaskSnapshotPort for Snapshot<'_, '_> {
     fn damaged(&self) -> Result<bool, StoreFailure> {
@@ -135,6 +137,11 @@ impl TaskSnapshotPort for Snapshot<'_, '_> {
     }
 }
 
+/// An event page can hold 200 lines, and the ctl event read keeps hidden ones in the same
+/// window, so a session allows one more row than the contract's page bound. Every other
+/// ctl query states its own, smaller bound.
+const EVENT_PAGE_ROWS: usize = 201;
+
 /// Opens the store read-only under a shared lease for one command.
 pub struct SnapshotStore;
 
@@ -147,7 +154,10 @@ impl TaskStorePort for SnapshotStore {
     ) -> Result<(), ReadError> {
         let session = ReadSession::open(
             root.as_str(),
-            Limits::default(),
+            Limits {
+                max_rows: EVENT_PAGE_ROWS,
+                ..Limits::default()
+            },
             deadline,
             hf_platform::lease::shared(),
         )

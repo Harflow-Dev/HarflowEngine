@@ -13,6 +13,10 @@ pub enum ReadPath {
     Page,
     /// Successor discovery, a direct-only read.
     Successors,
+    /// `task-events` and `task-prompt`, direct-only reads of one task's history.
+    History,
+    /// `task-artifacts`: every failure is an artifact error.
+    Artifacts,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -83,6 +87,37 @@ fn refusal(path: ReadPath, kind: RefusalKind) -> ErrorDoc {
             "caller_undecidable",
             format!("Successor discovery requires a verified direct caller: {who}"),
         ),
+        (ReadPath::History, RefusalKind::Agent) => ErrorDoc::new(
+            "agent_caller",
+            format!("Task history reads require a verified direct caller: {who}"),
+        ),
+        (ReadPath::History, RefusalKind::Undecidable) => ErrorDoc::new(
+            "caller_undecidable",
+            format!("Task history reads require a verified direct caller: {who}"),
+        ),
+        (ReadPath::Artifacts, _) => ErrorDoc::new(
+            "artifact_error",
+            format!("Task artifacts are refused: {who}"),
+        ),
+    }
+}
+
+/// An event cursor refusal: the client reloads the newest page.
+fn cursor(code: &'static str, message: &str) -> ErrorDoc {
+    let mut doc = ErrorDoc::new(code, format!("{message}; reload the newest page"));
+    doc.data = Some(json!({"reload": "newest"}));
+    doc
+}
+
+/// What an artifact read says about its own failures: all of them are artifact errors.
+fn artifact_failure(error: &ReadError) -> Option<ErrorDoc> {
+    match error {
+        ReadError::InvalidTaskId(raw) => Some(ErrorDoc::new(
+            "artifact_error",
+            format!("not a valid task id: {}", py_repr(raw)),
+        )),
+        ReadError::InvalidParams(message) => Some(ErrorDoc::new("artifact_error", message.clone())),
+        _ => None,
     }
 }
 
@@ -167,7 +202,17 @@ fn resolution(found: &Resolution) -> ErrorDoc {
 
 /// `state_root` is the selected root, named in state errors.
 pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc {
+    if path == ReadPath::Artifacts
+        && let Some(doc) = artifact_failure(error)
+    {
+        return doc;
+    }
     match error {
+        ReadError::CursorInvalid => cursor("event_cursor_invalid", "Invalid event cursor"),
+        ReadError::CursorExpired => cursor(
+            "event_cursor_expired",
+            "Event cursor generation is no longer served",
+        ),
         ReadError::Store(StoreFailure::Busy) => {
             ErrorDoc::new("state_busy", "State is busy; retry the read")
         }

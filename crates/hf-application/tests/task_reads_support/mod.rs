@@ -1,6 +1,7 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 //! A scripted world behind the task-read ports: a root class, a process table, records and
 //! a log of every port call, so the order and the number of calls can be asserted.
+mod history;
 use hf_application::ctl::task_reads::ReadError;
 use hf_application::ctl::{
     state_inspect::RootClass,
@@ -20,6 +21,7 @@ use hf_domain::{
     process::ProcessIdentity,
     task_read::{Lookup, TaskId},
 };
+pub use history::{History, items, log_facts, page_of, stored_prompt};
 use std::{cell::RefCell, collections::HashMap, time::Instant};
 
 pub const BOOT: &str = "abcdef01-2345-6789-abcd-ef0123456789";
@@ -105,6 +107,7 @@ pub struct World {
     pub unobserved_total: Option<u64>,
     pub open_error: Option<StoreFailure>,
     pub log: RefCell<Vec<String>>,
+    pub history: History,
 }
 
 impl World {
@@ -125,6 +128,7 @@ impl World {
             unobserved_total: None,
             open_error: None,
             log: RefCell::new(Vec::new()),
+            history: History::default(),
         }
     }
 

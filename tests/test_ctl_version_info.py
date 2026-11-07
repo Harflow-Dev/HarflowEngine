@@ -42,7 +42,7 @@ class VersionInfoTests(CtlCase):
         capabilities = self.document()["capabilities"]
         expected = ["ctl.v1", "version-info.v1"]
         if sys.platform == "darwin" and platform.machine() == "arm64":
-            expected.append("task-successors.v1")
+            expected.extend(["task-successors.v1", "task-event-page.v1", "task-prompt.v1"])
         self.assertEqual(sorted(capabilities), sorted(expected))
         self.assertEqual(len(capabilities), len(set(capabilities)))
         for withheld in ("setup.v1", "events.v1", "state-recovery.v1"):
