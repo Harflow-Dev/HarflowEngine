@@ -33,7 +33,12 @@ CTL_FORBIDDEN = re.compile(r"fixture|owner_runtime|st04|qualification|probe", re
 CTL_REDIRECT = re.compile(r"#\s*!?\s*\[\s*path\b|\binclude(_str|_bytes)?\s*!")
 HOST_CTL_TREE = "crates/hf-host/src/ctl"
 # Widening this list is a deliberate edit: a new opener or writer must be reviewed here.
-HOST_STORAGE_ALLOWED = {"hf_storage::SCHEMA_VERSION", "hf_storage::APPLICATION_ID"}
+HOST_STORAGE_ALLOWED = {
+    "hf_storage::SCHEMA_VERSION", "hf_storage::APPLICATION_ID",
+    # The read-only session and its typed snapshot: no writer, opener of a mutable store or fixture surface.
+    "hf_storage::ReadSession", "hf_storage::Limits", "hf_storage::Error",
+    "hf_storage::ReadRefusal", "hf_storage::TaskSnapshot",
+}
 HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 
 def check_ctl_sources(root):

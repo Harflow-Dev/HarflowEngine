@@ -6,7 +6,8 @@
 //! deadline is soft: SQLite open and WAL recovery cannot be interrupted, so an
 //! overrun answer is refused after the fact as `DeadlineExceeded`.
 use crate::{
-    Error, Identity, Limits, Result, binding::Binding, connection, read_context::ReadContext, wal,
+    Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection,
+    read_context::ReadContext, wal,
 };
 use hf_application::{
     event_read::EventReadResult,
@@ -96,6 +97,16 @@ impl ReadSession {
         query.validate().map_err(|_| Error::InvalidEventQuery)?;
         self.read(deadline, |context, db| {
             crate::event_read::run(context, db, query, deadline)
+        })
+    }
+    /// Runs `action` inside one read transaction over the typed task queries.
+    pub fn snapshot<T>(
+        &self,
+        deadline: Instant,
+        action: impl FnOnce(&TaskSnapshot<'_>) -> Result<T>,
+    ) -> Result<T> {
+        self.read(deadline, |context, db| {
+            action(&TaskSnapshot::new(context, db, deadline))
         })
     }
     /// One read transaction: binding, marker and SQL identity are checked on entry and

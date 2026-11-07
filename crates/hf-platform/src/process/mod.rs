@@ -8,11 +8,15 @@ mod identity;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod owned;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod table;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use capture::{Capture, StreamCapture};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use identity::{MacIdentity, current_parent_identity, observed_executable_path};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use owned::*;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub use table::PsProcessView;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PlatformSupport {
     MacOsPrimitives,

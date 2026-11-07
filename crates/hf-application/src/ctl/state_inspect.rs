@@ -63,6 +63,39 @@ impl Verdict {
         self
     }
 }
+/// How a read sees a state root, before any store is opened.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RootClass {
+    /// The root does not exist.
+    Absent,
+    /// An empty root, or Python's admissible empty set.
+    Empty,
+    /// A root whose marker and header name a current store.
+    MarkedStore,
+    /// Any root a read must refuse.
+    Refused(StateInspection),
+}
+/// Classifies a root exactly as `inspect_state` does, so reads and `state-inspect` cannot drift.
+pub fn classify_root(
+    observer: &dyn StateObserverPort,
+    codec: &dyn StateCodecPort,
+    policy: StorePolicy,
+    root: &StateRoot,
+) -> RootClass {
+    let facts = observer.observe(root);
+    let verdict = classify(&facts, codec, policy, root);
+    match verdict.status {
+        InspectStatus::Missing => RootClass::Absent,
+        InspectStatus::Ready if facts.store_identity == FileState::Absent => RootClass::Empty,
+        InspectStatus::Ready => RootClass::MarkedStore,
+        _ => RootClass::Refused(StateInspection::new(
+            root,
+            verdict.status,
+            verdict.reason,
+            verdict.observed,
+        )),
+    }
+}
 pub fn inspect_state(
     observer: &dyn StateObserverPort,
     codec: &dyn StateCodecPort,

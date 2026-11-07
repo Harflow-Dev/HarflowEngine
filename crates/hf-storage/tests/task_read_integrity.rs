@@ -82,7 +82,7 @@ fn non_boolean_sqlite_flags_never_become_true_facts() {
             &TaskQuery::ids(Vec::new()).unwrap(),
             deadline()
         ),
-        Err(Error::Incompatible)
+        Err(Error::MalformedRow)
     ));
 }
 
@@ -163,7 +163,7 @@ fn oversized_persisted_generation_and_ids_are_bounded_before_mapping() {
     let prefix = TaskQuery::ids(vec![id("prefix-123456")]).unwrap();
     assert!(matches!(
         store.task_read(&AuthorizedScope::Global, &prefix, deadline()),
-        Err(Error::Incompatible)
+        Err(Error::MalformedRow)
     ));
 }
 

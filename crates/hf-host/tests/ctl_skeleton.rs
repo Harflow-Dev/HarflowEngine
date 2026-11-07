@@ -184,7 +184,12 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
     let scratch = Scratch::new();
     let state = scratch.state();
     let before = scratch.tree();
-    for command in ["list", "state-recover", "status", "bogus"] {
+    // The store-backed reads exist on macOS arm64 only; elsewhere they are an invalid choice too.
+    let mut commands = vec!["state-recover", "bogus"];
+    if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        commands.extend(["list", "status"]);
+    }
+    for command in commands {
         let output = scratch.run(&[command], Some(&state));
         assert_eq!(output.status.code(), Some(2), "{command}");
         assert!(output.stdout.is_empty(), "{command}");

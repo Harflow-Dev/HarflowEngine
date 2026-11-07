@@ -2,6 +2,8 @@
 //! `harflow-ctl`: the public read-only skeleton. It composes the state observer with
 //! the ctl transport mapping and writes nothing to the state root.
 mod services;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod store_reads;
 use std::{io::Write, process::ExitCode};
 fn main() -> ExitCode {
     let argv: Vec<String> = std::env::args_os()

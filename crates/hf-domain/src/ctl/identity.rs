@@ -9,6 +9,9 @@ pub const VERSION_INFO_FORMAT: &str = "harflow.version-info";
 pub const PROGRAM: &str = "harflow-ctl";
 /// Advertised capabilities. The list grows only when a path and its evidence land.
 pub const CAPABILITIES: [&str; 2] = ["ctl.v1", "version-info.v1"];
+/// Advertised only where the store-backed reads exist (macOS arm64), after the paths they
+/// qualify pass. The rest of the read surface sits under `ctl.v1`.
+pub const STORE_READ_CAPABILITIES: [&str; 1] = ["task-successors.v1"];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostIdentity {
     pub os: String,

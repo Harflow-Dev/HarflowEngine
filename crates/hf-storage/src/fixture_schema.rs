@@ -20,12 +20,17 @@ CREATE TABLE task_facts(
 CREATE INDEX facts_continuation ON task_facts(continuation_of);
 CREATE INDEX facts_finished ON task_facts(finished_at_us,id);
 CREATE INDEX facts_started ON task_facts(started_at_us,id);
+CREATE INDEX facts_session ON task_facts(session_id,started_at_us DESC,id DESC);
+CREATE INDEX facts_damaged ON task_facts(id) WHERE valid=0;
+CREATE INDEX facts_unobserved ON task_facts(started_at_us DESC,id DESC) WHERE valid=1 AND (status='running' OR exit_code IS NULL);
 CREATE TABLE task_processes(
   task TEXT PRIMARY KEY CHECK(length(task) BETWEEN 1 AND 64),
   pid INTEGER NOT NULL CHECK(pid>1),
   start_seconds INTEGER, start_micros INTEGER, boot_uuid TEXT, pgid INTEGER,
   CHECK((start_seconds IS NULL)=(start_micros IS NULL) AND (start_seconds IS NULL)=(boot_uuid IS NULL))
 );
+CREATE INDEX processes_pid ON task_processes(pid);
+CREATE INDEX processes_pgid ON task_processes(pgid);
 CREATE TABLE task_prompts(
   task TEXT PRIMARY KEY CHECK(length(task) BETWEEN 1 AND 64),
   form TEXT NOT NULL CHECK(form IN('inline','sidecar')),

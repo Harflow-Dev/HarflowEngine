@@ -159,7 +159,7 @@ pub(crate) fn lookup(
     let mut candidates = Vec::new();
     while let Some(row) = rows.next()? {
         connection::check_deadline(deadline)?;
-        candidates.push(TaskId::new(row.get(0)?).map_err(|_| Error::Incompatible)?);
+        candidates.push(TaskId::new(row.get(0)?).map_err(|_| Error::MalformedRow)?);
     }
     if candidates.len() == 1 {
         return Ok(Lookup::Found(candidates.remove(0)));

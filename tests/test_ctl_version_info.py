@@ -40,7 +40,10 @@ class VersionInfoTests(CtlCase):
 
     def test_capabilities_are_exactly_the_advertised_set(self):
         capabilities = self.document()["capabilities"]
-        self.assertEqual(sorted(capabilities), ["ctl.v1", "version-info.v1"])
+        expected = ["ctl.v1", "version-info.v1"]
+        if sys.platform == "darwin" and platform.machine() == "arm64":
+            expected.append("task-successors.v1")
+        self.assertEqual(sorted(capabilities), sorted(expected))
         self.assertEqual(len(capabilities), len(set(capabilities)))
         for withheld in ("setup.v1", "events.v1", "state-recovery.v1"):
             self.assertNotIn(withheld, capabilities)

@@ -2,7 +2,7 @@
 use hf_domain::ctl::{
     identity::{
         CAPABILITIES, CTL_FORMAT, EVENT_FORMAT, HostIdentity, PRODUCT, PRODUCT_VERSION,
-        SETUP_FORMAT, WIRE_VERSION,
+        SETUP_FORMAT, STORE_READ_CAPABILITIES, WIRE_VERSION,
     },
     inspect::{Scalar, StateInspection},
     state_root::StateRoot,
@@ -36,7 +36,11 @@ pub fn usage_error(format: &str, message: &str) -> Value {
         json!({"error": {"code": "usage", "message": message}}),
     )
 }
-pub fn version_info(root: &StateRoot, host: &HostIdentity) -> Value {
+pub fn version_info(root: &StateRoot, host: &HostIdentity, store_reads: bool) -> Value {
+    let mut capabilities: Vec<&str> = CAPABILITIES.to_vec();
+    if store_reads {
+        capabilities.extend(STORE_READ_CAPABILITIES);
+    }
     let contract = |format: &str| json!({"format": format, "v": WIRE_VERSION});
     stamp(
         hf_domain::ctl::identity::VERSION_INFO_FORMAT,
@@ -47,7 +51,7 @@ pub fn version_info(root: &StateRoot, host: &HostIdentity) -> Value {
                 "setup": contract(SETUP_FORMAT),
                 "events": contract(EVENT_FORMAT),
             },
-            "capabilities": CAPABILITIES,
+            "capabilities": capabilities,
             "os": host.os,
             "architecture": host.architecture,
             "state_root": root.as_str(),

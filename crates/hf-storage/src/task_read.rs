@@ -161,7 +161,7 @@ fn strict_bool(value: i64) -> Result<bool> {
     match value {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(Error::Incompatible),
+        _ => Err(Error::MalformedRow),
     }
 }
 fn optional_bool(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<Option<bool>> {

@@ -2,10 +2,15 @@
 
 import json
 import os
+import platform
 import re
+import sys
 import unittest
 
 from ctl_support import INVALID_ROOT, CtlCase, fixture, one_document, snapshot
+
+# The store-backed reads exist on macOS arm64 only; elsewhere they are an invalid choice too.
+STORE_READS = sys.platform == "darwin" and platform.machine() == "arm64"
 
 PRIVATE_MODES = [
     "--fixture-fixed-protocol-helper",
@@ -39,7 +44,8 @@ class UsageTests(CtlCase):
         )
 
     def test_unknown_and_later_paths_are_invalid_choices(self):
-        for command in ("list", "state-recover", "status", "task-events", "bogus", "setup"):
+        later = ("state-recover", "task-events", "bogus", "setup")
+        for command in later if STORE_READS else ("list", "status") + later:
             with self.subTest(command=command):
                 result = self.ctl(command, "--json")
                 self.assertEqual(result.returncode, 2)
@@ -106,7 +112,7 @@ class UsageTests(CtlCase):
 
     def test_usage_errors_have_no_effect(self):
         before = snapshot(self.base)
-        for args in (["list"], ["state-recover"], ["state-inspect", "x"], []):
+        for args in (["list", "--since", "bogus"], ["state-recover"], ["state-inspect", "x"], []):
             self.assertEqual(self.ctl(*args).returncode, 2)
         self.assertEqual(snapshot(self.base), before)
 

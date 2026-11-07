@@ -1,81 +1,54 @@
 //! argparse-compatible parsing for the implemented paths. Every other path is an
 //! invalid choice. Accepts `--opt=value`, a `--` terminator and unique prefixes.
+use super::cli_scan::{Opt, Scan, duration_seconds, error, int_option, py_repr, scan};
+
 pub const PROGRAM: &str = "harflow-ctl";
 pub const VERSION_PROGRAM: &str = "harflow-ctl version-info";
+/// Commands that need no store.
 pub const COMMANDS: [&str; 2] = ["version-info", "state-inspect"];
+/// Commands that read the store, in the order the usage text lists them.
+pub const READ_COMMANDS: [&str; 4] = ["list", "status", "status-batch", "task-list-page"];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UsageError {
     pub program: String,
     pub message: String,
 }
+/// The arguments of `task-list-page`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PageArgs {
+    pub json: bool,
+    pub limit: i64,
+    pub cursor: Option<String>,
+    pub active_only: bool,
+    pub session_id: Option<String>,
+    pub task_ids: Option<String>,
+    pub predecessor: Option<String>,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Parsed {
     Help(Option<&'static str>),
-    VersionInfo { json: bool },
-    StateInspect { json: bool },
-}
-#[derive(Default)]
-struct Scan {
-    json: bool,
-    help: bool,
-    extras: Vec<String>,
-}
-fn error(program: &str, message: String) -> UsageError {
-    UsageError {
-        program: program.to_string(),
-        message,
-    }
-}
-/// Exact match, or a unique prefix of a long option.
-fn resolve(flags: &[&'static str], name: &str) -> Option<&'static str> {
-    let full = format!("--{name}");
-    if let Some(exact) = flags.iter().find(|flag| **flag == full) {
-        return Some(exact);
-    }
-    let mut found = flags
-        .iter()
-        .filter(|flag| !name.is_empty() && flag.starts_with(&full));
-    match (found.next(), found.next()) {
-        (Some(only), None) => Some(only),
-        _ => None,
-    }
-}
-fn scan(program: &str, flags: &[&'static str], args: &[String]) -> Result<Scan, UsageError> {
-    let mut result = Scan::default();
-    let mut positional = false;
-    for token in args {
-        if positional || !token.starts_with('-') || token == "-" {
-            result.extras.push(token.clone());
-        } else if token == "--" {
-            positional = true;
-        } else if token == "-h" {
-            result.help = true;
-            return Ok(result);
-        } else if let Some(body) = token.strip_prefix("--") {
-            let (name, value) = match body.split_once('=') {
-                Some((name, value)) => (name, Some(value)),
-                None => (body, None),
-            };
-            match resolve(flags, name) {
-                Some(flag) => {
-                    if let Some(value) = value {
-                        let message =
-                            format!("argument {flag}: ignored explicit argument '{value}'");
-                        return Err(error(program, message));
-                    }
-                    if flag == "--help" {
-                        result.help = true;
-                        return Ok(result);
-                    }
-                    result.json = true;
-                }
-                None => result.extras.push(token.clone()),
-            }
-        } else {
-            result.extras.push(token.clone());
-        }
-    }
-    Ok(result)
+    VersionInfo {
+        json: bool,
+    },
+    StateInspect {
+        json: bool,
+    },
+    List {
+        json: bool,
+        /// The `--since` window in seconds.
+        since: Option<i64>,
+    },
+    Status {
+        json: bool,
+        task_id: String,
+        observer_parent: bool,
+    },
+    StatusBatch {
+        json: bool,
+        task_ids: String,
+        observer_parent: bool,
+    },
+    Page(PageArgs),
 }
 fn unrecognized(program: &str, extras: &[String]) -> UsageError {
     error(
@@ -85,16 +58,116 @@ fn unrecognized(program: &str, extras: &[String]) -> UsageError {
 }
 /// `harflow-ctl version-info ...`: the direct entry, which has its own parser.
 pub fn parse_version_info(args: &[String]) -> Result<Parsed, UsageError> {
-    let parsed = scan(VERSION_PROGRAM, &["--json", "--help"], args)?;
+    let parsed = scan(VERSION_PROGRAM, &[], args)?;
     if parsed.help {
         return Ok(Parsed::Help(Some("version-info")));
     }
-    if !parsed.extras.is_empty() {
-        return Err(unrecognized(VERSION_PROGRAM, &parsed.extras));
+    let mut extras = parsed.positionals;
+    extras.extend(parsed.extras);
+    if !extras.is_empty() {
+        return Err(unrecognized(VERSION_PROGRAM, &extras));
     }
     Ok(Parsed::VersionInfo { json: parsed.json })
 }
-pub fn parse_ctl(argv: &[String]) -> Result<Parsed, UsageError> {
+const OBSERVER: Opt = Opt {
+    flag: "--observer-parent",
+    value: false,
+};
+const PAGE_OPTIONS: [Opt; 6] = [
+    Opt {
+        flag: "--limit",
+        value: true,
+    },
+    Opt {
+        flag: "--cursor",
+        value: true,
+    },
+    Opt {
+        flag: "--active-only",
+        value: false,
+    },
+    Opt {
+        flag: "--session-id",
+        value: true,
+    },
+    Opt {
+        flag: "--task-ids",
+        value: true,
+    },
+    Opt {
+        flag: "--predecessor-task-id",
+        value: true,
+    },
+];
+const SINCE: Opt = Opt {
+    flag: "--since",
+    value: true,
+};
+const TASK_IDS: Opt = Opt {
+    flag: "--task-ids",
+    value: true,
+};
+fn required(program: &str, name: &str) -> UsageError {
+    error(
+        program,
+        format!("the following arguments are required: {name}"),
+    )
+}
+fn text(parsed: &Scan, flag: &str) -> Option<String> {
+    parsed.value(flag).map(str::to_string)
+}
+/// Finishes a command: unrecognized tokens, including the surplus bare ones, are an error.
+fn finish(
+    mut extras: Vec<String>,
+    parsed: &Scan,
+    used: usize,
+    parsed_value: Parsed,
+) -> Result<Parsed, UsageError> {
+    extras.extend(parsed.positionals.iter().skip(used).cloned());
+    extras.extend(parsed.extras.iter().cloned());
+    if extras.is_empty() {
+        Ok(parsed_value)
+    } else {
+        Err(unrecognized(PROGRAM, &extras))
+    }
+}
+fn parse_list(parsed: &Scan) -> Result<Parsed, UsageError> {
+    let since = match parsed.value("--since") {
+        Some(raw) => Some(duration_seconds(raw).ok_or_else(|| {
+            error(
+                "harflow-ctl list",
+                format!(
+                    "invalid duration {}; expected e.g. '7d', '12h', '30m'",
+                    py_repr(raw)
+                ),
+            )
+        })?),
+        None => None,
+    };
+    Ok(Parsed::List {
+        json: parsed.json,
+        since,
+    })
+}
+fn parse_page(program: &str, parsed: &Scan) -> Result<Parsed, UsageError> {
+    let limit = match parsed.value("--limit") {
+        Some(raw) => int_option(program, "--limit", raw)?,
+        None => 100,
+    };
+    let args = PageArgs {
+        json: parsed.json,
+        limit,
+        cursor: text(parsed, "--cursor"),
+        active_only: parsed.flag("--active-only"),
+        session_id: text(parsed, "--session-id"),
+        task_ids: text(parsed, "--task-ids"),
+        predecessor: text(parsed, "--predecessor-task-id"),
+    };
+    Ok(Parsed::Page(args))
+}
+/// Options before the command, then the command and the tokens after it.
+type Split<'a> = (Vec<String>, &'a String, &'a [String]);
+fn split_command(argv: &[String]) -> Result<Option<Split<'_>>, UsageError> {
     let mut extras = Vec::new();
     let mut index = 0;
     let mut command = None;
@@ -111,8 +184,9 @@ pub fn parse_ctl(argv: &[String]) -> Result<Parsed, UsageError> {
         }
         let long = token.strip_prefix("--");
         let name = long.map(|body| body.split_once('=').map_or(body, |pair| pair.0));
-        if token == "-h" || name.and_then(|name| resolve(&["--help"], name)).is_some() {
-            return Ok(Parsed::Help(None));
+        let is_help = name.is_some_and(|name| !name.is_empty() && "help".starts_with(name));
+        if token == "-h" || is_help {
+            return Ok(None);
         }
         extras.push(token.clone());
     }
@@ -120,34 +194,114 @@ pub fn parse_ctl(argv: &[String]) -> Result<Parsed, UsageError> {
         let message = "the following arguments are required: command".to_string();
         return Err(error(PROGRAM, message));
     };
-    let rest = argv.get(index..).unwrap_or_default();
-    let (name, program) = match command.as_str() {
-        "version-info" => ("version-info", VERSION_PROGRAM),
-        "state-inspect" => ("state-inspect", "harflow-ctl state-inspect"),
-        other => {
-            let choices = COMMANDS.map(|name| format!("'{name}'")).join(", ");
-            let message =
-                format!("argument command: invalid choice: '{other}' (choose from {choices})");
-            return Err(error(PROGRAM, message));
+    Ok(Some((
+        extras,
+        command,
+        argv.get(index..).unwrap_or_default(),
+    )))
+}
+fn command_options(name: &str) -> Vec<Opt> {
+    match name {
+        "status" => vec![OBSERVER],
+        "status-batch" => vec![TASK_IDS, OBSERVER],
+        "list" => vec![SINCE],
+        "task-list-page" => PAGE_OPTIONS.to_vec(),
+        _ => Vec::new(),
+    }
+}
+/// The value of a parsed command and how many bare tokens it consumed.
+fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), UsageError> {
+    let both = |value| Ok((value, 0));
+    match name {
+        "version-info" => both(Parsed::VersionInfo { json: parsed.json }),
+        "state-inspect" => both(Parsed::StateInspect { json: parsed.json }),
+        "list" => both(parse_list(parsed)?),
+        "status" => {
+            let task_id = parsed
+                .positionals
+                .first()
+                .cloned()
+                .ok_or_else(|| required(program, "task_id"))?;
+            let value = Parsed::Status {
+                json: parsed.json,
+                task_id,
+                observer_parent: parsed.flag("--observer-parent"),
+            };
+            Ok((value, 1))
         }
+        "status-batch" => {
+            let task_ids =
+                text(parsed, "--task-ids").ok_or_else(|| required(program, "--task-ids"))?;
+            both(Parsed::StatusBatch {
+                json: parsed.json,
+                task_ids,
+                observer_parent: parsed.flag("--observer-parent"),
+            })
+        }
+        _ => both(parse_page(program, parsed)?),
+    }
+}
+pub fn parse_ctl(argv: &[String], reads: bool) -> Result<Parsed, UsageError> {
+    let Some((extras, command, rest)) = split_command(argv)? else {
+        return Ok(Parsed::Help(None));
     };
-    let parsed = scan(program, &["--json", "--help"], rest)?;
+    let known = COMMANDS
+        .iter()
+        .chain(READ_COMMANDS.iter().filter(|_| reads))
+        .find(|name| **name == command.as_str());
+    let Some(name) = known.copied() else {
+        let mut choices = COMMANDS.to_vec();
+        if reads {
+            choices.extend(READ_COMMANDS);
+        }
+        let choices = choices
+            .iter()
+            .map(|name| format!("'{name}'"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let message =
+            format!("argument command: invalid choice: '{command}' (choose from {choices})");
+        return Err(error(PROGRAM, message));
+    };
+    let program = if name == "version-info" {
+        VERSION_PROGRAM.to_string()
+    } else {
+        format!("{PROGRAM} {name}")
+    };
+    let parsed = scan(&program, &command_options(name), rest)?;
     if parsed.help {
         return Ok(Parsed::Help(Some(name)));
     }
-    extras.extend(parsed.extras);
-    if !extras.is_empty() {
-        return Err(unrecognized(PROGRAM, &extras));
+    let (value, used) = build(name, &program, &parsed)?;
+    let checked = finish(extras, &parsed, used, value)?;
+    if let Parsed::Page(args) = &checked
+        && args.predecessor.is_some()
+        && args.task_ids.is_some()
+    {
+        let message = "--predecessor-task-id cannot be combined with --task-ids".to_string();
+        return Err(error(PROGRAM, message));
     }
-    Ok(if name == "version-info" {
-        Parsed::VersionInfo { json: parsed.json }
-    } else {
-        Parsed::StateInspect { json: parsed.json }
-    })
+    Ok(checked)
 }
 pub fn help_text(command: Option<&str>) -> String {
     match command {
         Some("version-info") => "usage: harflow-ctl version-info [-h] [--json]\n".to_string(),
+        Some("list") => "usage: harflow-ctl list [-h] [--since SINCE] [--json]\n".to_string(),
+        Some("status") => {
+            "usage: harflow-ctl status [-h] [--json] [--observer-parent] task_id\n".to_string()
+        }
+        Some("status-batch") => concat!(
+            "usage: harflow-ctl status-batch [-h] --task-ids TASK_IDS [--json]\n",
+            "                                [--observer-parent]\n"
+        )
+        .to_string(),
+        Some("task-list-page") => concat!(
+            "usage: harflow-ctl task-list-page [-h] [--json] [--limit LIMIT] [--cursor CURSOR]\n",
+            "                                  [--active-only] [--session-id SESSION_ID]\n",
+            "                                  [--task-ids TASK_IDS]\n",
+            "                                  [--predecessor-task-id PREDECESSOR_TASK_ID]\n"
+        )
+        .to_string(),
         Some(_) => "usage: harflow-ctl state-inspect [-h] [--json]\n".to_string(),
         None => concat!(
             "usage: harflow-ctl [-h] command ...\n\n",

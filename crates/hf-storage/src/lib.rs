@@ -71,6 +71,8 @@ pub enum Error {
     UnsupportedLayout,
     /// Raised only by the read session: the named file could not be used.
     ReadUnavailable(&'static str),
+    /// Raised only by the ctl task reads: a stored row does not decode.
+    MalformedRow,
     TaskReadUnavailable,
     InvalidTaskQuery,
     StaleTaskCursor,
@@ -271,6 +273,11 @@ mod read_refusal;
 mod read_session;
 pub use read_refusal::ReadRefusal;
 pub use read_session::{LEASE_BUDGET, READ_BUDGET, ReadSession};
+mod caller_scan;
+mod snapshot;
+pub mod statements;
+mod task_catalog;
+pub use snapshot::TaskSnapshot;
 mod recovery;
 mod recovery_events;
 pub use recovery::RecoveryReadSession;

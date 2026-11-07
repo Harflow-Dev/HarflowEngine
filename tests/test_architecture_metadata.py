@@ -314,8 +314,13 @@ class ArchitectureMetadataTests(unittest.TestCase):
         path = folder / "services.rs"
         path.write_text("let a = hf_storage::SCHEMA_VERSION; let b = hf_storage :: APPLICATION_ID;\n", encoding="utf-8")
         validate(self.metadata, self.root)
+        path.write_text(
+            "use hf_storage::ReadSession; use hf_storage::Limits; use hf_storage::Error; "
+            "use hf_storage::ReadRefusal; use hf_storage::TaskSnapshot;\n", encoding="utf-8")
+        validate(self.metadata, self.root)
         for text in ("hf_storage::Store::open(x)", "use hf_storage::{SCHEMA_VERSION};", "use hf_storage;",
-                     "hf_storage::SCHEMA_VERSION_EXTRA", "let s = hf_storage::TaskFixture::new();"):
+                     "hf_storage::SCHEMA_VERSION_EXTRA", "let s = hf_storage::TaskFixture::new();",
+                     "hf_storage::ReadSessionExtra", "hf_storage::Store", "hf_storage::RecoveryReadSession"):
             path.write_text(text, encoding="utf-8")
             with self.subTest(text=text), self.assertRaises(ValueError):
                 validate(self.metadata, self.root)

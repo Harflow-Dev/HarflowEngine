@@ -1,0 +1,218 @@
+#![allow(dead_code, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+//! A scripted world behind the task-read ports, rendered through `dispatch`.
+use hf_application::ctl::{
+    state_inspect::RootClass,
+    task_reads::{
+        ProcessViewPort, ReadError, Reads, RootPort, StoreFailure, TaskSnapshotPort, TaskStorePort,
+        ViewFailure,
+    },
+};
+use hf_domain::{
+    ctl::{
+        caller::{EnvMarkers, PidObservation, ProcessView},
+        identity::HostIdentity,
+        inspect::StateInspection,
+        state_root::{InvalidStateRoot, StateRoot},
+        task_rows::{
+            BatchQuery, CallerRow, ProcessRecord, TaskFacts, TaskRecord, TaskSummary, UnobservedRow,
+        },
+    },
+    process::ProcessIdentity,
+    task_read::{Lookup, TaskId},
+};
+use hf_interfaces::ctl::dispatch::{CtlServices, dispatch};
+use serde_json::Value;
+use std::time::Instant;
+
+pub const OTHER: &str = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+pub const ID: &str = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+pub const BOOT: &str = "abcdef01-2345-6789-abcd-ef0123456789";
+
+pub fn args(list: &[&str]) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
+pub struct Fake {
+    pub status: String,
+    pub exit: Option<i64>,
+    pub seen: PidObservation,
+    pub parent: Option<ProcessIdentity>,
+    pub damaged: bool,
+    pub header_extra: &'static str,
+    pub clock: bool,
+    /// A continuation link to a related task whose header is `related_extra`.
+    pub related_extra: Option<&'static str>,
+}
+
+pub fn identity(pid: u32) -> ProcessIdentity {
+    ProcessIdentity::new(pid, 1_700_000_000, 123_456, BOOT.to_string()).unwrap()
+}
+
+impl Fake {
+    fn record(&self) -> TaskRecord {
+        TaskRecord {
+            facts: TaskFacts {
+                id: TaskId::new(ID.to_string()).unwrap(),
+                backend: "claude".into(),
+                repo_path: "/r".into(),
+                session_id: "s".into(),
+                status: self.status.clone(),
+                exit_code: self.exit,
+                started_at: "2026-01-01T00:00:00+00:00".into(),
+                started_at_us: 1_767_225_600_000_000,
+                finished_at: None,
+                finished_at_us: None,
+                output_drained: false,
+                title: None,
+                model: None,
+                continuation_of: self.related_extra.map(|_| TaskId::new(OTHER.to_string()).unwrap()),
+                chain_root: None,
+            },
+            header: format!(r#"{{"task_id":"{ID}"{}}}"#, self.header_extra).into_bytes(),
+            status_blob: Some(format!(r#"{{"task_id":"{ID}","needs_reconciliation":true,"process_identity_state":"dead"}}"#).into_bytes()),
+            process: Some(ProcessRecord { pid: 40, start: Some(identity(40)) }),
+        }
+    }
+}
+
+impl RootPort for Fake {
+    fn classify(&self, _: &StateRoot) -> RootClass {
+        RootClass::MarkedStore
+    }
+}
+impl ProcessViewPort for Fake {
+    fn view(&self, _: Instant) -> Result<ProcessView, ViewFailure> {
+        Ok(ProcessView {
+            pid: 9,
+            session: 3,
+            ancestors: vec![],
+        })
+    }
+    fn observe(&self, _: u32) -> PidObservation {
+        self.seen.clone()
+    }
+}
+impl TaskStorePort for Fake {
+    fn with_snapshot(
+        &self,
+        _: &StateRoot,
+        _: Instant,
+        action: &mut dyn FnMut(&dyn TaskSnapshotPort) -> Result<(), ReadError>,
+    ) -> Result<(), ReadError> {
+        action(self)
+    }
+}
+impl TaskSnapshotPort for Fake {
+    fn damaged(&self) -> Result<bool, StoreFailure> {
+        Ok(self.damaged)
+    }
+    fn related_callers(
+        &self,
+        _: i64,
+        _: &[u32],
+        _: Option<usize>,
+    ) -> Result<Vec<CallerRow>, StoreFailure> {
+        Ok(vec![])
+    }
+    fn lookup(&self, id: &TaskId) -> Result<Lookup, StoreFailure> {
+        Ok(Lookup::Found(id.clone()))
+    }
+    fn summaries(&self, _: &[TaskId]) -> Result<Vec<TaskSummary>, StoreFailure> {
+        Ok(vec![])
+    }
+    fn record(&self, id: &TaskId) -> Result<Option<TaskRecord>, StoreFailure> {
+        if id.as_str() == OTHER {
+            let mut other = self.record();
+            other.facts.id = id.clone();
+            other.facts.continuation_of = None;
+            other.header = format!(
+                r#"{{"task_id":"{OTHER}"{}}}"#,
+                self.related_extra.unwrap_or("")
+            )
+            .into_bytes();
+            other.status_blob = Some(format!(r#"{{"task_id":"{OTHER}"}}"#).into_bytes());
+            return Ok(Some(other));
+        }
+        Ok(Some(self.record()))
+    }
+    fn batch(&self, q: &BatchQuery) -> Result<Vec<TaskRecord>, StoreFailure> {
+        Ok(if q.after.is_some() {
+            vec![]
+        } else {
+            vec![self.record()]
+        })
+    }
+    fn unobserved_count(&self) -> Result<u64, StoreFailure> {
+        Ok(0)
+    }
+    fn unobserved_rows(
+        &self,
+        _: Option<(i64, String)>,
+        _: usize,
+    ) -> Result<Vec<UnobservedRow>, StoreFailure> {
+        Ok(vec![])
+    }
+    fn cursor_scope(
+        &self,
+        _: bool,
+        _: Option<&str>,
+        _: Option<&TaskId>,
+    ) -> Result<String, StoreFailure> {
+        Ok("0".repeat(64))
+    }
+}
+impl CtlServices for Fake {
+    fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot> {
+        Ok(StateRoot::from_normalized("/s".into()))
+    }
+    fn host_identity(&self) -> HostIdentity {
+        HostIdentity::from_rust("macos", "aarch64")
+    }
+    fn inspect(&self, root: &StateRoot) -> StateInspection {
+        StateInspection::new(
+            root,
+            hf_domain::ctl::inspect::InspectStatus::Ready,
+            hf_domain::ctl::inspect::InspectReason::Compatible,
+            vec![],
+        )
+    }
+    fn store_reads_supported(&self) -> bool {
+        true
+    }
+    fn reads(&self) -> Option<Reads<'_>> {
+        Some(Reads {
+            roots: self,
+            store: self,
+            process: self,
+            markers: EnvMarkers::default(),
+            deadline: Instant::now() + std::time::Duration::from_secs(600),
+        })
+    }
+    fn now_micros(&self) -> Option<i64> {
+        self.clock.then_some(1_800_000_000_000_000)
+    }
+    fn observer_parent(&self) -> Option<ProcessIdentity> {
+        self.parent.clone()
+    }
+}
+
+pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
+    Fake {
+        status: status.into(),
+        exit,
+        seen,
+        parent: Some(identity(77)),
+        damaged: false,
+        header_extra: "",
+        clock: true,
+        related_extra: None,
+    }
+}
+
+pub fn task(fake: &Fake, extra: &[&str]) -> Value {
+    let mut list = vec!["status", ID, "--json"];
+    list.extend_from_slice(extra);
+    let out = dispatch(&args(&list), fake);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    serde_json::from_str::<Value>(&out.stdout).unwrap()["task"].clone()
+}
