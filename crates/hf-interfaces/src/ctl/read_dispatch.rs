@@ -3,7 +3,7 @@ use super::{
     cli::{PageArgs, Parsed},
     cursor,
     dispatch::{CtlServices, Outcome, invalid_choice},
-    history_dispatch, read_docs,
+    feed_dispatch, history_dispatch, read_docs,
     read_errors::{ErrorDoc, ReadPath, describe, inconsistent},
     render,
     task_docs::Inconsistent,
@@ -144,6 +144,9 @@ pub(super) fn run_read(parsed: &Parsed, root: &StateRoot, services: &dyn CtlServ
         Parsed::Events(args) => history_dispatch::events(&read, root, args, now),
         Parsed::Prompt(args) => history_dispatch::prompt(&read, root, args),
         Parsed::Artifacts(args) => history_dispatch::artifacts(&read, root, args, services, now),
+        Parsed::Recovery(args) => feed_dispatch::recovery(&read, root, args),
+        Parsed::Interactions(args) => feed_dispatch::interactions(&read, root, args),
+        Parsed::Statistics(args) => feed_dispatch::statistics(&read, root, args, services),
         other => invalid_choice(command_name(other), false),
     }
 }
@@ -157,6 +160,9 @@ fn command_name(parsed: &Parsed) -> &'static str {
         Parsed::Events(_) => "task-events",
         Parsed::Prompt(_) => "task-prompt",
         Parsed::Artifacts(_) => "task-artifacts",
+        Parsed::Recovery(_) => "recovery-activity",
+        Parsed::Interactions(_) => "interaction-events",
+        Parsed::Statistics(_) => "statistics-page",
         Parsed::StateInspect { .. } => "state-inspect",
         Parsed::VersionInfo { .. } => "version-info",
         Parsed::Help(_) => "help",

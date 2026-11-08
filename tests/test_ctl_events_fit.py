@@ -215,7 +215,19 @@ class WalkTests(FitCase):
         done = self.read_page(root, "--limit", "200")
         utf8, ascii_size = printed(done)
         self.assertLessEqual(ascii_size, CAP)
-        self.assertLess(utf8, ascii_size * 0.6, "the page was sized by bytes, not by escapes")
+        # The document is written with ensure_ascii. The oracle is independent of the engine's own
+        # sizing: the escaped spelling of the seeded text is fixed by `json.dumps` of the text itself
+        # (24 bytes a repetition), so every event adds at least that many printed bytes, and the
+        # printed bytes are all ASCII.
+        escaped = json.dumps(text)[1:-1]
+        self.assertEqual(len(escaped), 24 * 600)
+        self.assertTrue(done.stdout.isascii())
+        self.assertEqual(utf8, len(done.stdout))
+        count = done.stdout.count(escaped)
+        self.assertGreater(count, 5)
+        self.assertGreaterEqual(utf8, count * len(escaped))
+        self.assertLessEqual(utf8, CAP)
+        self.assertEqual(utf8, ascii_size, "the page was printed by the escapes it was sized by")
         page = json.loads(done.stdout)["result"]
         one_more = len(json.dumps(page["events"][0])) + 2
         self.assertGreater(ascii_size + one_more, CAP, "the page is the largest that fits")

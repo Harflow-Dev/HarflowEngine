@@ -1,7 +1,9 @@
 #![allow(dead_code, unused_imports)]
 //! A scripted world behind the task-read ports: a root class, a process table, records and
 //! a log of every port call, so the order and the number of calls can be asserted.
+mod feed;
 mod history;
+pub use feed::{FeedWorld, row, source, stat_facts};
 use hf_application::ctl::task_reads::ReadError;
 use hf_application::ctl::{
     state_inspect::RootClass,
@@ -108,6 +110,7 @@ pub struct World {
     pub open_error: Option<StoreFailure>,
     pub log: RefCell<Vec<String>>,
     pub history: History,
+    pub feed: FeedWorld,
 }
 
 impl World {
@@ -129,6 +132,7 @@ impl World {
             open_error: None,
             log: RefCell::new(Vec::new()),
             history: History::default(),
+            feed: FeedWorld::default(),
         }
     }
 
@@ -158,7 +162,7 @@ impl World {
             .collect()
     }
 
-    fn note(&self, entry: String) {
+    pub(crate) fn note(&self, entry: String) {
         self.log.borrow_mut().push(entry);
     }
 }

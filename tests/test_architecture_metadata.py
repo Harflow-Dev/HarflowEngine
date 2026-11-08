@@ -286,6 +286,31 @@ class ArchitectureMetadataTests(unittest.TestCase):
             (folder / "good.rs").write_text("pub fn inspect() {}\n", encoding="utf-8")
         validate(self.metadata, self.root)
 
+    def test_the_contract_key_exemption_covers_only_the_exact_quoted_key(self):
+        folder = self.root / ARCHITECTURE.CTL_TREES[0]
+        folder.mkdir(parents=True, exist_ok=True)
+        self.assertEqual(ARCHITECTURE.CTL_CONTRACT_KEYS, {"time_qualification"})
+        path = folder / "keys.rs"
+        for text in ('"time_qualification"', 'json!({"time_qualification": 1})',
+                     '"time_qualification" "time_qualification"'):
+            path.write_text(f"const K: &str = {text};\n", encoding="utf-8")
+            with self.subTest(accepted=text):
+                validate(self.metadata, self.root)
+        for label, text in (
+            ("comment", "// the qualification of the time\n"),
+            ("comment naming the key", "// time_qualification\n"),
+            ("identifier", "fn time_qualification_x() {}\n"),
+            ("quoted longer key", 'const K: &str = "time_qualification_x";\n'),
+            ("quoted prefixed key", 'const K: &str = "xtime_qualification";\n'),
+            ("unquoted", "let time_qualification = 1;\n"),
+            ("single quoted", "let k = 'time_qualification';\n"),
+            ("quoted key beside an unquoted one", 'let a = "time_qualification"; let b = time_qualification;\n'),
+        ):
+            path.write_text(text, encoding="utf-8")
+            with self.subTest(rejected=label), self.assertRaisesRegex(ValueError, "ctl code"):
+                validate(self.metadata, self.root)
+        path.unlink()
+
     def test_ctl_module_roots_are_scanned(self):
         for relative in ARCHITECTURE.CTL_ROOTS:
             path = self.root / relative

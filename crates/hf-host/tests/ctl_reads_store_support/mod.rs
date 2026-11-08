@@ -116,7 +116,29 @@ pub fn ctl(root: &Path, args: &[&str]) -> Output {
         .unwrap()
 }
 
+/// The document with the whitespace between its tokens removed: the transport writes Python's
+/// default separators, and these tests read values, not spacing.
+pub fn compact_json(document: &str) -> String {
+    let mut out = String::with_capacity(document.len());
+    let (mut quoted, mut escaped) = (false, false);
+    for ch in document.chars() {
+        if quoted {
+            out.push(ch);
+            match (escaped, ch) {
+                (true, _) => escaped = false,
+                (false, '\\') => escaped = true,
+                (false, '"') => quoted = false,
+                _ => {}
+            }
+        } else if !ch.is_whitespace() {
+            quoted = ch == '"';
+            out.push(ch);
+        }
+    }
+    out
+}
+
 pub fn text(output: &Output) -> String {
     let _ = &output.stderr;
-    String::from_utf8(output.stdout.clone()).unwrap()
+    compact_json(&String::from_utf8(output.stdout.clone()).unwrap())
 }

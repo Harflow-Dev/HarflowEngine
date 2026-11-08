@@ -1,6 +1,7 @@
 //! A listing header is at most 2 KiB; full content stays on the direct detail route. The
 //! sizes are those of Python's `json.dumps(..., ensure_ascii=True)`, which the contract's
 //! budget was written against.
+use super::py_float::{Exact, Place, number_text, segment};
 use serde_json::{Map, Value, json};
 
 const HEADER_BYTES: usize = 2048;
@@ -52,28 +53,76 @@ const METADATA: [&str; 9] = [
 
 /// The serialized size of `value` as Python's `json.dumps` with `ensure_ascii` writes it.
 pub fn python_size(value: &Value) -> usize {
-    sized(value, true)
+    python_size_with(value, None)
+}
+
+/// As `python_size`, counting `exact` where it points.
+pub fn python_size_with(value: &Value, exact: Option<Exact<'_>>) -> usize {
+    sized(value, Style::ASCII, &mut Place::new(exact))
 }
 
 /// As `python_size` with `ensure_ascii=False`: non-ASCII text counts as UTF-8 bytes.
 pub fn utf8_size(value: &Value) -> usize {
-    sized(value, false)
+    sized(value, Style::UTF8, &mut Place::new(None))
 }
 
-fn sized(value: &Value, ascii: bool) -> usize {
+/// As `python_size` with `separators=(",", ":")`, counting `exact` where it points.
+pub fn compact_size_with(value: &Value, exact: Option<Exact<'_>>) -> usize {
+    sized(value, Style::COMPACT, &mut Place::new(exact))
+}
+
+/// How `json.dumps` was asked to write: whether non-ASCII text is escaped, and the bytes of
+/// the item and key separators.
+#[derive(Clone, Copy)]
+struct Style {
+    ascii: bool,
+    item: usize,
+    key: usize,
+}
+
+impl Style {
+    const ASCII: Self = Self {
+        ascii: true,
+        item: 2,
+        key: 2,
+    };
+    const UTF8: Self = Self {
+        ascii: false,
+        item: 2,
+        key: 2,
+    };
+    const COMPACT: Self = Self {
+        ascii: true,
+        item: 1,
+        key: 1,
+    };
+}
+
+fn sized(value: &Value, style: Style, at: &mut Place<'_>) -> usize {
+    if let Some(digits) = at.exact_here() {
+        return digits.len();
+    }
     match value {
-        Value::String(text) => string_size(text, ascii),
+        Value::String(text) => string_size(text, style.ascii),
         Value::Array(items) => {
-            2 + items.iter().map(|item| sized(item, ascii)).sum::<usize>()
-                + 2 * items.len().saturating_sub(1)
+            let mut total = 2 + style.item * items.len().saturating_sub(1);
+            for (index, item) in items.iter().enumerate() {
+                let mark = at.enter(|| index.to_string());
+                total += sized(item, style, at);
+                at.leave(mark);
+            }
+            total
         }
         Value::Object(map) => {
-            let members: usize = map
-                .iter()
-                .map(|(key, item)| string_size(key, ascii) + 2 + sized(item, ascii))
-                .sum();
-            2 + members + 2 * map.len().saturating_sub(1)
+            let mut total = 2 + style.item * map.len().saturating_sub(1);
+            for (key, item) in map {
+                let mark = at.enter(|| segment(key));
+                total += string_size(key, style.ascii) + style.key + sized(item, style, at);
+                at.leave(mark);
+            }
+            total
         }
+        Value::Number(number) => number_text(number).len(),
         other => other.to_string().len(),
     }
 }

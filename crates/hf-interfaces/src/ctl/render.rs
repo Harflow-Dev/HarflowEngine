@@ -20,15 +20,13 @@ pub fn stamp(format: &str, payload: Value) -> Value {
     map.insert("product_version".into(), json!(PRODUCT_VERSION));
     Value::Object(map)
 }
+/// One line of compact JSON with Python's float spelling, newline-terminated.
 pub fn line(value: &Value) -> String {
-    let mut text = value.to_string();
-    text.push('\n');
-    text
+    super::py_float::line(value)
 }
+/// Indented JSON with Python's float spelling, newline-terminated.
 pub fn pretty(value: &Value) -> String {
-    let mut text = serde_json::to_string_pretty(value).unwrap_or_default();
-    text.push('\n');
-    text
+    super::py_float::pretty(value)
 }
 pub fn usage_error(format: &str, message: &str) -> Value {
     stamp(

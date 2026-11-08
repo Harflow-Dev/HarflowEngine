@@ -98,6 +98,40 @@ impl CtlServices for HostServices {
             .ok()
             .and_then(|elapsed| i64::try_from(elapsed.as_micros()).ok())
     }
+    /// A debug-only test seam: `HARFLOW_STATISTICS_BUDGET_MS` replaces the two-second budget so
+    /// a test can exhaust it on a small store. A release build always uses the default.
+    fn statistics_budget(&self) -> std::time::Duration {
+        let default = hf_application::ctl::task_reads::STATISTICS_BUDGET;
+        #[cfg(debug_assertions)]
+        {
+            std::env::var("HARFLOW_STATISTICS_BUDGET_MS")
+                .ok()
+                .and_then(|text| text.parse::<u64>().ok())
+                .map_or(default, std::time::Duration::from_millis)
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            default
+        }
+    }
+    /// A debug-only test seam: `HARFLOW_STATISTICS_EXPIRE_AFTER_ROWS=N` counts the statistics
+    /// budget as spent once N rows are read. It can only shorten the budget, and a release
+    /// build never reads it.
+    fn statistics_expire_after_rows(&self) -> Option<usize> {
+        #[cfg(debug_assertions)]
+        {
+            std::env::var("HARFLOW_STATISTICS_EXPIRE_AFTER_ROWS")
+                .ok()
+                .and_then(|text| text.parse::<usize>().ok())
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            None
+        }
+    }
+    fn retention_days(&self) -> Option<String> {
+        std::env::var_os("HARFLOW_RETENTION_DAYS").map(|value| value.to_string_lossy().into_owned())
+    }
     fn observer_parent(&self) -> Option<ProcessIdentity> {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {

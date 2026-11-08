@@ -51,7 +51,7 @@ pub fn decode(raw: &str) -> EventCursorArg {
 /// The reference engine's decoder, `base64.b64decode(cursor, altchars=b"-_", validate=True)`:
 /// `-` and `_` stand for `+` and `/`, so both alphabets are read; padding is required and
 /// exact; nothing else may appear, whitespace included; non-zero trailing bits are allowed.
-fn reference_decode(raw: &str) -> Option<Vec<u8>> {
+pub(super) fn reference_decode(raw: &str) -> Option<Vec<u8>> {
     let engine = GeneralPurpose::new(
         &alphabet::STANDARD,
         GeneralPurposeConfig::new().with_decode_allow_trailing_bits(true),

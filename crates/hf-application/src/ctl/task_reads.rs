@@ -5,6 +5,8 @@
 //! and the read. Nothing a refused caller could learn is read before the gate.
 mod artifacts;
 mod events;
+mod feed;
+pub mod feed_ports;
 mod gate;
 mod history;
 pub mod history_ports;
@@ -13,13 +15,18 @@ mod page;
 mod page_parts;
 mod page_query;
 pub mod ports;
+mod recovery;
 mod resolve;
 mod single;
+mod statistics;
+mod statistics_page;
 
 pub use artifacts::{
     ArtifactCursorArg, ArtifactEntry, ArtifactPage, ArtifactRequest, NextCursor, artifacts,
 };
 pub use events::{EventCursorArg, EventsOut, EventsRequest, events};
+pub use feed::{FeedCursorArg, FeedGap, FeedPage, FeedRequest, interaction_events};
+pub use feed_ports::{FeedPort, ScanBatch, ScanFailure, ScanRow};
 pub use history::{PromptOut, prompt};
 pub use history_ports::{ArtifactTargetPort, EventFailure, HistoryPort};
 pub use list::list;
@@ -27,8 +34,14 @@ pub use page::{Counts, CursorArg, ItemSize, PageMode, PageOut, PageRequest, page
 pub use ports::{
     ProcessViewPort, RootPort, StoreFailure, TaskSnapshotPort, TaskStorePort, ViewFailure,
 };
+pub use recovery::{RecoveryOut, recovery_activity};
 pub use resolve::missing_resolution;
 pub use single::{BatchOut, BatchRow, StatusOut, status, status_batch, status_with};
+pub use statistics::{
+    EMPTY_GENERATION, SESSION_MARGIN, STATISTICS_BUDGET, StatsCursorArg, StatsRequest, statistics,
+    statistics_limited, statistics_within,
+};
+pub use statistics_page::{StatsMeta, StatsOut, StatsPage, StatsSizing};
 
 use hf_domain::ctl::{
     caller::{EnvMarkers, RefusalKind},
@@ -103,6 +116,12 @@ pub enum ReadError {
     CursorInvalid,
     /// A well-formed event cursor that no longer applies.
     CursorExpired,
+    /// A failure with its own wire code and message: a refusal of the feed and statistics
+    /// requests, or an unknown task without a resolution diagnostic.
+    Coded {
+        code: &'static str,
+        message: String,
+    },
 }
 
 impl From<StoreFailure> for ReadError {

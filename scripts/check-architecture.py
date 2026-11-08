@@ -30,6 +30,9 @@ CTL_CRATES = ("hf-domain", "hf-application", "hf-platform", "hf-interfaces", "hf
 CTL_TREES = [f"crates/{crate}/src/ctl" for crate in CTL_CRATES]
 CTL_ROOTS = [f"crates/{crate}/src/ctl.rs" for crate in CTL_CRATES]
 CTL_FORBIDDEN = re.compile(r"fixture|owner_runtime|st04|qualification|probe", re.IGNORECASE)
+# Wire keys that contracts/v1 requires verbatim and that contain a forbidden word. Only the exact
+# quoted occurrence is exempt; widening this set is a deliberate reviewed edit.
+CTL_CONTRACT_KEYS = {"time_qualification"}
 CTL_REDIRECT = re.compile(r"#\s*!?\s*\[\s*path\b|\binclude(_str|_bytes)?\s*!")
 HOST_CTL_TREE = "crates/hf-host/src/ctl"
 # Widening this list is a deliberate edit: a new opener or writer must be reviewed here.
@@ -47,6 +50,8 @@ def check_ctl_sources(root):
         files.extend((root / tree).rglob("*.rs"))
     for path in files:
         text = path.read_text(encoding="utf-8")
+        for key in CTL_CONTRACT_KEYS:
+            text = text.replace(f'"{key}"', '""')
         found = CTL_FORBIDDEN.search(text)
         if found:
             raise ValueError(f"Forbidden name {found.group(0)!r} in ctl code: {path}")

@@ -55,8 +55,8 @@ fn a_root_from_the_real_initializer_inspects_as_ready_without_changes() {
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
     let text = String::from_utf8(output.stdout).unwrap();
-    assert!(text.contains("\"status\":\"ready\""), "{text}");
-    assert!(text.contains("\"reason\":\"compatible\""), "{text}");
+    assert!(text.contains("\"status\": \"ready\""), "{text}");
+    assert!(text.contains("\"reason\": \"compatible\""), "{text}");
     let mut after = BTreeMap::new();
     tree(&scratch.0, &mut after);
     assert_eq!(before, after);

@@ -1,5 +1,5 @@
 //! Error documents of the task reads: code, message and data, per path.
-use super::cli_scan::py_repr;
+use super::{cli_scan::py_repr, read_errors_feeds};
 use hf_application::ctl::task_reads::{ReadError, Resolution, StoreFailure, UnknownReason};
 use hf_domain::ctl::{caller::RefusalKind, identity::PRODUCT_VERSION, inspect::InspectReason};
 use serde_json::{Map, Value, json};
@@ -17,6 +17,10 @@ pub enum ReadPath {
     History,
     /// `task-artifacts`: every failure is an artifact error.
     Artifacts,
+    /// `interaction-events`, a direct-only read with one refusal code.
+    Interactions,
+    /// `statistics-page`, a direct-only read.
+    Statistics,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,7 +31,7 @@ pub struct ErrorDoc {
 }
 
 impl ErrorDoc {
-    fn new(code: &'static str, message: impl Into<String>) -> Self {
+    pub(super) fn new(code: &'static str, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),
@@ -99,6 +103,9 @@ fn refusal(path: ReadPath, kind: RefusalKind) -> ErrorDoc {
             "artifact_error",
             format!("Task artifacts are refused: {who}"),
         ),
+        (ReadPath::Interactions | ReadPath::Statistics, _) => {
+            read_errors_feeds::refusal(path, kind, who)
+        }
     }
 }
 
@@ -239,6 +246,7 @@ pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc
         ),
         ReadError::InvalidParams(message) => ErrorDoc::new("invalid_params", message.clone()),
         ReadError::Resolution(found) => resolution(found),
+        ReadError::Coded { code, message } => ErrorDoc::new(code, message.clone()),
         ReadError::PendingLaunch(raw) => ErrorDoc::new(
             "task_pending_launch",
             format!(

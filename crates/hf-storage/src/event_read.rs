@@ -135,13 +135,7 @@ pub(crate) fn stream_optional(db: &Connection, task: &TaskId) -> Result<Option<S
     {
         return Err(Error::EventReadUnavailable);
     }
-    let capture = match capture {
-        0 => CaptureState::Live,
-        1 => CaptureState::LostWithOwner,
-        2 => CaptureState::ObservedTerminal,
-        3 => CaptureState::Unknown,
-        _ => return Err(Error::EventReadUnavailable),
-    };
+    let capture = capture_of(capture).ok_or(Error::EventReadUnavailable)?;
     let mut stream = Stream {
         generation,
         complete_end: end as u64,
@@ -165,6 +159,16 @@ pub(crate) fn stream_optional(db: &Connection, task: &TaskId) -> Result<Option<S
     }
     validate_final(db, task, &mut stream)?;
     Ok(Some(stream))
+}
+/// The capture a stream row stores as a number.
+pub(crate) fn capture_of(code: i64) -> Option<CaptureState> {
+    match code {
+        0 => Some(CaptureState::Live),
+        1 => Some(CaptureState::LostWithOwner),
+        2 => Some(CaptureState::ObservedTerminal),
+        3 => Some(CaptureState::Unknown),
+        _ => None,
+    }
 }
 fn boolean(value: i64) -> Result<bool> {
     match value {

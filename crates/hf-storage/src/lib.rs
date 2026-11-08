@@ -274,6 +274,7 @@ mod read_session;
 pub use read_refusal::ReadRefusal;
 pub use read_session::{LEASE_BUDGET, READ_BUDGET, ReadSession};
 mod caller_scan;
+mod feed_reads;
 mod history_reads;
 mod recent_reads;
 mod snapshot;

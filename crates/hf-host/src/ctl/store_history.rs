@@ -1,18 +1,21 @@
 //! The history queries of the read-only snapshot: event pages, prompts and artifacts.
 use super::store_reads::{Snapshot, failure, read};
 use hf_application::{
-    ctl::task_reads::{EventFailure, HistoryPort, StoreFailure},
+    ctl::task_reads::{EventFailure, FeedPort, HistoryPort, ScanBatch, ScanFailure, StoreFailure},
     event_read::EventReadResult,
 };
 use hf_domain::{
     ctl::{
+        feed::FeedSource,
         history::{ArtifactItem, LogObject, ManifestHead, StoredPrompt},
+        statistics::GenerationEntry,
         task_rows::TaskRecord,
     },
-    event_read::EventQuery,
+    event_read::{CaptureState, EventQuery},
     task_read::TaskId,
 };
 use hf_storage::Error;
+use std::time::Instant;
 
 impl HistoryPort for Snapshot<'_, '_> {
     fn event_page(&self, query: &EventQuery) -> Result<EventReadResult, EventFailure> {
@@ -60,5 +63,39 @@ impl HistoryPort for Snapshot<'_, '_> {
     }
     fn workflow_builder(&self, id: &TaskId) -> Result<bool, StoreFailure> {
         read(self.0.workflow_builder(id))
+    }
+}
+
+impl FeedPort for Snapshot<'_, '_> {
+    fn stream_capture(&self, id: &TaskId) -> Result<Option<CaptureState>, StoreFailure> {
+        read(self.0.stream_capture(id))
+    }
+    fn feed_sources(&self, after: &str, limit: usize) -> Result<Vec<FeedSource>, StoreFailure> {
+        read(self.0.feed_sources(after, limit))
+    }
+    fn feed_source(&self, id: &str) -> Result<Option<FeedSource>, StoreFailure> {
+        read(self.0.feed_source(id))
+    }
+    fn history_rows(&self, limit: usize) -> Result<usize, StoreFailure> {
+        read(self.0.history_rows(limit))
+    }
+    fn valid_rows(&self, limit: usize) -> Result<usize, StoreFailure> {
+        read(self.0.valid_rows(limit))
+    }
+    fn statistics_batch(
+        &self,
+        after: Option<&str>,
+        deadline: Instant,
+    ) -> Result<ScanBatch, ScanFailure> {
+        self.0
+            .statistics_batch(after, deadline)
+            .map_err(|error| match error {
+                Error::DeadlineExceeded => ScanFailure::Deadline,
+                Error::LimitExceeded => ScanFailure::Limit,
+                other => ScanFailure::Store(failure(&other)),
+            })
+    }
+    fn statistics_generation(&self, entries: &[GenerationEntry]) -> Result<String, StoreFailure> {
+        read(self.0.statistics_generation(entries))
     }
 }

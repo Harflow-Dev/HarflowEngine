@@ -1,6 +1,7 @@
 //! The argparse-compatible token scan shared by every command: options with and without a
 //! value, `--opt=value`, unique prefixes, the `--` terminator, positionals and integers.
 use super::cli::UsageError;
+use hf_domain::ctl::py_int::parse;
 
 #[derive(Clone, Copy)]
 pub(super) struct Opt {
@@ -138,27 +139,8 @@ pub(super) fn scan(program: &str, options: &[Opt], args: &[String]) -> Result<Sc
     Ok(result)
 }
 
-/// Python's `int(text)` for the spellings an option value can take.
-pub(super) fn py_int(text: &str) -> Option<i64> {
-    let trimmed = text.trim();
-    let (negative, digits) = match trimmed.strip_prefix('-') {
-        Some(rest) => (true, rest),
-        None => (false, trimmed.strip_prefix('+').unwrap_or(trimmed)),
-    };
-    let well_formed = !digits.is_empty()
-        && !digits.starts_with('_')
-        && !digits.ends_with('_')
-        && !digits.contains("__")
-        && digits.bytes().all(|b| b.is_ascii_digit() || b == b'_');
-    if !well_formed {
-        return None;
-    }
-    let magnitude: i64 = digits.replace('_', "").parse().ok()?;
-    Some(if negative { -magnitude } else { magnitude })
-}
-
 pub(super) fn int_option(program: &str, flag: &str, text: &str) -> Result<i64, UsageError> {
-    py_int(text).ok_or_else(|| {
+    parse(text).map(|value| value.saturating()).ok_or_else(|| {
         error(
             program,
             format!("argument {flag}: invalid int value: {}", py_repr(text)),

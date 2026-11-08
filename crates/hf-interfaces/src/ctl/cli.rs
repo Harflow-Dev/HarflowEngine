@@ -1,5 +1,7 @@
 //! argparse-compatible parsing for the implemented paths. Every other path is an
 //! invalid choice. Accepts `--opt=value`, a `--` terminator and unique prefixes.
+use super::cli_feeds::{self, PAGING_OPTIONS, STATISTICS_OPTIONS};
+pub use super::cli_feeds::{InteractionArgs, RecoveryArgs, StatisticsArgs};
 use super::cli_history::{self, ARTIFACT_OPTIONS, EVENT_OPTIONS, PROMPT_OPTIONS};
 pub use super::cli_history::{ArtifactArgs, EventArgs, PromptArgs};
 use super::cli_scan::{Opt, Scan, duration_seconds, error, int_option, py_repr, scan};
@@ -9,7 +11,7 @@ pub const VERSION_PROGRAM: &str = "harflow-ctl version-info";
 /// Commands that need no store.
 pub const COMMANDS: [&str; 2] = ["version-info", "state-inspect"];
 /// Commands that read the store, in the order the usage text lists them.
-pub const READ_COMMANDS: [&str; 7] = [
+pub const READ_COMMANDS: [&str; 10] = [
     "list",
     "status",
     "status-batch",
@@ -17,6 +19,9 @@ pub const READ_COMMANDS: [&str; 7] = [
     "task-events",
     "task-prompt",
     "task-artifacts",
+    "recovery-activity",
+    "interaction-events",
+    "statistics-page",
 ];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UsageError {
@@ -63,6 +68,9 @@ pub enum Parsed {
     Events(EventArgs),
     Prompt(PromptArgs),
     Artifacts(ArtifactArgs),
+    Recovery(RecoveryArgs),
+    Interactions(InteractionArgs),
+    Statistics(StatisticsArgs),
 }
 fn unrecognized(program: &str, extras: &[String]) -> UsageError {
     error(
@@ -224,6 +232,8 @@ fn command_options(name: &str) -> Vec<Opt> {
         "task-events" => EVENT_OPTIONS.to_vec(),
         "task-prompt" => PROMPT_OPTIONS.to_vec(),
         "task-artifacts" => ARTIFACT_OPTIONS.to_vec(),
+        "recovery-activity" | "interaction-events" => PAGING_OPTIONS.to_vec(),
+        "statistics-page" => STATISTICS_OPTIONS.to_vec(),
         "status-batch" => vec![TASK_IDS, OBSERVER],
         "list" => vec![SINCE],
         "task-list-page" => PAGE_OPTIONS.to_vec(),
@@ -263,6 +273,9 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
         "task-events" => Ok((cli_history::events(program, parsed)?, 1)),
         "task-prompt" => Ok((cli_history::prompt(program, parsed)?, 1)),
         "task-artifacts" => Ok((cli_history::artifacts(program, parsed)?, 1)),
+        "recovery-activity" => Ok((cli_feeds::recovery(program, parsed)?, 1)),
+        "interaction-events" => both(cli_feeds::interactions(program, parsed)?),
+        "statistics-page" => both(cli_feeds::statistics(program, parsed)?),
         _ => both(parse_page(program, parsed)?),
     }
 }
@@ -310,6 +323,9 @@ pub fn parse_ctl(argv: &[String], reads: bool) -> Result<Parsed, UsageError> {
     Ok(checked)
 }
 pub fn help_text(command: Option<&str>) -> String {
+    if let Some(text) = command.and_then(cli_feeds::help) {
+        return text;
+    }
     match command {
         Some("version-info") => "usage: harflow-ctl version-info [-h] [--json]\n".to_string(),
         Some("list") => "usage: harflow-ctl list [-h] [--since SINCE] [--json]\n".to_string(),

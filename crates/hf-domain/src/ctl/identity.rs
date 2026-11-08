@@ -11,8 +11,13 @@ pub const PROGRAM: &str = "harflow-ctl";
 pub const CAPABILITIES: [&str; 2] = ["ctl.v1", "version-info.v1"];
 /// Advertised only where the store-backed reads exist (macOS arm64), after the paths they
 /// qualify pass. The rest of the read surface sits under `ctl.v1`.
-pub const STORE_READ_CAPABILITIES: [&str; 3] =
-    ["task-successors.v1", "task-event-page.v1", "task-prompt.v1"];
+pub const STORE_READ_CAPABILITIES: [&str; 5] = [
+    "task-successors.v1",
+    "task-event-page.v1",
+    "task-prompt.v1",
+    "interaction-events.v1",
+    "statistics-page.v1",
+];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostIdentity {
     pub os: String,

@@ -83,9 +83,9 @@ fn observations_are_printed_as_exact_integers() {
     let out = dispatch(&args(&["task-artifacts", ID, "--json"]), &fake);
     assert_eq!(out.code, 0, "{}", out.stderr);
     for wanted in [
-        "\"device\":18446744073709551615",
-        "\"inode\":18446744073709551614",
-        "\"mtime_ns\":-9223372036854775808",
+        "\"device\": 18446744073709551615",
+        "\"inode\": 18446744073709551614",
+        "\"mtime_ns\": -9223372036854775808",
     ] {
         assert!(out.stdout.contains(wanted), "{wanted}: {}", out.stdout);
     }

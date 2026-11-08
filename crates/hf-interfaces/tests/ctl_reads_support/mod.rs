@@ -1,6 +1,9 @@
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 //! A scripted world behind the task-read ports, rendered through `dispatch`.
+mod feed;
 mod history;
+#[allow(unused_imports)]
+pub use feed::{Feeds, facts};
 use hf_application::ctl::{
     state_inspect::RootClass,
     task_reads::{
@@ -53,6 +56,11 @@ pub struct Fake {
     pub root_marker: bool,
     /// Members added to the status blob, each as `,"key":value`.
     pub status_extra: &'static str,
+    pub feed: Feeds,
+    /// The value of `HARFLOW_RETENTION_DAYS`.
+    pub retention: Option<String>,
+    /// The state root the services resolve.
+    pub root: String,
 }
 
 pub fn identity(pid: u32) -> ProcessIdentity {
@@ -174,7 +182,7 @@ impl TaskSnapshotPort for Fake {
 }
 impl CtlServices for Fake {
     fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot> {
-        Ok(StateRoot::from_normalized("/s".into()))
+        Ok(StateRoot::from_normalized(self.root.clone()))
     }
     fn host_identity(&self) -> HostIdentity {
         HostIdentity::from_rust("macos", "aarch64")
@@ -201,6 +209,9 @@ impl CtlServices for Fake {
     }
     fn now_micros(&self) -> Option<i64> {
         self.clock.then_some(1_800_000_000_000_000)
+    }
+    fn retention_days(&self) -> Option<String> {
+        self.retention.clone()
     }
     fn observer_parent(&self) -> Option<ProcessIdentity> {
         self.parent.clone()
@@ -230,6 +241,9 @@ pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
         artifact_support: true,
         root_marker: false,
         status_extra: "",
+        feed: Feeds::default(),
+        retention: None,
+        root: "/s".into(),
     }
 }
 

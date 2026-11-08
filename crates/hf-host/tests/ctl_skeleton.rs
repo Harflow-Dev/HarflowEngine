@@ -98,6 +98,28 @@ fn stdout(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).unwrap()
 }
 
+/// The document with the whitespace between its tokens removed: the transport writes Python's
+/// default separators, and these tests read values, not spacing.
+fn compact_json(document: &str) -> String {
+    let mut out = String::with_capacity(document.len());
+    let (mut quoted, mut escaped) = (false, false);
+    for ch in document.chars() {
+        if quoted {
+            out.push(ch);
+            match (escaped, ch) {
+                (true, _) => escaped = false,
+                (false, '\\') => escaped = true,
+                (false, '"') => quoted = false,
+                _ => {}
+            }
+        } else if !ch.is_whitespace() {
+            quoted = ch == '"';
+            out.push(ch);
+        }
+    }
+    out
+}
+
 fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
 }
@@ -124,7 +146,7 @@ fn state_inspect_of_a_missing_root_exits_zero_and_creates_nothing() {
     let before = scratch.tree();
     let output = scratch.run(&["state-inspect", "--json"], Some(&state));
     assert_eq!(output.status.code(), Some(0));
-    assert!(stdout(&output).contains("\"status\":\"missing\""));
+    assert!(compact_json(&stdout(&output)).contains("\"status\":\"missing\""));
     assert_eq!(scratch.tree(), before);
     assert!(fs::symlink_metadata(&state).is_err());
 }
@@ -135,7 +157,7 @@ fn state_inspect_of_the_default_root_creates_nothing_under_home() {
     let before = scratch.tree();
     let output = scratch.run(&["state-inspect", "--json"], None);
     assert_eq!(output.status.code(), Some(0));
-    assert!(stdout(&output).contains("\"status\":\"missing\""));
+    assert!(compact_json(&stdout(&output)).contains("\"status\":\"missing\""));
     assert_eq!(scratch.tree(), before);
 }
 
@@ -193,6 +215,9 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
             "task-events",
             "task-prompt",
             "task-artifacts",
+            "recovery-activity",
+            "interaction-events",
+            "statistics-page",
         ]);
     }
     for command in commands {
@@ -294,6 +319,6 @@ fn a_symlinked_existing_root_is_reported_without_following_it() {
     let before = scratch.tree();
     let output = scratch.run(&["state-inspect", "--json"], Some(&link));
     assert_eq!(output.status.code(), Some(0));
-    assert!(stdout(&output).contains("\"reason\":\"unsafe_root\""));
+    assert!(compact_json(&stdout(&output)).contains("\"reason\":\"unsafe_root\""));
     assert_eq!(scratch.tree(), before);
 }

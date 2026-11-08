@@ -40,6 +40,18 @@ pub trait CtlServices {
     fn now_micros(&self) -> Option<i64> {
         None
     }
+    /// How long a statistics read may run before it gives up its page.
+    fn statistics_budget(&self) -> std::time::Duration {
+        hf_application::ctl::task_reads::STATISTICS_BUDGET
+    }
+    /// A count of rows after which a statistics read counts its budget as spent.
+    fn statistics_expire_after_rows(&self) -> Option<usize> {
+        None
+    }
+    /// The value of `HARFLOW_RETENTION_DAYS`, when set.
+    fn retention_days(&self) -> Option<String> {
+        None
+    }
     /// The qualified immediate parent, or `None` when it cannot be qualified alive.
     fn observer_parent(&self) -> Option<ProcessIdentity> {
         None
