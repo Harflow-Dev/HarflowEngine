@@ -18,7 +18,6 @@ pub enum EventError {
     InvalidOptions,
     InvalidFilter,
     InvalidCursor,
-    ExpiredCursor,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum EventFilter {

@@ -1,40 +1,11 @@
 use crate::{Error, Result, Store, connection, read_context::ReadContext};
-use hf_application::event_read::{EventReadError, EventReadPort, EventReadResult};
+use hf_application::event_read::EventReadResult;
 use hf_domain::{
-    event_read::{CaptureState, EventError, EventQuery, LogFacts},
+    event_read::{CaptureState, EventQuery, LogFacts},
     task_read::{AuthorizedScope, Lookup, TaskId},
 };
 use rusqlite::{Connection, OptionalExtension};
 use std::time::Instant;
-pub struct EventReadSession<'a> {
-    store: &'a Store,
-}
-impl<'a> EventReadSession<'a> {
-    pub fn new(store: &'a Store) -> Self {
-        Self { store }
-    }
-}
-impl EventReadPort for EventReadSession<'_> {
-    fn execute(
-        &self,
-        query: &EventQuery,
-        deadline: Instant,
-    ) -> std::result::Result<EventReadResult, EventReadError> {
-        query.validate().map_err(EventReadError::InvalidQuery)?;
-        self.store
-            .event_read(query, deadline)
-            .map_err(|error| match error {
-                Error::EventReadUnavailable | Error::TaskReadUnavailable => {
-                    EventReadError::Unavailable
-                }
-                Error::InvalidEventQuery => EventReadError::InvalidQuery(EventError::InvalidCursor),
-                Error::ExpiredEventCursor => {
-                    EventReadError::InvalidQuery(EventError::ExpiredCursor)
-                }
-                _ => EventReadError::Storage,
-            })
-    }
-}
 impl Store {
     pub fn event_read(&self, query: &EventQuery, deadline: Instant) -> Result<EventReadResult> {
         query.validate().map_err(|_| Error::InvalidEventQuery)?;

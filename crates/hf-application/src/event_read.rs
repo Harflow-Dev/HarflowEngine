@@ -1,27 +1,8 @@
-//! Injected fixture-only event authority. No production caller verification.
+//! Event read result values.
 use hf_domain::{
-    event_read::{EventCursor, EventError, EventGap, EventQuery, LogFacts},
+    event_read::{EventCursor, EventGap, LogFacts},
     task_read::{Lookup, TaskId},
 };
-use std::time::Instant;
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum EventAuthority {
-    Preparing,
-    Blocked,
-    Managed,
-    DirectFixture,
-}
-pub trait EventAuthorityPort {
-    fn prepare(&self) -> EventAuthority;
-}
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum EventReadError {
-    Preparing,
-    Refused,
-    Unavailable,
-    InvalidQuery(EventError),
-    Storage,
-}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RecordClass {
     Valid,
@@ -55,38 +36,4 @@ pub struct EventReadResult {
     pub decoded: usize,
     /// Logical bytes inspected, at most one 1MiB window. Not serialized size.
     pub scanned_bytes: u64,
-}
-pub trait EventReadPort {
-    fn execute(
-        &self,
-        query: &EventQuery,
-        deadline: Instant,
-    ) -> Result<EventReadResult, EventReadError>;
-}
-pub struct EventReader<A, R> {
-    authority: A,
-    repository: R,
-}
-impl<A: EventAuthorityPort, R: EventReadPort> EventReader<A, R> {
-    pub fn new(authority: A, repository: R) -> Self {
-        Self {
-            authority,
-            repository,
-        }
-    }
-    pub fn read(
-        &self,
-        query: &EventQuery,
-        deadline: Instant,
-    ) -> Result<EventReadResult, EventReadError> {
-        query.validate().map_err(EventReadError::InvalidQuery)?;
-        match self.authority.prepare() {
-            EventAuthority::Preparing => return Err(EventReadError::Preparing),
-            EventAuthority::Blocked | EventAuthority::Managed => {
-                return Err(EventReadError::Refused);
-            }
-            EventAuthority::DirectFixture => {}
-        }
-        self.repository.execute(query, deadline)
-    }
 }

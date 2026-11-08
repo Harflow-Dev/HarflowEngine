@@ -10,7 +10,6 @@ mod event_read;
 mod event_render;
 mod event_scan;
 pub use event_fixture::EventFixture;
-pub use event_read::EventReadSession;
 mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
