@@ -9,6 +9,8 @@ mod components;
 mod data;
 #[path = "read_measure/ops.rs"]
 mod ops;
+#[path = "read_measure/prompt.rs"]
+mod prompt;
 #[path = "read_measure/run.rs"]
 mod run;
 
@@ -52,13 +54,26 @@ fn size(path: PathBuf) -> u64 {
 #[ignore]
 fn generate() {
     let name = env("HF_MEASURE_DATASET");
-    let (tasks, per_task) = if name == "large" {
-        (5000, 100)
-    } else {
-        (300, 100)
+    let (tasks, per_task) = match name.as_str() {
+        "large" => (5000, 100),
+        // The 10,000-task statistics world: same generator, 10 events per task.
+        "stats10k" => (10_000, 10),
+        _ => (300, 100),
+    };
+    // HF_MEASURE_TASKBYTES=legacy reproduces the S2 task content; the default is the S6 content.
+    let bytes = match run::env_or("HF_MEASURE_TASKBYTES", "valid").as_str() {
+        "legacy" => data::TaskBytes::Legacy,
+        _ => data::TaskBytes::Valid,
     };
     let wal = dir().join(format!("{name}-wal"));
-    let elapsed = data::generate(&wal, tasks, per_task, None, common::lease::lease_port());
+    let elapsed = data::generate(
+        &wal,
+        tasks,
+        per_task,
+        None,
+        bytes,
+        common::lease::lease_port(),
+    );
     let ckpt = dir().join(format!("{name}-ckpt"));
     copy_tree(&wal, &ckpt);
     truncate_checkpoint(&ckpt);
@@ -76,6 +91,15 @@ fn generate() {
     .unwrap();
 }
 
+/// One valid task whose prompt is 4 MiB (`HF_MEASURE_DATASET` names the directory
+/// under `HF_MEASURE_DIR`), for the `task-prompt` component case.
+#[test]
+#[ignore]
+fn generate_prompt() {
+    let form = env_or("HF_MEASURE_PROMPT_FORM", "sidecar");
+    prompt::generate(&dir().join(env("HF_MEASURE_DATASET")), form == "inline");
+}
+
 #[test]
 #[ignore]
 fn child() {
@@ -87,6 +111,7 @@ fn child() {
         "ro" => ops::ro_once(&root, kind, &task),
         "writer" => return components::writer(&root),
         "hold" => return components::hold(&root),
+        "sqlite_version" => return println!("HFS {}", rusqlite::version()),
         _ => ops::Timing {
             open_us: 0,
             query_us: 0,

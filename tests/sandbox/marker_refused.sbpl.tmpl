@@ -1,0 +1,16 @@
+(version 1)
+(deny default)
+;; Smallest system allows measured for harflow-ctl: it execs, reads "/" and queries sysctl.
+;; /bin/ps is setuid root, so the caller process view runs outside the sandbox.
+(allow process-exec* (literal "@BINARY@"))
+(allow process-exec* (literal "/bin/ps") (with no-sandbox))
+(allow process-fork)
+(allow file-read-metadata)
+(allow file-read* (literal "/"))
+(allow file-read* (literal "/dev/null"))
+(allow file-write-data (literal "/dev/null"))
+(allow sysctl-read)
+;; Marker-refused callers: root classification only, no store session.
+(allow file-read* (literal "@ROOT@"))
+(allow file-read* (literal "@ROOT@/store.identity"))
+(allow file-read* (literal "@ROOT@/store.sqlite3"))

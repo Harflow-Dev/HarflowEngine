@@ -313,3 +313,129 @@ and killed-reader files are kept under `raw/experiments/first-run/` and the
 first contention data under the `r1` to `r3` labels; their weaknesses are
 described in amendments 9 to 11. The file-size limit forced splitting the
 harness (`late.rs`, `retention.rs`); no behaviour changed.
+
+2026-11-08, slice S6 (E1 exit evidence). Written before any non-smoke S6 sample. Smoke runs
+(labelled `smoke`, 5 samples per case, gated cases on `ci` and the ungated components) were
+taken before this text was committed to check the harness; they are not evidence. The harness
+(`scripts/measure-ctl-budgets.py`) and this section are committed before the first gated
+run, so the criteria can be checked against the commit. The S2 text above and the S2 results
+keep their criteria. No budget value is changed. S6 differs from the protocol only as listed.
+
+S6.1. Gating boundary. Gated cases are the `ci` dataset only, in the `wal`, `ckpt` and
+`tail` states (amendment 1 defines `tail`), measured on the release `harflow-ctl` as cold
+processes on this Apple Silicon machine. Source: the completion plan's exit gate, "Reads
+meet revision 3's budgets on the CI dataset" (`HARFLOW_ENGINE_COMPLETION_PLAN.md` lines
+117-118, workspace root), with the protocol's Apple Silicon gating (budgets section). The
+budgets are the table above, unchanged: version-info below 50 ms, status below 50 ms, list
+page below 100 ms, event page below 100 ms, each at p95. The `large` dataset is recorded,
+not gated (S6.8).
+
+S6.2. Metric. The gated figure is the end-to-end wall time of one `harflow-ctl` process,
+from spawn to exit, measured by the parent. The binary has no phase timer, and end to end
+is stricter than the protocol's operation time. The null child (`/usr/bin/true`, 200
+samples) is reported beside it and is never subtracted for the gate. A case that misses end
+to end but would pass net of the null child is reported as a miss. A case is a pass only
+when its p95 is below the limit, it had no failed sample, and its batch is not
+load-compromised. The harness gives a gated verdict only for a run that has the complete
+gated set (four operations in `wal`, `ckpt` and `tail` on `ci`), each at exactly 200
+samples, a label other than `smoke`, and no `--only` filtering; any other run is marked
+"not gate-eligible" in its summary and carries no pass or fail. Runs under one output parent are serialized by an exclusive lock file
+(`.measure.lock`, holding the pid and run name); a second run refuses to start and a stale
+lock is removed by hand, never automatically, so a run directory without a summary is a
+dead run. The evidence is the first
+complete non-smoke run at the default sample count with no `--only` filtering and no
+requested recorded group missing its data; every non-smoke run label is reported in the
+receipt. The summary records `samples`, `only`, `missing_data`, `gate_eligible`, `evidence:
+true|false` (true only for a gate-eligible run with no earlier gate-eligible sibling run), the
+earlier sibling runs (`prior_eligible_runs`, and `prior_runs` for the others, a killed run
+without a summary included),
+and a gated case whose sample count differs from 200 fails with the reason `n != 200`.
+
+S6.3. Samples. 200 cold samples per operation per state. The protocol had 200 per path
+across three query kinds (about 67 per kind), so this is more samples per kind, never
+fewer. Percentiles are nearest-rank (p50, p95, p99, max); no outlier is dropped; failed
+samples and refusals stay in the distribution and are counted by error kind. The task id of
+a status or event sample is drawn uniformly from the dataset, as a pure function of the
+dataset name and sample index.
+
+S6.4. Warm cases are dropped. A `harflow-ctl` invocation is always a fresh process, so a
+warm case has no counterpart in the shipped surface; warm was a library-level diagnostic of
+S2. The S2 warm results stand and are not repeated.
+
+S6.5. Holder variant (amendment 2): a second process keeps a read-only connection open
+while the four operations are sampled, for each state. Recorded, not gated. The holder is
+the existing ignored harness entry (`child` with `HF_MEASURE_OP=hold`).
+
+S6.6. Query additions (listed as S6's in the query mix section): `task-list-page` with a
+`--session-id` filter, a list cursor page, an event cursor page, and `task-events --from
+oldest`. Cursors are fetched once, outside the timed region, from a fixed pool of 20 tasks
+(list cursor: one cursor from the first page). Recorded for `ci` in the three states and
+judged against the parent budget (list page or event page); they are not gated.
+
+S6.7. Contention. The protocol's writer is kept: the existing ignored harness writer
+(`child` with `HF_MEASURE_OP=writer`: `apply_batch`, 8 mutations of 1 KiB per transaction,
+`synchronous=FULL`, no sleep), on a copy of `ci` `wal`, with and without passive
+checkpoints every 200 commits. Four concurrent cold `harflow-ctl` readers take 50 samples
+each, rotating status, list page and event page. Recorded, not gated. Reported: writer
+commits per second (whole run and inside the reader window), writer errors, and reader
+`state_busy` counts; busy results stay in the latency distribution. The reader window is
+marked by a file as before. A contention case counts as evidence only if the writer exited
+with status 0, printed exactly one report, ran in the existing `store` mode, committed inside
+the reader window (and, in the checkpoint variant, ran at least one checkpoint); otherwise
+the case is marked invalid in the summary with the writer's output kept, and is not
+contention evidence.
+
+S6.8. Large dataset (5,000 tasks, 500,000 events): the four operations on `wal` and `ckpt`,
+recorded and not gated, as S6.1 gates `ci` only. The S2 `wal` miss on `large` (fixture-only
+WAL growth with no owner at E1; the checkpoint owner is E2) is not re-litigated here.
+
+S6.9. Components, recorded with no budget: `/bin/ps -axo pid=,ppid=` invoked as the caller
+gate invokes it (cleared environment, `LC_ALL=C`, 200 samples); release binary size and
+linked libraries (`otool -L`); `task-prompt` on a task with a 4 MiB prompt (stored as a
+digest-verified sidecar, the form long prompts take; an inline 4 MiB prompt is also
+sampled and is expected to be refused by the reader's byte bound), against `task-prompt`
+on a short prompt; `status-batch` of 20 ids, `list`, `task-artifacts`, `interaction-events
+--limit 100` and `recovery-activity`, on `ci` `wal`; and `statistics-page --limit 100` on
+`ci` `wal` and on a 10,000-task world built by the same generator (10 events per task),
+measured on its `ckpt` state because the generator's `wal` state of that world is about
+1.2 GiB and is not a state any store takes in E1.
+
+S6.10. Generator. Task rows become valid documents, because the S2 content (random
+alphabetic header and status bytes) cannot be served by public reads. Header and status
+blobs are JSON objects padded with a `pad` member to the protocol's byte ranges (header 160
+to 480, status 64 to 256). The seeded size draw, the `active` mix, the 2 percent stamp ties
+and the event content are unchanged: the valid generator consumes exactly the S2 random
+draws. Stamps are read as seconds and shifted 600,000,000 s into the past, so no task
+starts after the clock. Status follows the `active` draw (`running` without an exit code;
+`completed`, exit 0; and, for the draw that was unknown, `failed`, exit 1, since
+`add_task_fixture` derives `active` from the status and cannot express unknown). Typed
+facts (backend, session, start and finish times, exit code, drained flag) agree with the
+documents, and each task has a short inline prompt. Written through the existing fixture
+APIs only: an empty `replace_task_fixture` for coverage, then `add_task_fixture` per task;
+events as before; `tail` by the raw derivation of amendment 1. The S2 content remains
+available with `HF_MEASURE_TASKBYTES=legacy` (and is the only content the S2 results
+describe). The generated `ci` `wal` state holds about 66 MB of WAL (65,882,952 bytes, about 62.8 MiB, in the
+smoke generation), a deviation from the protocol's 15 to 30 MiB for `ci`, caused by the
+per-task `add_task_fixture` writes, just below the 64 MiB (67,108,864 bytes) cap that governs the old open path.
+
+S6.11. Readability check. Before any sample, the harness runs every gated and recorded
+command family on the generated `ci` store in all three states and refuses to sample if one
+fails: `version-info`, `state-inspect`, `list` (300 tasks, none refused), `status`,
+`status-batch`, `task-list-page` (plain, filtered, cursor), `task-events` (default, cursor,
+`--from oldest`), `task-prompt`, `task-artifacts`, `recovery-activity`,
+`interaction-events` and `statistics-page`. Each must answer with exit 0, the expected
+format and a non-empty result where one is expected.
+
+S6.11a. Deadline. The protocol gives every operation a 5 second deadline. The harness
+enforces only a 30 second per-process timeout (a timed-out sample is a failure at that
+time); `harflow-ctl` applies its own internal deadline, which the harness does not set.
+
+S6.12. Load rules are the protocol's (1-minute load average at most 5.5 at batch start and
+end, up to three attempts, all attempts kept), with a 10 second pause between attempts.
+A load-compromised result never counts as meeting a budget. Raw samples (one JSON line per
+sample per attempt), `env.txt` (including the SQLite version string the linked library
+reports, printed by the `read_measure` helper), `batches.jsonl` and `summary.json` go to a
+new run directory `<UTC timestamp>-<label>` under a parent outside the repository. The
+directory is created exclusively, so a run never overwrites or truncates earlier evidence,
+and each run's `batches.jsonl` names only its own raw files. A run labelled `smoke` is a
+harness check and not evidence.
