@@ -1,6 +1,7 @@
 # Cooperative storage protocol, R02-A2
 
-Internal fixture design; no public API or execution qualification. See
+Cooperative store protocol used by internal fixtures and public read-only ctl
+adapters; no public execution qualification. See
 [foundation](storage-foundation.md) and [receipt](migration-receipts/R02-A2.md).
 The R02-A receipt remains historical evidence for its exclusive/quiescent design.
 
@@ -14,7 +15,7 @@ regular-file sidecars. Marker identity must match the SQLite logical identity.
 The marker is bootstrap ownership/compatibility evidence, not another mutable
 record authority or permission to replay an external effect.
 
-Roots are local same-host cooperative Unix fixture directories. All participating
+Roots are local same-host cooperative Unix store directories. All participating
 writers must use this protocol. Raw SQLite schema writers that bypass gates and
 hostile same-user path replacement are outside the guarantee. Observed replacement
 or symlinks refuse; metadata checks are not an atomic hostile nofollow boundary.
@@ -134,18 +135,23 @@ remain unchanged. This is new-root initialization, not a schema-migration API.
 
 ## R02-W fresh-schema evolution
 
-Current initialization uses schema3, with watcher metadata version1/revision0
-created in the exclusive initialization transaction. Schema1/2 and future roots
-refuse; no upgrade, reset or reader initialization occurs. Metadata publication and
-revision advancement share one SQLite commit. Reads inspect at most two scalar
+The R02-W stage introduced schema3, with watcher metadata version1/revision0
+created in the exclusive initialization transaction. Current schema6 retains it;
+older and future roots refuse. No upgrade, reset or reader initialization occurs.
+Metadata publication and revision advancement share one SQLite commit.
+Watch-source reads inspect at most two scalar
 rows and never complete a publisher or repair state. Store generation qualification
 checks exact UTF8 byte length before allocation, including embedded-NUL refusal.
 See [task-list invalidation](task-list-watch.md). All prior lock, WAL/FULL/FK,
-manual-checkpoint and64MiB qualification limits remain unchanged.
+manual-checkpoint and64MiB qualification limits for open/recover/probe remain unchanged.
 
-## Subsequent B2c schema
+## Subsequent schemas
 
-Current fresh roots use schema4 for the separate [private capture/completion
-foundation](capture-completion.md). The schema3 watch foundation above is its
-historical entry stage; schema3 roots now refuse without upgrade or repair.
-Watcher publication and its current writer inventory are otherwise unchanged.
+The separate [private capture/completion foundation](capture-completion.md)
+introduced schema4; schema5 changed the locking protocol. Current fresh roots use
+schema6, adding `task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`
+and `artifact_items` beside the existing task/event/watch tables. Header/status
+blobs remain the served bytes. Schema5 reads refuse as `unsupported_layout`,
+without upgrade or repair. Open/recover/probe retain the 64MiB cap; public ctl
+reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
+`RecoveryReadSession` remains a distinct capped private-copy path.

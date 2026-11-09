@@ -1,8 +1,21 @@
 # Internal task reads, R02-B
 
 See [receipt](migration-receipts/R02-B.md) and [storage protocol](storage-protocol.md).
-The scaffold still reports unsupported engine operations. No public command,
-capability, cursor encoding, task lifecycle or production caller verifier is added.
+R02-B added no public command, capability, cursor encoding, task lifecycle or
+production caller verifier. The scaffold still reports unsupported engine operations.
+
+Current `harflow-ctl` provides `version-info` and `state-inspect` everywhere; on
+macOS arm64 it also provides `list`, `status` (including `--brief`), `status-batch`,
+`task-list-page` (including successors), `task-events`, `task-prompt`,
+`task-artifacts`, `recovery-activity`, `interaction-events` and `statistics-page`.
+Store-backed commands classify the root before store opening and use one
+`ReadSession` snapshot under a shared lease. `task-events`, `task-prompt` and
+`statistics-page` check caller markers and may refuse before root classification.
+Missing-root reads create nothing. The caller gate admits
+`NoAgentDetected`, not a human credential, and refuses unresolved agents under
+`REFUSE_UNRESOLVED_AGENTS`. This does not qualify managed ownership or lifecycle
+control. Watch command/capability remains unavailable until E2. See the
+[partial E1 receipt](migration-receipts/E1.md).
 
 ## Two bounded stages
 
@@ -16,7 +29,9 @@ Neither serializes the internal query result into a supposedly compatible comman
 returns typed unready/refusal without counts, candidate enumeration or repository
 calls. Authorized global/closed scopes come only from the injected trusted port;
 there is no production implementation proving OS/direct/worker/builder/orchestrator
-identity. A request cannot choose a direct-caller flag. Closed candidate queries
+identity within this R02-B seam. The ctl adapter separately uses process/lineage
+observations and the policy in `hf_domain::ctl::caller`.
+A request cannot choose a direct-caller flag. Closed candidate queries
 never consult global candidates; missing and unauthorized IDs expose no global
 matches. This is fixture scope enforcement, not completed B10 authority qualification.
 Missing/false owner observations never upgrade the authority grant.
@@ -26,26 +41,30 @@ exclusive initialization transaction. Their dataset has its own version/generati
 Explicit `replace_task_fixture` performs bounded DML replacement and generation
 rotation under the writer gate, not execution or a task-write lifecycle. Old roots
 without task tables and unseeded datasets return unavailable; reads and replacement
-do not create/upgrade missing tables. Root schema remains the existing fixture
-foundation; no migration/public creation path is introduced.
+do not create/upgrade missing tables. Current fresh roots use schema6: typed
+`task_facts`, `task_processes`, `task_prompts`, `artifact_manifests` and
+`artifact_items` supplement the existing task/event tables. Header/status blobs
+remain the served bytes. Schema5 roots refuse as `unsupported_layout`; no
+migration/public creation path is introduced.
 
 ## Query and observation coverage
 
 | Internal behavior | Pinned contract relationship and limit |
 | --- | --- |
-| IDs | ASCII `[A-Za-z0-9][A-Za-z0-9_-]{0,63}`; exact wins, canonical32hex/hyphen UUID never prefix, prefix minimum8, case-sensitive literal underscore. Ambiguity at most5 candidate IDs plus truncation; full public ambiguity diagnostics/echo serialization are not implemented. |
+| IDs | ASCII `[A-Za-z0-9][A-Za-z0-9_-]{0,63}`; exact wins, canonical32hex/hyphen UUID never prefix, prefix minimum8, case-sensitive literal underscore. Ambiguity at most5 candidate IDs plus truncation; public diagnostics/echo serialization belong to the separate ctl adapter. |
 | Scope | Namespace precedes exact/prefix lookup; closed scopes bound100 supplied IDs. Actual managed role/ownership derivation remains absent. |
 | Pending | Separate fixture-supplied exact ID presence, not a task record; never prefix candidate/list row. Typed Pending supplies no launch state, reservation/owner liveness or public status body. |
 | Pages | Limit1..100; `(stamp,id)` descending keyset; independent supplied active observation and session filter up to256characters. Sort stamps are explicit fixture integers, not a new public timestamp parser. |
-| Explicit IDs | Separate bounded request mode, deduplicated/request order; no silently ignored history filter/cursor. Missing IDs are lookup outcomes and omitted rows. Public adapter error/drop/echo mapping remains unimplemented. |
+| Explicit IDs | Separate bounded request mode, deduplicated/request order; no silently ignored history filter/cursor. Missing IDs are lookup outcomes and omitted rows. This internal result does not supply public adapter error/drop/echo mapping; ctl has a separate mapping. |
 | Stored status | Same scoped resolver, optional stored status bytes and independent recorded-status/active/exit/drain/owner facts. No supervision/provider replay, current process check or inferred successful delivery. |
 | Evidence | Discovery/ownership/source completeness supplied explicitly. Unknown activity has separate incomplete evidence; matching-row count stays unknown when required evidence is incomplete. Count is not canonical total_active_count/root accounting. Pagination partial/more is independent of evidence completeness. |
 | Bounds | Fixture header max2048bytes; status bytes also local2048byte bound, not the public full-status limit. Pages bounded128KiB with512reserve plus cursor/scope metadata accounting and Store limits. Oversized input/materialization refuses rather than falsely complete truncation. |
 | Cursors | Internal typed store/dataset/query-filter/authorized-namespace binding; dataset replacement invalidates. Page-size changes preserve keyset semantics. No wire encoding/TTL/public reset/error contract is invented. |
-| Snapshot | Dataset generation, resolution, rows and counts share one SQLite read transaction. Reads use an already-open qualified Store; no root init, recovery, retention or execution is triggered. |
+| Snapshot | Dataset generation, resolution, rows and counts share one SQLite read transaction. The internal reader supports an already-open Store or ReadSession; ctl uses ReadSession, with no root init, explicit recovery, retention or execution. |
 
 The internal byte budget accounts for materialized opaque bytes/metadata; it is
-not a serialized public ctl response guarantee. No public result serializer exists.
+not a serialized public ctl response guarantee. Public ctl serialization is separate
+in `hf_interfaces::ctl`.
 
 All ordinary runtime `status` fields require the canonical supervision/control/
 provider projections. An indexed `status` string is not proof of activity, observed
@@ -53,7 +72,8 @@ exit, terminal output drain, authority or completion. Unknown/null/false and abs
 stored facts stay separate. Unknown source/ownership does not become complete
 history, zero cost/count or direct authority. Workflow associations/root counts,
 predecessor/successor discovery and compact group/title/repo/status/backend/since
-filters are outside this internal query surface, not silently implemented partially.
+filters are outside this internal query surface. The separate ctl task page
+implements successor discovery; this does not add workflow accounting to R02-B.
 
 ## Consumer-only documents
 
@@ -70,8 +90,8 @@ are local consumer resource bounds, not new public command limits. Maximum100 pa
 items and2048character opaque cursor reflect selected task-page constraints. The
 consumer does not verify artifact authenticity or replace a fresh runtime handshake.
 It does not establish that opaque fixture bytes agree with independent index facts;
-a future producer/adapter must derive and validate those inputs under its accepted
-contract. No production task publisher is present in R02-B.
+the ctl producer has separate projections and validation under `hf_interfaces::ctl`.
+No production task publisher is present in R02-B.
 
 Dependency: exact serde_json1.0.154, defaults disabled/std only, permitted solely in
 hf-interfaces with exact owner/version/features/kind enforcement. MIT OR Apache2.0,
@@ -108,7 +128,7 @@ publish task metadata invalidations. Watch responses remain hints, never task fa
 The consumer foundation establishes a boundary before snapshot, retains the returned
 cursor before refresh, keeps one wait in flight, coalesces invalidations while busy
 and reconciles lifecycle deadlines even after timeout. Actual Mac/Web integration,
-fresh OS/runtime/authority qualification and public host operations remain separate;
+fresh OS/runtime/authority qualification and public watch operations remain separate;
 no app private persistence or agent-MCP fallback is introduced. See the
 [R02-W receipt](migration-receipts/R02-W.md) for immutable inputs and exact proof scope.
 

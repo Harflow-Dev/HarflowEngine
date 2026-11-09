@@ -1,9 +1,13 @@
 # Internal stored event reads
 
 R02-C is an internal, fixture-backed read seam. HarflowMCP remains the canonical
-contract owner. The host still refuses product operations. This seam does not
-verify caller processes, ingest provider output, supervise owners, expose a ctl
-command or implement the required watcher.
+contract owner. That stage did not verify caller processes, ingest provider output,
+supervise owners, expose a ctl command or implement the required watcher.
+Current `harflow-ctl task-events` is implemented on macOS arm64 with a caller gate,
+wire cursor encoding, log/change-token projection and document fitting. It uses
+one read-only `ReadSession` snapshot under a shared lease, without a private copy
+or per-call `quick_check`. This adds no ingestion or supervision. Watch
+command/capability remains unavailable until E2; see the [partial E1 receipt](migration-receipts/E1.md).
 
 ## Inputs and ownership
 
@@ -23,18 +27,19 @@ Domain owns pure query/filter/cursor and observation values. Application owns
 constructor-injected authority and event-read ports. Storage owns optional SQLite
 fixture tables, snapshot reads and explicit fixture DML. Interfaces owns consumer
 JSON validation and pure fixture preparation using the existing serde_json seam.
-No dependency or supported transport is added.
+R02-C added no supported transport; the current ctl producer is separate from
+these consumer-only mappings.
 
 ## Contract decisions
 
 | Concern | Required interpretation |
 | --- | --- |
-| Authority | Only a trusted injected direct fixture grant reaches storage. Managed/blocked/undecidable callers disclose no task, prefix candidates or counts. This is not production caller verification. |
+| Authority | The R02-C seam requires a trusted injected direct fixture grant before storage. The ctl caller gate separately uses marker/process/lineage observations; agent or undecidable callers are refused before task disclosure. Admission as NoAgentDetected is not a human credential or managed-ownership qualification. |
 | Resolution | Exact/prefix and pending/unknown results remain separate from log readability; retention removal is not an empty readable history. |
 | Filter | Default is the fixed known kind set except assistant_delta; all adds that kind. Unknown kinds are valid accounted records but filtered even by all. Consumer views preserve unknown kinds. |
 | Order and work | Ascending output. Limit1–200 counts decoded records, including filtered/blank/malformed, rather than returned events. Oversized spans advance without consuming that count. Logical scan window is at most1048576 bytes. |
 | Record bounds | Raw fixture classification refuses to parse lines over1000000 bytes. Normalized event bodies are at most16384 UTF8 bytes. Invalid UTF8 is malformed, not lossy text. |
-| Cursor | Internal typed cursor binds store/task/filter/stream generation/direction/boundary and sequence/skip/resync context. No Python private path/inode/anchor encoding is copied and no public cursor format is exposed. |
+| Cursor | Internal typed cursor binds store/task/filter/stream generation/direction/boundary and sequence/skip/resync context. The separate ctl codec wraps it in an opaque wire cursor; no Python private path/inode/anchor encoding is copied. |
 | Continuity | Append preserves stream generation, including initially empty streams. Replacement, rewrite/truncation, root replacement or unavailable stream invalidates continuity. No time-based expiry or liveness claim. |
 | Span and gaps | Accounted valid sequence values include filtered kinds. Skipped unreadable records influence gap reasons, including at adjacent-page boundaries. Unknown loss is not silently called unreadable. |
 | Partial tail | Withhold until a complete newline-terminated record exists. A partial tail alone does not establish has_newer or finality. |
@@ -42,23 +47,26 @@ No dependency or supported transport is added.
 | Finality | Readable + observed-terminal capture + drained + last complete task_finished exactly at EOF. This does not prove complete history. Stored status alone proves none of these observations. |
 | Other log states | Live capture=open; lost owner=incomplete; undecidable capture=unknown; unavailable stream=unavailable. Terminal/drained without final record may settle under independently supplied grace evidence, otherwise incomplete. |
 | Versions | Outer ctl v1 uses the selected current release line; nested event v1 accepts syntactically valid historical writer versions independently. Unknown fields/string states remain intact. |
-| Change tokens | No watcher journal or authoritative equality/liveness token is implemented. A future public adapter must map the canonical sampled-source semantics explicitly. |
+| Change tokens | The ctl adapter projects a sampled-source change token. It is not a watcher journal or authoritative equality/liveness token. |
 
 ## Qualification boundaries
 
-Only explicit fixture initialization creates optional event tables under the
-existing exclusive initializer. Reads and fixture replacements do not upgrade old
+Only explicit fixture initialization creates event tables under the existing
+exclusive initializer. Current fresh roots use schema6; schema5 roots refuse as
+`unsupported_layout`. Reads and fixture replacements do not upgrade old
 roots or silently replace a future schema. Replacements and appends are test-input
 operations, not product ingestion APIs. Facts about capture, drain, grace and stored
 status are independent supplied observations. They do not become true merely because
 an event row, terminal status or cursor exists.
 
-R02-A2's cooperative local-filesystem locking, bounded whole-store qualification,
-SQLite-controlled WAL recovery and unsupported hostile-path/power-loss/platform/
-performance limits still apply. R02-B task dataset generations do not stand in for
-an event stream's append continuity. Public authority, lifecycle adapters, serialized
-producer fitting, root discovery, retention scheduling and watcher durability remain
-separate work. See the [R02-C receipt](migration-receipts/R02-C.md) for the delivered
+R02-A2's cooperative local-filesystem locking, SQLite-controlled WAL recovery and
+unsupported hostile-path/power-loss/platform/performance limits still apply.
+Open/recover/probe retain capped whole-store qualification (64MiB); ctl reads use
+the read session, which has no store-size cap of its own and may create/rewrite
+`-shm`, with soft deadline acceptance. R02-B task dataset generations do not stand
+in for an event stream's append continuity. Managed ownership, lifecycle adapters,
+retention scheduling and public watcher durability remain separate work.
+See the [R02-C receipt](migration-receipts/R02-C.md) for the delivered
 API, exact tested cells and remaining gaps.
 
 ## Implemented internal representation
@@ -109,13 +117,14 @@ closure evidence. State final is independent of gap-free or complete history.
 
 The consumer validates the entire received JSON byte length at262144, at most200
 events, nested event size and cursor character limits. This bounds parsing of a
-received document; it does not implement producer fitting, canonical CLI flags,
+received document; the consumer itself does not implement producer fitting, canonical CLI flags,
 error codes/exits, resolved_from echoes, observed_at sampling, change tokens or
-wire cursor encoding. The host and hf-contracts remain unchanged.
+wire cursor encoding. Those are separate ctl producer responsibilities now
+implemented in `hf_interfaces::ctl`; hf-contracts remains an empty seam.
 
 `eof_finished_seq` is an internal observation, not the public `log.final_seq` field:
-it may be present while capture is unknown or drain is absent. A future producer
-must expose canonical final_seq only with the canonical final-state conditions.
+it may be present while capture is unknown or drain is absent. The ctl producer
+derives final_seq through `LogObject` rather than copying this observation alone.
 The consumer preserves received log fields and does not manufacture this mapping.
 EOF metadata is validated within the normalized fixture trust boundary; storage is
 not an independent raw-event JSON verifier.

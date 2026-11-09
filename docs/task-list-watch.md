@@ -1,8 +1,10 @@
 # Internal task-list invalidation foundation (R02-W)
 
 This is an internal Rust store/wait seam plus consumer mapping, not a supported ctl
-command, production task catalog or caller verifier. The default host remains
-unsupported and advertises no capability. HarflowMCP remains the canonical contract
+command, production task catalog or caller verifier. The scaffold remains
+unsupported; `harflow-ctl` now provides read-only commands and advertises their
+capabilities, but no watch command or `task-list-watch.v1` capability is available
+until E2. HarflowMCP remains the canonical contract
 owner until accepted O04. See the [receipt](migration-receipts/R02-W.md).
 
 ## Exact adopted contract
@@ -33,9 +35,10 @@ not authentication, authorization or evidence of task state.
 
 ## Atomic Rust publication boundary
 
-Fresh schema3 initializes one task_watch_meta row (singleton1, version1, revision0)
-in the exclusive root initialization transaction. Root generation is its epoch.
-Schema1/2/future roots refuse, with no automatic upgrade, reader initialization,
+The schema3 stage introduced one task_watch_meta row (singleton1, version1,
+revision0) in the exclusive root initialization transaction. Current fresh roots
+use schema6 and retain this row. Root generation is its epoch.
+Older/future roots refuse, with no automatic upgrade, reader initialization,
 reset or repair. The selected fresh schema requires canonical lowercase32hex store
 generation in marker/database, exact UTF8 byte length checked before allocation.
 Embedded-NUL suffixes and noncanonical source generations refuse without rewrite.
@@ -45,7 +48,8 @@ transaction. A task_headers replacement advances revision before commit, under t
 existing cooperative I/O gate. Abort or precommit process death publishes neither;
 postcommit response loss retains both. Revision exhaustion refuses and rolls back
 rather than wrapping or silently changing epoch. WAL/FULL/foreign keys, manual
-checkpoint policy and64MiB main+WAL qualification remain unchanged.
+checkpoint policy and64MiB main+WAL qualification for open/recover/probe remain
+unchanged. Public ctl reads instead use the [read session](store-read-path.md).
 
 No persistent open-PID fence or begin/end token API exists. The exact lexical SQLite
 transaction owns publication; observers cannot finish it. A live uncommitted writer
@@ -57,9 +61,11 @@ one atomic write; those private mechanics are not copied into Rust.
 | Current path | Participation |
 | --- | --- |
 | replace_task_fixture | Republishes task_headers and advances revision atomically, even for identical bytes. Pending values in that whole replacement do not make it a pending-only operation. |
+| add_task_fixture / damage_task_fixture | Changes task metadata, rotates the paging dataset generation and advances revision in the same transaction. |
 | replace_pending_fixture | Writes only task_pending and advances the paging dataset generation; no task metadata invalidation. Duplicate/header-colliding IDs refuse atomically. |
 | Task/status/list reads and watch observations | Read only; no revision/lease/fence writes or observation-side publication completion. |
 | Stored event fixture DML | Separate namespace; no task metadata publication. |
+| Prompt blob / artifact manifest fixture DML | Separate namespace; no task metadata publication. |
 | B1/B2 ownership/claim/cancel/release and generic fixture_records | Separate namespace; no task metadata publication. |
 | Future production lifecycle/catalog writers | Not implemented. Must join the same atomic metadata/revision commit before watch coverage can be claimed. |
 
@@ -134,7 +140,7 @@ erase that work. Unavailable/failed waits require rebaselining and reconciliatio
 Actual public snapshot/lifecycle operations remain caller responsibilities.
 
 The result encoder takes an explicit stable product version. Tests can use the
-canonical Python fixture version or actual experimental Rust0.0.1; the encoder does
+canonical Python fixture version or the then-current experimental Rust0.0.1; the encoder does
 not relabel the Rust runtime0.0.10 or advertise support.
 
 ## Dependency and retained gates
@@ -152,9 +158,11 @@ B2c capture durability/lifecycle, R04 faults, B10/B11/B17 and R14 acceptance rem
 outstanding. Corrected Python's owner-accepted mixed-legacy-writer exclusion applies
 only to that temporary producer; it is not permission to weaken Rust continuity.
 
-## Subsequent B2c schema
+## Subsequent schemas
 
-Current fresh roots use schema4 for the separate [private capture/completion
-foundation](capture-completion.md). The schema3 watch foundation above is its
-historical entry stage; schema3 roots now refuse without upgrade or repair.
-Watcher publication and its current writer inventory are otherwise unchanged.
+The separate [private capture/completion foundation](capture-completion.md)
+introduced schema4; schema5 then changed the locking protocol. Current fresh roots
+use schema6 with typed task/process/prompt/artifact facts beside the existing
+task/event/watch tables. Schema5 reads refuse as `unsupported_layout`, without
+upgrade or repair. The schema3 watch foundation above remains historical;
+current publication still joins task metadata and revision in one commit.

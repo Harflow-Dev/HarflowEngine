@@ -1,7 +1,12 @@
-# Store read path and writer open (E1 slice S2), design, revision 3
+# Store read path and writer open (E1 slice S2), revision 3
 
-Status: final revision before implementation (round 2 review incorporated). No production code was
-changed. The protocol and its amendments are in
+Status: read session implemented; the revision-3 measurements below remain historical
+S2 evidence, not release-binary budget acceptance. Current macOS arm64 ctl reads use
+`ReadSession` and one snapshot per command; fresh roots use schema6, and schema5
+reads refuse as `unsupported_layout` without migration. The
+[partial E1 receipt](migration-receipts/E1.md) records coordinator-verified release
+evidence and outstanding gates. E1 has not exited or been accepted.
+The protocol and its amendments are in
 [measurement protocol](store-read-measurement.md); guarantees named here are in
 [storage protocol](storage-protocol.md). Raw data is retained outside the
 repository under `.claude-work/engine/e1/s2-measure/`. Hardware: Apple M3 Pro,
@@ -20,8 +25,9 @@ changed a first-run claim are marked **changed**.
 
 Two parts, kept separate throughout:
 
-- **Implemented at E1 (S2).** Only the read session (a new read-only way to
-  answer reads) and the `state-inspect` `-wal` row. `Store::open`, `recover`,
+- **Implemented in S2.** The read session (a new read-only way to
+  answer reads) and the `state-inspect` `-wal` row. Subsequent E1 slices compose
+  the public read-only ctl commands with it. `Store::open`, `recover`,
   `probe`, `probe_with_scratch`, `open_with_scratch`, the capped copy and their
   tests stay exactly as they are, because E1 has no writer and no guarantee may
   weaken. The 64 MiB limit therefore remains in force for those paths at E1.
@@ -238,12 +244,11 @@ are in-process; S6 must cover the cross-process case with the release binary.
 
 # Part 1. Implemented at E1 (slice S2)
 
-Scope: the read session and the `state-inspect` `-wal` row, nothing else.
+S2 scope: the read session and the `state-inspect` `-wal` row.
 `Store::open`, `recover`, `probe`, `probe_with_scratch`, `open_with_scratch`, the
 capped copy and their tests are untouched; `RecoveryReadSession`
-(recovery.rs:38-39) also stays as is and keeps the cap and `io.lock` it has today
-(S5's recovery-activity inherits them; whether S5 adopts the read session is S5's
-decision, not S2's).
+also keeps its private-copy cap and `io.lock`. It is distinct from public
+`recovery-activity`, which now uses `ReadSession` through the ctl snapshot adapter.
 
 ## Read session, exact requirements
 
@@ -337,18 +342,17 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 | marker, identity mismatch, `Replaced` | none | contract `state-recover` |
 | SQLite corruption error | none; there is no backup operation in Rust | contract `state-recover` archiving; the public remedy |
 
-## storage-protocol.md amendments (E1, read session only)
+## Applied storage-protocol.md amendments (E1, read session only)
 
-- Add a "Read session" paragraph: shared `store.lock` (2 s acquisition), no
+- The "Read session" paragraph records shared `store.lock` (2 s acquisition), no
   `io.lock`, `-wal` regular-file precondition, read-only open, soft 5 s deadline,
   refusals mapped as above.
-- Lines 30-31 (`io.lock`) get one added sentence: read sessions do not take it;
+- The `io.lock` hierarchy records that read sessions do not take it;
   the sentence about copying and opening source SQLite stays for the paths that do.
-- Line 52 (no source writes): add that a read session may create or rewrite
+- The source-write boundary records that a read session may create or rewrite
   `-shm`, never main or WAL content, never `-wal`. The probe sentence is unchanged.
-- Lines 44-48 (probe, copy, 64 MiB cap), 47-48 (the recover ordering), the
-  64 MiB repeats at lines 113 and 125 and task-list-watch.md: **not amended at
-  E1**; they describe paths that are unchanged.
+- Probe/copy qualification, recovery ordering and the 64 MiB cap remain unchanged
+  for open/recover/probe and the internal private-copy `RecoveryReadSession`.
 
 ## E1 guarantee ledger (read session only)
 
@@ -358,15 +362,15 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 | No sidecar creation or source writes by reads | Changed for the read session: may create or rewrite `-shm`; never main, WAL or `-wal` (missing is refused first, race acknowledged) |
 | 64 MiB cap | Does not apply to the read session; **still applies** to open, recover, probe and `RecoveryReadSession` |
 | `quick_check` at open | The read session does not run it; open and probe still do |
-| Lock hierarchy; `io.lock` | Read session skips `io.lock` (measured safe, 0 anomalies in 3.49 million reads); mutators unchanged |
+| Lock hierarchy; `io.lock` | Read session skips `io.lock` (0 anomalies in the historical 3.49-million-read experiment, not a general safety qualification); mutators unchanged |
 | No checkpoint on close or by readers | Preserved; a read-only handle cannot checkpoint |
 | No immutable shortcut, no custom WAL parser | Preserved; `immutable=1` drops the WAL silently |
 | Nonempty journal refuses | Preserved |
 | Kill leaves scratch remnants | Improved for the read session (none; the existing path left one in 21 to 28 of 30); a reader that created `-shm` and is killed leaves it, confirmed |
 | Readers do not disturb the single writer | Read session: 0 writer failures in 3 x 4 windows; existing path: 95 to 98 percent |
-| Damage a read does not touch | Not detected by the read session (the existing path's open-time `quick_check` would have); detected by verify at E2 |
+| Damage a read does not touch | Not detected by the read session (the existing path's open-time `quick_check` would have); verify is specified for E2, not implemented here |
 | Payload damage | Returned as data (7 of 20 flipped-byte trials) by the read session; `quick_check` does not detect it on either path; an owner decision (open question 3) |
-| Silent history loss on WAL damage | Never prevented; unchanged; E1 has no public writer; needs the owner's acceptance before E1's exit |
+| Silent history loss on WAL damage | Not prevented; unchanged; owner accepted this only for E1 (D20). Watermark/generation sequence/recovery signal remain E2 work, not an E1-exit acceptance |
 
 ## Seed tool and E1
 
@@ -468,8 +472,9 @@ A damaged, truncated or lost WAL yields a consistent but wrong or empty
 **successful** history, including `Ok(0)` for a task's events, and SQLite cannot
 detect it: frame checksums end the log at the first bad frame, and a torn tail
 after a killed writer is indistinguishable from damage. This is unchanged from
-today. E1 has no public writer, so it is unreachable there; it needs the owner's
-explicit acceptance before E1's exit; the watermark is a named E2-exit decision.
+the capped path. E1 has no public writer; owner acceptance of silent WAL rollback
+is limited to E1 (D20), not a claim that damaged fixtures cannot encounter it.
+The watermark/generation sequence/recovery signal remain named E2 carryover.
 Unmeasured: with a live owner whose wal-index is trusted, damaged frames behind a
 valid index may return wrong rows rather than rolling back.
 
@@ -521,8 +526,9 @@ unflagged repetitions relied on.
 
 1. Decision A (owner): A1 or A2 for owner admission, and what A2's weaker rule
    costs the owner.
-2. Accept unchanged WAL-damage behaviour for E1 and decide the watermark at E2
-   exit, or require it earlier? Settle Decision B's acceptance ordering.
+2. Unchanged silent WAL rollback is owner-accepted only for E1 (D20). Decide the
+   watermark/generation sequence/recovery signal at E2 and settle Decision B's
+   acceptance ordering.
 3. Payload damage: single flipped bytes are returned as data (7 of 20 trials) and
    no SQLite mechanism available here (no page checksums in the bundled build)
    detects it on either path. Accept as unchanged, or require a checksum
@@ -532,11 +538,15 @@ unflagged repetitions relied on.
 5. Cadence period and where its due time lives; owner thresholds (8 MiB, 16 MiB
    limit) are CI-scale and need S6 confirmation.
 
-# Not measured
+# Historical measurement exclusions and remaining qualification
 
-Cold file cache (needs privileges); the production lease adapter across
-processes (the recover tests are in-process); production queries on a read-only
-handle (needs code); a live owner with a write transaction; damaged frames behind
+The S2 measurements did not cover cold file cache (needs privileges), the production
+lease adapter across processes (the recover tests were in-process), or production
+queries on a read-only handle. Those queries are now implemented; no W4 phaseB
+budget samples are recorded in the partial E1 receipt. Other unmeasured items:
+a live owner with a write transaction; damaged frames behind
 a trusted wal-index; `F_FULLFSYNC` cost; open-time checkpoint cost and multi-owner
 `io.lock` behaviour; RESTART checkpoint behaviour; the stress dataset, workflows
-and runs; power loss; other platforms.
+and runs; power loss; other platforms. Payload corruption and the large-integer
+issue remain open. Part 2 is an E2 specification, not implemented behavior or
+acceptance of its proposed policies.
