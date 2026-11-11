@@ -46,7 +46,7 @@ pub(super) fn store() -> (Fixture, Store) {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![row()],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,

@@ -65,7 +65,7 @@ fn fingerprint(parts: &mut Vec<Vec<u8>>, record: &TaskRecord) {
     optional(parts, facts.title.as_deref());
     optional(parts, facts.model.as_deref());
     optional(parts, facts.continuation_of.as_ref().map(TaskId::as_str));
-    optional(parts, facts.chain_root.as_ref().map(TaskId::as_str));
+    optional(parts, facts.chain_root.raw());
     match &record.process {
         Some(process) => {
             part(parts, &process.pid.to_le_bytes());

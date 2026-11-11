@@ -263,7 +263,7 @@ class RetentionTests(FeedsCase):
 
     def test_the_unavailable_document_reports_the_policy_too(self):
         self.seed("remove_root")
-        self.world(settled("c1", continuation_of="ghost"))
+        self.world(settled("c1", continuation_of="ghost", chain_root="ghost"))
         done = self.read("statistics-page", "--since", WIDE[0], "--before", WIDE[1], "--json",
                          env={"HARFLOW_RETENTION_DAYS": "0"})
         result = json.loads(done.stdout)["result"]

@@ -71,7 +71,7 @@ fn fixture(header: &[u8]) -> TaskFixture {
             header: header.to_vec(),
             status: None,
         }],
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

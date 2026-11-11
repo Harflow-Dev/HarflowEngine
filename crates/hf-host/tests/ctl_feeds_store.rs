@@ -74,7 +74,12 @@ fn a_pending_launch_is_an_unknown_task_without_data() {
     writer
         .add_task_fixture(&task(1, "completed", Some(0), 1, "/r"), later())
         .unwrap();
-    writer.replace_pending_fixture(&[id(5)], later()).unwrap();
+    writer
+        .replace_launch_fixture(
+            &[hf_storage::LaunchRow::waiting_for_resources(id(5))],
+            later(),
+        )
+        .unwrap();
     drop(writer);
     let pending = id(5);
     let out = ctl(&root, &["recovery-activity", pending.as_str()]);

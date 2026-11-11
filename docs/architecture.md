@@ -114,16 +114,25 @@ same-context, Queue-only fixture over injected ports and reserved `__r06/` fixtu
 records. It adds no delivery transport, public capability or production evidence
 adapter. Every other route refuses before port I/O.
 
-Store schema 6 adds the typed fact tables for the read families (`task_facts`, `task_processes`,
+Store schema 7 keeps the schema 6 typed fact tables, replaces `task_pending` with
+`launch_attempts` and adds `chain_stops`; a schema 6 root is refused as `unsupported_layout`.
+
+Store schema 6 added the typed fact tables for the read families (`task_facts`, `task_processes`,
 `task_prompts`, `artifact_manifests`, `artifact_items`) beside the unchanged `task_dataset`,
-`task_headers`, `event_streams` and `event_records`; there is no migration, and a schema 5 root is
+`task_headers`, `event_streams` and `event_records`; there is no migration, and a schema 5 root was
 refused as `unsupported_layout`. The `task_headers` header and status blobs remain the served bytes.
 The fixture writers (`add_task_fixture`, `damage_task_fixture`, `append_prompt_blob_fixture`,
 `replace_artifacts_fixture`, `append_event_record_fixture`, `truncate_event_log_fixture`,
-`remove_event_log_fixture`) are internal to hf-storage's fixture surface and unreachable from
+`remove_event_log_fixture`, `replace_launch_fixture`, `put_launch_attempt`, `put_chain_stop`,
+`remove_chain_stop`) are internal to hf-storage's fixture surface and unreachable from
 `harflow-ctl`. `hf_interfaces::fixture_port` owns all JSON of the E1 conformance fixture port, and
 the private tool `tools/hf-fixture-seed` (`hf-fixture-seed OP --root ROOT`, one JSON object on
-stdin, one JSON value on stdout) implements its seventeen operations over typed values. It depends on
+stdin, one JSON value on stdout) implements its twenty operations over typed values (the last three, `stop_chain`, `add_launch` and
+`add_invalid_launch_name`, write chain-stop markers and pre-record launch receipts).
+Chain-root rule of `add_task` and `seed_world`: an explicit `chain_root` (null or text) is stored as given and
+needs no predecessor; otherwise it is the predecessor's stored root, else the predecessor id, and a missing or damaged
+predecessor refuses the operation (a predecessor named elsewhere in the same `seed_world` counts as present). The
+explicit form is a superset of the Python adapter, which refuses it for a missing predecessor. It depends on
 hf-domain, hf-application, hf-storage, hf-platform and hf-interfaces, adds no direct `serde_json` or
 `sha2` edge, is not a dependency of hf-host and publishes nothing. The five `legacy_*` caller identity
 states answer `{"supported": false}`. `hf_domain::timestamp` parses ISO 8601 instants with an offset

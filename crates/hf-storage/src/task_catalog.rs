@@ -2,7 +2,7 @@
 //! measured in SQL and checked before it is copied, and bytes are accounted as read.
 use crate::{Error, Result, caller_scan::process_record, snapshot::TaskSnapshot, statements};
 use hf_domain::{
-    ctl::task_rows::{BatchQuery, TaskFacts, TaskRecord, UnobservedRow},
+    ctl::task_rows::{BatchQuery, ChainRoot, TaskFacts, TaskRecord, UnobservedRow},
     task_read::TaskId,
 };
 use rusqlite::{Row, params_from_iter, types::Value};
@@ -60,7 +60,7 @@ fn record(row: &Row<'_>) -> Result<(TaskRecord, usize)> {
         title: row.get(11)?,
         model: row.get(12)?,
         continuation_of: optional_id(row.get(13)?)?,
-        chain_root: optional_id(row.get(14)?)?,
+        chain_root: ChainRoot::qualify(row.get(14)?),
     };
     let record = TaskRecord {
         facts,

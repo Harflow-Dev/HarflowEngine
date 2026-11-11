@@ -7,7 +7,8 @@ use crate::{
 };
 use hf_domain::{process::ProcessIdentity, task_read::TaskId};
 use hf_interfaces::fixture_port::{
-    IdentityState, LiveCaller, PortError, Projection, PromptRecord, Response, TaskSpec, World,
+    ChainRootSpec, IdentityState, LiveCaller, PortError, Projection, PromptRecord, Response,
+    TaskSpec, World,
 };
 use hf_storage::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask, Sha256Stream, Store};
 
@@ -19,8 +20,9 @@ pub fn seed_world(context: &Context, world: &World) -> Result<Response> {
     Ok(Response::Null)
 }
 fn fill(context: &Context, store: &Store, world: &World) -> Result<()> {
+    let known: Vec<TaskId> = world.tasks.iter().map(|task| task.id.clone()).collect();
     for task in &world.tasks {
-        add_task(context, store, task.clone())?;
+        add_task(context, store, task.clone(), &known)?;
     }
     for (id, rows) in &world.events {
         for row in rows {
@@ -29,9 +31,14 @@ fn fill(context: &Context, store: &Store, world: &World) -> Result<()> {
     }
     Ok(())
 }
-pub fn add_task(context: &Context, store: &Store, spec: TaskSpec) -> Result<Response> {
+pub fn add_task(
+    context: &Context,
+    store: &Store,
+    spec: TaskSpec,
+    world: &[TaskId],
+) -> Result<Response> {
     let projection = spec.projection(None);
-    write(context, store, spec, None, projection)
+    write(context, store, spec, None, projection, world)
 }
 pub fn damage_task(store: &Store, id: &TaskId) -> Result<Response> {
     store.damage_task_fixture(id, deadline())?;
@@ -56,7 +63,7 @@ pub fn add_live_caller(context: &Context, store: &Store, caller: &LiveCaller) ->
     };
     let spec = caller.task_spec();
     let projection = spec.projection(Some(caller.process_identity_state()));
-    write(context, store, spec, Some(process), projection)?;
+    write(context, store, spec, Some(process), projection, &[])?;
     Ok(Response::Supported(true))
 }
 fn deadline() -> std::time::Instant {
@@ -68,6 +75,7 @@ fn write(
     mut spec: TaskSpec,
     process: Option<FixtureProcess>,
     projection: Projection,
+    world: &[TaskId],
 ) -> Result<Response> {
     let mut response = Response::Empty;
     if spec.real_workspace {
@@ -86,9 +94,10 @@ fn write(
         response = Response::RepoPath(spec.repo_path.clone());
     }
     let prompt = spec.prompt_record(&sha256_hex)?;
+    let chain_root = chain_root(store, &spec, world)?;
     let task = FixtureTask {
-        facts: facts(&spec),
-        header: spec.header_blob(),
+        facts: facts(&spec, chain_root.clone()),
+        header: spec.header_blob(chain_root.as_deref()),
         status: spec.status_blob(projection),
         prompt: prompt_row(prompt),
         process,
@@ -96,7 +105,35 @@ fn write(
     store.add_task_fixture(&task, deadline())?;
     Ok(response)
 }
-fn facts(spec: &TaskSpec) -> FixtureFacts {
+/// The stored chain root. An explicit root (none or text) is stored as given and needs no
+/// predecessor. Otherwise it is the predecessor's stored root, else the predecessor itself
+/// (the reference store); a predecessor that stores no usable root makes the predecessor the
+/// root. A missing or damaged predecessor fails the operation, as the reference adapter
+/// does, unless it is named by another task of the world being seeded: then it is the root.
+/// The explicit form is a superset of the reference adapter, which refuses it for a missing
+/// predecessor; it lets tests model broken ancestry.
+fn chain_root(store: &Store, spec: &TaskSpec, world: &[TaskId]) -> Result<Option<String>> {
+    match &spec.chain_root {
+        ChainRootSpec::Absent => Ok(None),
+        ChainRootSpec::Verbatim(text) => Ok(Some(text.clone())),
+        ChainRootSpec::Default => {
+            let Some(predecessor) = &spec.continuation_of else {
+                return Ok(None);
+            };
+            let stored = match store.fixture_chain_root(predecessor, deadline())? {
+                Some(stored) => stored,
+                None if world.contains(predecessor) => None,
+                None => return Err(Fail::new("the predecessor task is missing or damaged")),
+            };
+            Ok(Some(
+                stored
+                    .filter(|text| !text.is_empty())
+                    .unwrap_or_else(|| predecessor.as_str().to_owned()),
+            ))
+        }
+    }
+}
+fn facts(spec: &TaskSpec, chain_root: Option<String>) -> FixtureFacts {
     FixtureFacts {
         id: spec.id.clone(),
         backend: spec.backend.clone(),
@@ -112,7 +149,7 @@ fn facts(spec: &TaskSpec) -> FixtureFacts {
         title: spec.title.clone(),
         model: spec.model.clone(),
         continuation_of: spec.continuation_of.clone(),
-        chain_root: spec.continuation_of.clone(),
+        chain_root,
     }
 }
 fn prompt_row(prompt: PromptRecord) -> FixturePrompt {

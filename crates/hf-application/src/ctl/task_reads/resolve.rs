@@ -48,7 +48,11 @@ pub(crate) fn resolve(
             let from = (found != id).then(|| raw.to_string());
             Ok((found, from))
         }
-        Lookup::Pending(_) => Err(ReadError::PendingLaunch(raw.to_string())),
+        Lookup::Pending(pending) => Err(ReadError::PendingLaunch {
+            raw: raw.to_string(),
+            state: pending.state,
+            not_started_reason: pending.not_started_reason,
+        }),
         Lookup::Missing => Err(ReadError::Resolution(missing_resolution(&id))),
         Lookup::InvalidPrefix => Err(unknown(Some(UnknownReason::PrefixTooShort))),
         Lookup::Incomplete => Err(unknown(Some(UnknownReason::PrefixIndexUnavailable))),

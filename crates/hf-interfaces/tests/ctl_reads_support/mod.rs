@@ -18,7 +18,8 @@ use hf_domain::{
         inspect::StateInspection,
         state_root::{InvalidStateRoot, StateRoot},
         task_rows::{
-            BatchQuery, CallerRow, ProcessRecord, TaskFacts, TaskRecord, TaskSummary, UnobservedRow,
+            BatchQuery, CallerRow, ChainRoot, ProcessRecord, TaskFacts, TaskRecord, TaskSummary,
+            UnobservedRow,
         },
     },
     process::ProcessIdentity,
@@ -85,7 +86,7 @@ impl Fake {
                 title: None,
                 model: None,
                 continuation_of: self.related_extra.map(|_| TaskId::new(OTHER.to_string()).unwrap()),
-                chain_root: None,
+                chain_root: ChainRoot::Absent,
             },
             header: format!(r#"{{"task_id":"{ID}"{}}}"#, self.header_extra).into_bytes(),
             status_blob: Some(format!(r#"{{"task_id":"{ID}","needs_reconciliation":true,"process_identity_state":"dead"{}}}"#, self.status_extra).into_bytes()),

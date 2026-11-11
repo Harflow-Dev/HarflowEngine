@@ -132,7 +132,7 @@ fn not_found(error: ReadError) -> ReadError {
             reason: None | Some(UnknownReason::PrefixTooShort),
             ..
         })
-        | ReadError::PendingLaunch(_) => refused("Unknown task"),
+        | ReadError::PendingLaunch { .. } => refused("Unknown task"),
         other => other,
     }
 }

@@ -4,7 +4,10 @@ use super::{
     gate::{Observer, timely},
     page::{Counts, ItemSize},
 };
-use hf_domain::{ctl::task_rows::TaskRecord, task_read::TaskId};
+use hf_domain::{
+    ctl::{task_rows::TaskRecord, text::py_repr},
+    task_read::TaskId,
+};
 use std::time::Instant;
 
 /// Over this many unobserved rows root-wide, no count is claimed.
@@ -71,13 +74,18 @@ pub(crate) fn related(
         .iter()
         .map(|item| item.record.facts.id.clone())
         .collect();
-    let mut queue: Vec<TaskId> = Vec::new();
+    // Linked ids stay as stored text: like the reference, a link is validated only when the
+    // traversal reaches it, and an invalid stored chain root then fails the whole page.
+    let mut queue: Vec<String> = Vec::new();
     for item in items {
         push_links(&mut queue, &item.record, &visited);
     }
     let mut found = Vec::new();
     while !queue.is_empty() && found.len() < RELATED_MAX && visited.len() < VISITS_MAX {
-        let id = queue.remove(0);
+        let raw = queue.remove(0);
+        let id = TaskId::new(raw.clone()).map_err(|_| {
+            ReadError::InvalidParams(format!("not a valid task id: {}", py_repr(&raw)))
+        })?;
         if visited.contains(&id) {
             continue;
         }
@@ -99,14 +107,16 @@ pub(crate) fn related(
     Ok(found)
 }
 
-fn push_links(queue: &mut Vec<TaskId>, record: &TaskRecord, visited: &[TaskId]) {
+fn push_links(queue: &mut Vec<String>, record: &TaskRecord, visited: &[TaskId]) {
     let facts = &record.facts;
-    for link in [&facts.continuation_of, &facts.chain_root]
-        .into_iter()
-        .flatten()
-    {
-        if !visited.contains(link) {
-            queue.push(link.clone());
+    let links = [
+        facts.continuation_of.as_ref().map(TaskId::as_str),
+        facts.chain_root.raw(),
+    ];
+    // An empty stored link is skipped as the reference skips every falsy value.
+    for link in links.into_iter().flatten().filter(|link| !link.is_empty()) {
+        if !visited.iter().any(|seen| seen.as_str() == link) {
+            queue.push(link.to_owned());
         }
     }
 }

@@ -58,7 +58,7 @@ pub fn recovery_activity(
             let managed = (GatePath::Managed, Family::Complete);
             guard(managed.0, snapshot, marker, &view, managed.1, &mut observer)?;
             let (id, resolved_from) = resolve(snapshot, raw).map_err(|error| match error {
-                ReadError::PendingLaunch(raw) => unknown_task(&raw),
+                ReadError::PendingLaunch { raw, .. } => unknown_task(&raw),
                 other => other,
             })?;
             let record = snapshot

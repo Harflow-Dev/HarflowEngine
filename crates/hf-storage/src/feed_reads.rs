@@ -16,6 +16,7 @@ use hf_domain::{
     ctl::{
         feed::FeedSource,
         statistics::{GenerationEntry, StatFacts},
+        task_rows::ChainRoot,
     },
     event_read::CaptureState,
     task_read::TaskId,
@@ -204,7 +205,7 @@ fn stat_facts(row: &rusqlite::Row<'_>) -> Result<StatFacts> {
         model: row.get(9)?,
         repo_path: row.get(10)?,
         continuation_of: optional_id(row.get(11)?)?,
-        chain_root: optional_id(row.get(12)?)?,
+        chain_root: ChainRoot::qualify(row.get(12)?),
     })
 }
 
@@ -243,7 +244,7 @@ fn entry_json(out: &mut String, entry: &GenerationEntry) {
     json_string(out, &format!("task:{}", facts.id.as_str()));
     out.push(',');
     let link = facts.continuation_of.as_ref().map(TaskId::as_str);
-    let root = facts.chain_root.as_ref().map(TaskId::as_str);
+    let root = facts.chain_root.raw();
     if entry.identity_only {
         out.push_str("\"nonterminal_ancestry\",");
         json_optional(out, link);

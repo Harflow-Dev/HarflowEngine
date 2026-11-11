@@ -56,7 +56,7 @@ pub(super) fn task_fixture() -> TaskFixture {
             header: b"separate-process-commit".to_vec(),
             status: None,
         }],
-        pending: vec![],
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

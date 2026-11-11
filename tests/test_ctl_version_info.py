@@ -36,17 +36,17 @@ class VersionInfoTests(CtlCase):
         self.assertIsNotNone(match, version)
         self.assertEqual(match.group(1, 2), ("0", "0"))
         self.assertLessEqual(len(version.encode("utf-8")), 256)
-        self.assertEqual(version, "0.0.11+rust")
+        self.assertEqual(version, "0.0.13+rust")
 
     def test_capabilities_are_exactly_the_advertised_set(self):
         capabilities = self.document()["capabilities"]
         expected = ["ctl.v1", "version-info.v1"]
         if sys.platform == "darwin" and platform.machine() == "arm64":
-            expected.extend([
-                "task-successors.v1", "task-event-page.v1", "task-prompt.v1",
-                "interaction-events.v1", "statistics-page.v1",
-            ])
-        self.assertEqual(sorted(capabilities), sorted(expected))
+            expected = [
+                "interaction-events.v1", "ctl.v1", "version-info.v1", "statistics-page.v1",
+                "task-event-page.v1", "task-prompt.v1", "task-successors.v1",
+            ]
+        self.assertEqual(capabilities, expected)
         self.assertEqual(len(capabilities), len(set(capabilities)))
         for withheld in ("setup.v1", "events.v1", "state-recovery.v1", "statistics-cost-model.v1"):
             self.assertNotIn(withheld, capabilities)

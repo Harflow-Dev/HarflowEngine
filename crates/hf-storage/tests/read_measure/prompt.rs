@@ -39,7 +39,7 @@ pub fn generate(root: &Path, inline: bool) {
     };
     let empty = hf_storage::TaskFixture {
         rows: Vec::new(),
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: all,
     };
     store.replace_task_fixture(&empty, deadline()).unwrap();

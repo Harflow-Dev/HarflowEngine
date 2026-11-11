@@ -43,7 +43,7 @@ fn setup() -> (Fixture, Store) {
                     header: b"row".to_vec(),
                     status: None,
                 }],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,

@@ -1,7 +1,7 @@
 """Runs the reference engine's `interaction_events.page` over a Python state layout.
 
 This file is executed by python3 in a subprocess with the reference sources (HarflowMCP commit
-a426c5a, extracted from git) on PYTHONPATH. It reads {"tasks": [...], "limits": [...]} on stdin,
+0ac7e3c, extracted from git) on PYTHONPATH. It reads {"tasks": [...], "limits": [...]} on stdin,
 writes the tasks with the reference store, walks the feed at each limit and prints the pages.
 """
 

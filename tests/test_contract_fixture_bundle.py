@@ -8,8 +8,16 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "tests" / "fixtures" / "contracts-v1"
-EXPECTED_MANIFEST_SHA256 = "cd58a5ef8bae565513669dcf4d4ac9179ea327d5093de4461806d7be8dae1873"
-EXPECTED_OLD_PROVENANCE_SHA256 = "70d9ae6bc588609d25dbc74c563e38dcfc230a6197f5dc3140bbb169b6ec37a0"
+EXPECTED_MANIFEST_SHA256 = "56ac4ce3c762ebb3b40855fc6defa47636076cb9b2ebdda9d7b207dce350fb55"
+EXPECTED_OLD_PROVENANCE_SHA256 = "49e2708616aecb29cba324a797de06314db77ac9ea067f479ffe991267a04311"
+
+ADDED_FAMILIES = {
+    "task-continue",
+    "task-artifacts",
+    "task-cancel-cascade",
+    "task-pending-launch",
+    "task-continuation-stop",
+}
 
 
 def _sha256(path):
@@ -32,7 +40,7 @@ class ContractFixtureBundleTests(unittest.TestCase):
         manifest = json.loads(manifest_bytes)
         cases = manifest["cases"]
         hashes = manifest["files"]
-        self.assertEqual(len(cases), 291)
+        self.assertEqual(len(cases), 334)
         self.assertEqual(set(cases), set(hashes))
         actual_names = {
             path.name
@@ -43,28 +51,28 @@ class ContractFixtureBundleTests(unittest.TestCase):
         for name, expected in hashes.items():
             self.assertEqual(_sha256(BUNDLE / name), expected, name)
 
-    def test_v2_provenance_pins_public_artifacts_and_preserves_v1_history(self):
+    def test_v3_provenance_pins_public_artifacts_and_preserves_the_previous_history(self):
         path = ROOT / "tests" / "fixtures" / "contracts-v1.provenance.json"
         provenance = json.loads(path.read_bytes())
         manifest = json.loads((BUNDLE / "manifest.json").read_bytes())
-        self.assertEqual(provenance["consumer_audit_version"], 2)
-        self.assertEqual(provenance["public_version"], "0.0.11")
-        self.assertEqual(provenance["source_commit"], "6195e619499003301e4b20bacc3da86b5dbe371a")
-        self.assertEqual(provenance["tag"], "v0.0.11")
-        self.assertEqual(provenance["release_url"], "https://github.com/Harflow-Dev/HarflowMCP/releases/tag/v0.0.11")
+        self.assertEqual(provenance["consumer_audit_version"], 3)
+        self.assertEqual(provenance["public_version"], "0.0.13")
+        self.assertEqual(provenance["source_commit"], "0ac7e3cc07a2adc8602e6d378549c99184247f93")
+        self.assertEqual(provenance["tag"], "v0.0.13")
+        self.assertEqual(provenance["release_url"], "https://github.com/Harflow-Dev/HarflowMCP/releases/tag/v0.0.13")
         self.assertIs(provenance["release_prerelease"], True)
-        self.assertIn("Verified GitHub tag v0.0.11 resolves to source commit", provenance["source_identity_basis"])
-        self.assertEqual(provenance["contracts_md_sha256"], "850b4fded3f3b4732585902f7bcadf47cd7fdab5f733c49e32fe49aca20b70c2")
-        self.assertEqual(provenance["wheel_sha256"], "8ec421d1e21894f0fc9504f2d928eb02cef7c1d245fecd6fc5ba69204a346dfc")
-        self.assertEqual(provenance["sdist_sha256"], "bdf02ad4a28dbc5d17c02e01a5006613e877171e246a873906bf3f2fa1641c4a")
+        self.assertIn("Local tag v0.0.13 resolves to source commit", provenance["source_identity_basis"])
+        self.assertEqual(provenance["contracts_md_sha256"], "d8d1d715f9af87a16720253e0ebe94b19ec2c78be9853ec942615304a5f32a3f")
+        self.assertEqual(provenance["wheel_sha256"], "1363c549e8d701efb9a0d6f00197f725a262f5fdecca6ff2964f5331d60c8424")
+        self.assertEqual(provenance["sdist_sha256"], "64303a47c3583b8d9622323e639fdad6ef5dc36e4d0ee508e5af4c2e8971dff7")
         self.assertEqual(provenance["manifest_sha256"], EXPECTED_MANIFEST_SHA256)
-        self.assertEqual(provenance["fixture_count"], 291)
-        self.assertEqual(provenance["previous_fixture_count"], 207)
-        self.assertEqual(provenance["previous_manifest_sha256"], "ceb336216b8e5b0938f101b2a8b2ba5f85e3d939e281c446461499a2ae5c4906")
+        self.assertEqual(provenance["fixture_count"], 334)
+        self.assertEqual(provenance["previous_fixture_count"], 291)
+        self.assertEqual(provenance["previous_manifest_sha256"], "cd58a5ef8bae565513669dcf4d4ac9179ea327d5093de4461806d7be8dae1873")
         self.assertEqual(provenance["removed"], [])
 
         history = provenance["history"]
-        self.assertEqual(history["path"], "tests/fixtures/provenance/contracts-v1-0.0.10.json")
+        self.assertEqual(history["path"], "tests/fixtures/provenance/contracts-v1-0.0.11.json")
         old_provenance = ROOT / history["path"]
         self.assertEqual(history["sha256"], EXPECTED_OLD_PROVENANCE_SHA256)
         self.assertEqual(_sha256(old_provenance), EXPECTED_OLD_PROVENANCE_SHA256)
@@ -72,21 +80,21 @@ class ContractFixtureBundleTests(unittest.TestCase):
     def test_every_audit_entry_has_hashes_and_classified_json_pointer_diffs(self):
         provenance = json.loads((ROOT / "tests" / "fixtures" / "contracts-v1.provenance.json").read_bytes())
         manifest = json.loads((BUNDLE / "manifest.json").read_bytes())
-        old_provenance = json.loads((ROOT / "tests" / "fixtures" / "provenance" / "contracts-v1-0.0.10.json").read_bytes())
-        self.assertEqual(len(provenance["files"]), 291)
+        old_provenance = json.loads((ROOT / "tests" / "fixtures" / "provenance" / "contracts-v1-0.0.11.json").read_bytes())
+        self.assertEqual(len(provenance["files"]), 334)
         entries = {entry["file"]: entry for entry in provenance["files"]}
         self.assertEqual(set(entries), set(manifest["files"]))
-        self.assertEqual(len(entries), 291)
+        self.assertEqual(len(entries), 334)
         old_entries = {entry["file"]: entry for entry in old_provenance["files"]}
-        self.assertEqual(len(old_provenance["files"]), 207)
+        self.assertEqual(len(old_provenance["files"]), 291)
         self.assertEqual(set(old_entries), {name for name, entry in entries.items() if entry["classification"] != "added"})
         expected_counts = {
-            "product-version-only": 110,
-            "capability-list": 9,
-            "opaque-regeneration": 17,
+            "product-version-only": 190,
+            "capability-list": 29,
+            "opaque-regeneration": 15,
             "usage-help": 1,
-            "unchanged": 70,
-            "added": 84,
+            "unchanged": 56,
+            "added": 43,
         }
         observed_counts = {}
         for entry in entries.values():
@@ -134,7 +142,7 @@ class ContractFixtureBundleTests(unittest.TestCase):
             elif classification == "added":
                 self.assertIsNone(entry["previous_sha256"], name)
                 self.assertEqual(paths, set(), name)
-                self.assertIn(entry["added_family"], {"ctl-steering", "ctl-conversation", "negative-handshake"}, name)
+                self.assertIn(entry["added_family"], ADDED_FAMILIES, name)
             else:
                 self.fail(f"unrecognized audit classification {classification!r}: {name}")
 
@@ -145,7 +153,13 @@ class ContractFixtureBundleTests(unittest.TestCase):
             family = entry.get("added_family")
             if family is not None:
                 family_counts[family] = family_counts.get(family, 0) + 1
-        self.assertEqual(family_counts, {"ctl-steering": 45, "ctl-conversation": 33, "negative-handshake": 6})
+        self.assertEqual(family_counts, {
+            "task-continue": 5,
+            "task-artifacts": 8,
+            "task-cancel-cascade": 10,
+            "task-pending-launch": 14,
+            "task-continuation-stop": 6,
+        })
 
     def test_new_fixture_families_preserve_advertisement_and_unknown_boundaries(self):
         version_info = _fixture("version-info.json")

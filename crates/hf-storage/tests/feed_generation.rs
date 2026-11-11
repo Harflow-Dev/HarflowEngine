@@ -40,7 +40,7 @@ fn entry(name: &str, only_identity: bool) -> GenerationEntry {
             model: None,
             repo_path: "/repo".into(),
             continuation_of: None,
-            chain_root: None,
+            chain_root: hf_domain::ctl::task_rows::ChainRoot::Absent,
         },
         identity_only: only_identity,
     };
@@ -94,7 +94,7 @@ fn the_generation_follows_every_fact_but_only_the_identity_of_a_running_ancestor
         Box::new(|e| e.facts.model = Some("m".into())),
         Box::new(|e| e.facts.repo_path = "/other".into()),
         Box::new(|e| e.facts.continuation_of = Some(id("p"))),
-        Box::new(|e| e.facts.chain_root = Some(id("p"))),
+        Box::new(|e| e.facts.chain_root = hf_domain::ctl::task_rows::ChainRoot::Valid(id("p"))),
         Box::new(|e| e.facts.id = id("b")),
     ];
     for change in changes.drain(..) {

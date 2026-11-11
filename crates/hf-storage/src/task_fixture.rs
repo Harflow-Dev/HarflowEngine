@@ -1,12 +1,12 @@
 use crate::{Error, Result, Store, connection};
 use hf_application::task_read::TaskRow;
-use hf_domain::task_read::{Coverage, TaskId};
+use hf_domain::task_read::Coverage;
 use rusqlite::TransactionBehavior;
 use std::time::Instant;
-pub const TASK_SCHEMA: &str = "CREATE TABLE task_dataset(singleton INTEGER PRIMARY KEY CHECK(singleton=1),version INTEGER NOT NULL,generation TEXT NOT NULL CHECK(typeof(generation)='text' AND length(generation)=32),discovery INTEGER NOT NULL CHECK(discovery IN(0,1)),ownership INTEGER NOT NULL CHECK(ownership IN(0,1)),source INTEGER NOT NULL CHECK(source IN(0,1))); CREATE TABLE task_headers(id TEXT PRIMARY KEY CHECK(typeof(id)='text' AND length(id) BETWEEN 1 AND 64),stamp INTEGER NOT NULL,session TEXT,active INTEGER CHECK(active IN(0,1)),recorded_status TEXT,exited INTEGER CHECK(exited IN(0,1)),drained INTEGER CHECK(drained IN(0,1)),owned INTEGER CHECK(owned IN(0,1)),header BLOB NOT NULL,status BLOB); CREATE INDEX task_order ON task_headers(stamp DESC,id DESC); CREATE INDEX task_session ON task_headers(session,stamp DESC,id DESC); CREATE INDEX task_active ON task_headers(active,stamp DESC,id DESC); CREATE TABLE task_pending(id TEXT PRIMARY KEY CHECK(typeof(id)='text' AND length(id) BETWEEN 1 AND 64));";
+pub const TASK_SCHEMA: &str = "CREATE TABLE task_dataset(singleton INTEGER PRIMARY KEY CHECK(singleton=1),version INTEGER NOT NULL,generation TEXT NOT NULL CHECK(typeof(generation)='text' AND length(generation)=32),discovery INTEGER NOT NULL CHECK(discovery IN(0,1)),ownership INTEGER NOT NULL CHECK(ownership IN(0,1)),source INTEGER NOT NULL CHECK(source IN(0,1))); CREATE TABLE task_headers(id TEXT PRIMARY KEY CHECK(typeof(id)='text' AND length(id) BETWEEN 1 AND 64),stamp INTEGER NOT NULL,session TEXT,active INTEGER CHECK(active IN(0,1)),recorded_status TEXT,exited INTEGER CHECK(exited IN(0,1)),drained INTEGER CHECK(drained IN(0,1)),owned INTEGER CHECK(owned IN(0,1)),header BLOB NOT NULL,status BLOB); CREATE INDEX task_order ON task_headers(stamp DESC,id DESC); CREATE INDEX task_session ON task_headers(session,stamp DESC,id DESC); CREATE INDEX task_active ON task_headers(active,stamp DESC,id DESC);";
 pub struct TaskFixture {
     pub rows: Vec<TaskRow>,
-    pub pending: Vec<TaskId>,
+    pub launches: Vec<crate::LaunchRow>,
     pub coverage: Coverage,
 }
 impl Store {
@@ -22,7 +22,7 @@ impl Store {
         super::task_read::dataset_optional(&transaction)?;
         connection::timeout(&transaction, deadline)?;
         transaction.execute_batch(
-            "DELETE FROM task_headers; DELETE FROM task_pending; DELETE FROM task_dataset; DELETE FROM task_facts; DELETE FROM task_processes; DELETE FROM task_prompts; DELETE FROM artifact_manifests; DELETE FROM artifact_items;",
+            "DELETE FROM task_headers; DELETE FROM launch_attempts; DELETE FROM chain_stops; DELETE FROM task_dataset; DELETE FROM task_facts; DELETE FROM task_processes; DELETE FROM task_prompts; DELETE FROM artifact_manifests; DELETE FROM artifact_items;",
         )?;
         transaction.execute(
             "INSERT INTO task_dataset VALUES(1,1,lower(hex(randomblob(16))),?1,?2,?3)",
@@ -50,9 +50,9 @@ impl Store {
                 ],
             )?;
         }
-        for id in &fixture.pending {
+        for row in &fixture.launches {
             connection::timeout(&transaction, deadline)?;
-            transaction.execute("INSERT INTO task_pending VALUES(?1)", [id.as_str()])?;
+            crate::launch_attempts::insert(&transaction, row, false)?;
         }
         crate::watch_meta::publish(&transaction)?;
         self.binding.check()?;
@@ -73,7 +73,8 @@ impl Store {
 fn validate(store: &Store, fixture: &TaskFixture, deadline: Instant) -> Result<()> {
     let mut ids = std::collections::BTreeSet::new();
     let mut bytes = 0usize;
-    store.check_bounds(fixture.rows.len().saturating_add(fixture.pending.len()), 0)?;
+    let mut launch_names = std::collections::BTreeSet::new();
+    store.check_bounds(fixture.rows.len().saturating_add(fixture.launches.len()), 0)?;
     for row in &fixture.rows {
         connection::check_deadline(deadline)?;
         if !ids.insert(row.id.clone())
@@ -95,14 +96,12 @@ fn validate(store: &Store, fixture: &TaskFixture, deadline: Instant) -> Result<(
             .checked_add(super::task_read::row_bytes(row))
             .ok_or(Error::LimitExceeded)?;
     }
-    for id in &fixture.pending {
+    for row in &fixture.launches {
         connection::check_deadline(deadline)?;
-        if !ids.insert(id.clone()) {
+        if !launch_names.insert(row.name.as_str()) {
             return Err(Error::Incompatible);
         }
-        bytes = bytes
-            .checked_add(id.as_str().len())
-            .ok_or(Error::LimitExceeded)?;
+        bytes = bytes.checked_add(row.bytes()).ok_or(Error::LimitExceeded)?;
     }
-    store.check_bounds(ids.len(), bytes)
+    store.check_bounds(ids.len() + launch_names.len(), bytes)
 }

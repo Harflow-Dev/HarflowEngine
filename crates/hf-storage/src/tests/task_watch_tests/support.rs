@@ -86,7 +86,7 @@ pub(super) fn row(id: &str, bytes: &[u8]) -> TaskRow {
 pub(super) fn task_fixture(rows: &[(&str, &[u8])]) -> TaskFixture {
     TaskFixture {
         rows: rows.iter().map(|(id, bytes)| row(id, bytes)).collect(),
-        pending: vec![],
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

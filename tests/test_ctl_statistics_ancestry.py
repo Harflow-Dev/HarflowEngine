@@ -39,11 +39,11 @@ class AncestryTests(FeedsCase):
         return pages[0]
 
     def test_a_missing_parent_of_an_included_task_makes_the_page_unavailable(self):
-        self.world(settled("c1", continuation_of="ghost"))
+        self.world(settled("c1", continuation_of="ghost", chain_root="ghost"))
         self.unavailable([MISSING])
 
     def test_a_missing_parent_of_a_task_outside_the_window_does_not(self):
-        self.world(seeds.task("c1", continuation_of="ghost", **OLD), settled("c2"))
+        self.world(seeds.task("c1", continuation_of="ghost", chain_root="ghost", **OLD), settled("c2"))
         self.ready(["c2"])
 
     def test_a_task_that_continues_itself_is_ambiguous(self):
@@ -78,11 +78,11 @@ class AncestryTests(FeedsCase):
         self.ready(self.in_order(128))
 
     def test_each_task_with_a_missing_parent_gives_its_own_diagnostic(self):
-        self.world(settled("o1", continuation_of="ghost"), settled("o2", continuation_of="ghost"))
+        self.world(settled("o1", continuation_of="ghost", chain_root="ghost"), settled("o2", continuation_of="ghost", chain_root="ghost"))
         self.unavailable([MISSING, MISSING])
 
     def test_diagnostics_stop_at_sixteen(self):
-        self.world(*[settled("o%02d" % n, n % 50, continuation_of="ghost") for n in range(20)])
+        self.world(*[settled("o%02d" % n, n % 50, continuation_of="ghost", chain_root="ghost") for n in range(20)])
         self.unavailable([MISSING] * 16)
 
     def test_a_parent_with_an_unknown_status_is_absent_and_listed_after_the_child(self):
@@ -102,7 +102,7 @@ class AncestryTests(FeedsCase):
 
     def test_unscoped_diagnostics_come_first_then_ownership_then_unreadable_rows(self):
         self.world(
-            seeds.task("n1", started_at=stamp(0), finished_at=None), settled("o1", 1, continuation_of="ghost"),
+            seeds.task("n1", started_at=stamp(0), finished_at=None), settled("o1", 1, continuation_of="ghost", chain_root="ghost"),
             seeds.task("n2", started_at=stamp(2), finished_at=None), settled("u1", status="bogus"),
         )
         self.unavailable([NO_FINISH, NO_FINISH, MISSING, dict(UNREADABLE, message="task:u1")])
@@ -113,11 +113,11 @@ class AncestryTests(FeedsCase):
         self.ready(["c1"])
 
     def test_an_old_ancestor_with_a_missing_parent_blocks_the_page_of_its_included_child(self):
-        self.world(settled("c1", continuation_of="p1"), seeds.task("p1", continuation_of="ghost", **OLD))
+        self.world(settled("c1", continuation_of="p1"), seeds.task("p1", continuation_of="ghost", chain_root="ghost", **OLD))
         self.unavailable([MISSING])
 
     def test_an_unavailable_page_has_no_cursor_even_when_one_is_asked_for_by_limit(self):
-        self.world(settled("c1", continuation_of="ghost"))
+        self.world(settled("c1", continuation_of="ghost", chain_root="ghost"))
         page = self.stats("--limit", "1")
         self.assertEqual((page["state"], page["next_cursor"], page["generation"]), ("unavailable", None, None))
         self.assertNotEqual(page["generation"], EMPTY_GENERATION)

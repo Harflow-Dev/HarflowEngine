@@ -128,15 +128,8 @@ pub(crate) fn lookup(
             return Ok(Lookup::Found(id.clone()));
         }
         connection::timeout(db, deadline)?;
-        let pending: Option<String> = db
-            .query_row(
-                "SELECT id FROM task_pending WHERE id=?1",
-                [id.as_str()],
-                |r| r.get(0),
-            )
-            .optional()?;
-        if pending.is_some() {
-            return Ok(Lookup::Pending(id.clone()));
+        if let Some(pending) = crate::launch_attempts::pending(db, id)? {
+            return Ok(Lookup::Pending(pending));
         }
     }
     if id.canonical() {
@@ -195,7 +188,12 @@ fn status_query(
 
 fn lookup_bytes(lookup: &Lookup) -> usize {
     match lookup {
-        Lookup::Found(id) | Lookup::Pending(id) => 16 + id.as_str().len(),
+        Lookup::Found(id) => 16 + id.as_str().len(),
+        Lookup::Pending(pending) => {
+            16 + pending.id.as_str().len()
+                + pending.state.len()
+                + pending.not_started_reason.as_ref().map_or(0, String::len)
+        }
         Lookup::Ambiguous { candidates, .. } => {
             16 + candidates
                 .iter()

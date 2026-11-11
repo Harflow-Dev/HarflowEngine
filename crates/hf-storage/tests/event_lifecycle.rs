@@ -223,7 +223,9 @@ fn pending_exact_task_wins_before_cursor_validation_and_has_no_stream_facts() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: Vec::new(),
-                pending: vec![pending.clone()],
+                launches: vec![hf_storage::LaunchRow::waiting_for_resources(
+                    pending.clone(),
+                )],
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,
@@ -247,7 +249,14 @@ fn pending_exact_task_wins_before_cursor_validation_and_has_no_stream_facts() {
     let mut pending_query = query(10, false, EventFilter::Default, Some(cursor));
     pending_query.task = pending.clone();
     let result = store.event_read(&pending_query, deadline()).unwrap();
-    assert_eq!(result.lookup, Lookup::Pending(pending));
+    assert_eq!(
+        result.lookup,
+        Lookup::Pending(hf_domain::task_read::PendingLaunch {
+            id: pending,
+            state: "waiting_for_resources".into(),
+            not_started_reason: None,
+        })
+    );
     assert!(result.facts.is_none());
     assert!(result.events.is_empty());
 }

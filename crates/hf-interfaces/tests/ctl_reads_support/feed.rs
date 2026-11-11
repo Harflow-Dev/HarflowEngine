@@ -5,6 +5,7 @@ use hf_domain::{
     ctl::{
         feed::FeedSource,
         statistics::{GenerationEntry, StatFacts},
+        task_rows::ChainRoot,
     },
     event_read::CaptureState,
     task_read::TaskId,
@@ -50,7 +51,7 @@ pub fn facts(id: &str, start_us: i64, end_us: i64) -> StatFacts {
         model: Some("model-a".into()),
         repo_path: "/workspace/repo".into(),
         continuation_of: None,
-        chain_root: None,
+        chain_root: ChainRoot::Absent,
     }
 }
 

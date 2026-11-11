@@ -2,7 +2,7 @@
 
 The same world is written twice: with the reference engine's own store writer into a Python
 state layout, and into a Rust store through the fixture port. The pinned `interaction_events.page`
-(HarflowMCP commit a426c5a, extracted with `git archive`, python3 3.13.5, run in a subprocess) is
+(HarflowMCP commit 0ac7e3c, extracted with `git archive`, python3 3.13.5, run in a subprocess) is
 walked at several limits, and so is `harflow-ctl interaction-events`; every page must be equal
 (cursors are compared as decoded objects, because the engine writes its cursor canonically).
 
@@ -25,7 +25,7 @@ import unittest
 import seed_support as seeds
 from feeds_support import FeedsCase, decode_cursor
 
-COMMIT = "a426c5a"
+COMMIT = "0ac7e3c"
 LIMITS = (1, 2, 7, 25, 100)
 HERE = os.path.dirname(os.path.abspath(__file__))
 MCP = os.path.join(os.path.dirname(os.path.dirname(HERE)), "HarflowMCP")

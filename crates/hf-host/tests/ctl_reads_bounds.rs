@@ -194,7 +194,7 @@ fn incomplete_coverage_on_any_flag_behaves_as_damaged_on_every_gated_read() {
         };
         let empty = TaskFixture {
             rows: Vec::new(),
-            pending: Vec::new(),
+            launches: Vec::new(),
             coverage,
         };
         writer.replace_task_fixture(&empty, later()).unwrap();

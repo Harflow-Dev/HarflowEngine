@@ -30,7 +30,7 @@ fn a_continuation_stores_both_links_and_a_running_task_has_no_finish() {
     let w = world();
     let mut t = task(B, "running", None, false);
     t.facts.continuation_of = Some(tid(A));
-    t.facts.chain_root = Some(tid(A));
+    t.facts.chain_root = Some(A.to_owned());
     w.add(&t);
     assert_eq!(
         quoted(&w.db(), "task_facts", FACT_COLUMNS, "id", B),

@@ -58,6 +58,14 @@ fn explicit_ids_resolve_in_request_order() {
     assert!(matches!(out, Err(ReadError::Resolution(_))), "{out:?}");
 }
 
+fn pending(raw: &str) -> ReadError {
+    ReadError::PendingLaunch {
+        raw: raw.to_string(),
+        state: "waiting_for_resources".into(),
+        not_started_reason: None,
+    }
+}
+
 #[test]
 fn a_pending_launch_is_an_error_for_status_and_dropped_from_explicit_ids() {
     let mut world = world();
@@ -66,16 +74,13 @@ fn a_pending_launch_is_an_error_for_status_and_dropped_from_explicit_ids() {
     let raw = task_id(5).as_str().to_string();
     assert_eq!(
         status(&reads, &root(), &raw).map(|_| ()),
-        Err(ReadError::PendingLaunch(raw.clone()))
+        Err(pending(&raw))
     );
     let ids = vec![raw.clone(), task_id(1).as_str().to_string()];
     let out = page(&reads, &root(), &request(PageMode::TaskIds(ids))).unwrap();
     assert_eq!(out.items.len(), 1);
     let batch = status_batch(&reads, &root(), std::slice::from_ref(&raw)).unwrap();
-    assert_eq!(
-        batch.errors,
-        vec![(raw.clone(), ReadError::PendingLaunch(raw))]
-    );
+    assert_eq!(batch.errors, vec![(raw.clone(), pending(&raw))]);
 }
 
 #[test]

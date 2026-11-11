@@ -46,7 +46,7 @@ fn non_boolean_sqlite_flags_never_become_true_facts() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![row("flagged-task", 1)],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,
@@ -100,7 +100,7 @@ fn oversized_persisted_generation_and_ids_are_bounded_before_mapping() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![row("prefix-123456-item", 1)],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,
@@ -182,7 +182,7 @@ fn fixture_replacement_refuses_future_dataset_version_without_erasing_rows() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![row("preserve-this", 1)],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,
@@ -207,7 +207,7 @@ fn fixture_replacement_refuses_future_dataset_version_without_erasing_rows() {
         store.replace_task_fixture(
             &TaskFixture {
                 rows: vec![row("replacement", 2)],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: false,
                     ownership_complete: false,

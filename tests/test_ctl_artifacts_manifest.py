@@ -177,7 +177,9 @@ class AncestryTests(HistoryCase):
         tasks = []
         for number in range(1, length + 1):
             parent = ident(number - 1) if number > 1 else tip_continues
-            tasks.append(seeds.task(ident(number), continuation_of=parent, started_at=f"2026-01-10T10:{number // 60:02d}:{number % 60:02d}+00:00"))
+            # The tip may continue a task that does not exist: its chain root is then given explicitly.
+            extra = {"chain_root": tip_continues} if number == 1 and tip_continues else {}
+            tasks.append(seeds.task(ident(number), continuation_of=parent, **extra, started_at=f"2026-01-10T10:{number // 60:02d}:{number % 60:02d}+00:00"))
         self.world(*tasks)
         return ident(length)
 
@@ -264,7 +266,7 @@ class SummaryTests(ArtifactCase):
         self.assertEqual(self.summary()["count"], 100)
 
     def test_broken_ancestry_is_unavailable_with_no_reference(self):
-        self.add(B, continuation_of=ident(900), started_at="2026-01-11T10:00:00+00:00")
+        self.add(B, continuation_of=ident(900), chain_root=ident(900), started_at="2026-01-11T10:00:00+00:00")
         self.assertEqual(self.summary(task_id=B), {"count": 0, "state": "unavailable"})
 
     def test_batch_and_brief_carry_the_same_summary(self):

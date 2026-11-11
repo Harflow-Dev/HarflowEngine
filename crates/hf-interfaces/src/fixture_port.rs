@@ -4,19 +4,25 @@
 //! owns all JSON so that the seed tool itself handles typed values only. It reads no files and
 //! has no clock.
 mod args;
+mod launch;
 mod parts;
 mod spec;
 use args::Args;
 use hf_domain::task_read::TaskId;
+pub use launch::{
+    LAUNCH_STATES, LaunchSpec, Lineage, REFUSAL_CHECKS, Resources, StopMode, StopSpec, Worktree,
+};
 pub use parts::{
     ArtifactSpec, CallerStatus, EventSpec, IdentityState, LiveCaller, Observation, Target,
     check_name,
 };
 use serde_json::Value;
-pub use spec::{PREVIEW_CHARS, Projection, PromptRecord, PromptStore, TaskSpec, header_repo_path};
+pub use spec::{
+    ChainRootSpec, PREVIEW_CHARS, Projection, PromptRecord, PromptStore, TaskSpec, header_repo_path,
+};
 /// Largest request body the port accepts.
 pub const MAX_REQUEST: usize = 4 * 1024 * 1024;
-pub const OPERATIONS: [&str; 17] = [
+pub const OPERATIONS: [&str; 20] = [
     "initialize_empty",
     "remove_root",
     "make_foreign_root",
@@ -34,6 +40,9 @@ pub const OPERATIONS: [&str; 17] = [
     "write_artifacts",
     "change_artifact_target",
     "authoritative_digest",
+    "stop_chain",
+    "add_launch",
+    "add_invalid_launch_name",
 ];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PortError(String);
@@ -79,6 +88,9 @@ pub enum Request {
     },
     ChangeArtifactTarget(TaskId, String),
     AuthoritativeDigest,
+    StopChain(StopSpec),
+    AddLaunch(Box<LaunchSpec>),
+    AddInvalidLaunchName(String),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Response {
@@ -149,6 +161,15 @@ pub fn parse(operation: &str, stdin: &[u8]) -> Result<Request, PortError> {
             let name = args.string("name")?;
             check_name(&name)?;
             Request::ChangeArtifactTarget(task(&args)?, name)
+        }
+        "stop_chain" => {
+            Request::StopChain(StopSpec::parse(with(&["spec"])?.object_value("spec")?)?)
+        }
+        "add_launch" => Request::AddLaunch(Box::new(LaunchSpec::parse(
+            with(&["spec"])?.object_value("spec")?,
+        )?)),
+        "add_invalid_launch_name" => {
+            Request::AddInvalidLaunchName(launch::invalid_name(with(&["name"])?.string("name")?)?)
         }
         other => return Err(PortError::new(format!("unknown operation {other:?}"))),
     })

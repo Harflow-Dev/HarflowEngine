@@ -91,30 +91,77 @@ fn future_version_extra_rows_and_large_scalar_cells_are_unavailable_without_repa
 }
 
 #[test]
-fn pending_id_collision_refuses_atomically_without_changing_overlay_or_watch_cursor() {
-    let fixture = Fixture::new("pending-collision");
+fn a_launch_sharing_an_id_with_a_record_is_accepted_and_keeps_the_watch_cursor() {
+    let fixture = Fixture::new("launch-shares-record-id");
     let store = fixture.initialize();
     publish(&store, &[("already-a-header", b"owned-header")]);
-    let retained = TaskId::new("existing-pending".into()).unwrap();
+    let raw = fixture.raw();
+    let read = |raw: &rusqlite::Connection| -> (String, i64, Vec<u8>) {
+        raw.query_row(
+            "SELECT d.generation,w.revision,h.header FROM task_dataset d,task_watch_meta w,task_headers h WHERE d.singleton=1 AND w.singleton=1 AND h.id='already-a-header'",
+            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).unwrap()
+    };
+    let before = read(&raw);
+    let sharing = TaskId::new("already-a-header".into()).unwrap();
     store
-        .replace_pending_fixture(&[retained], deadline())
+        .replace_launch_fixture(
+            &[crate::LaunchRow::waiting_for_resources(sharing)],
+            deadline(),
+        )
+        .unwrap();
+    let after = read(&raw);
+    assert_ne!(
+        after.0, before.0,
+        "a launch write advances the paging generation"
+    );
+    assert_eq!(
+        (after.1, &after.2),
+        (before.1, &before.2),
+        "task-list metadata revision and the record stay unchanged"
+    );
+    let launches: i64 = raw
+        .query_row(
+            "SELECT count(*) FROM launch_attempts WHERE name='already-a-header'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(launches, 1);
+}
+
+#[test]
+fn duplicate_launch_names_refuse_atomically_without_changing_generation_or_rows() {
+    let fixture = Fixture::new("launch-duplicate-names");
+    let store = fixture.initialize();
+    publish(&store, &[("task-a", b"header")]);
+    let retained = TaskId::new("existing-launch".into()).unwrap();
+    store
+        .replace_launch_fixture(
+            &[crate::LaunchRow::waiting_for_resources(retained)],
+            deadline(),
+        )
         .unwrap();
     let raw = fixture.raw();
-    let before: (String, i64, Vec<u8>, String) = raw.query_row(
-        "SELECT d.generation,w.revision,h.header,(SELECT id FROM task_pending) FROM task_dataset d,task_watch_meta w,task_headers h WHERE d.singleton=1 AND w.singleton=1 AND h.id='already-a-header'",
-        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-    ).unwrap();
-    let colliding = TaskId::new("already-a-header".into()).unwrap();
+    let read = |raw: &rusqlite::Connection| -> (String, i64, String) {
+        raw.query_row(
+            "SELECT d.generation,w.revision,(SELECT group_concat(name) FROM launch_attempts) FROM task_dataset d,task_watch_meta w WHERE d.singleton=1 AND w.singleton=1",
+            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).unwrap()
+    };
+    let before = read(&raw);
+    let twin = TaskId::new("twin".into()).unwrap();
+    let rows = [
+        crate::LaunchRow::waiting_for_resources(twin.clone()),
+        crate::LaunchRow::waiting_for_resources(twin),
+    ];
     assert!(matches!(
-        store.replace_pending_fixture(&[colliding], deadline()),
+        store.replace_launch_fixture(&rows, deadline()),
         Err(crate::Error::Incompatible)
     ));
-    let after: (String, i64, Vec<u8>, String) = raw.query_row(
-        "SELECT d.generation,w.revision,h.header,(SELECT id FROM task_pending) FROM task_dataset d,task_watch_meta w,task_headers h WHERE d.singleton=1 AND w.singleton=1 AND h.id='already-a-header'",
-        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-    ).unwrap();
     assert_eq!(
-        after, before,
-        "rejected collision must preserve paging generation, metadata revision, header and old overlay"
+        read(&raw),
+        before,
+        "a rejected duplicate must preserve the paging generation, revision and old rows"
     );
 }

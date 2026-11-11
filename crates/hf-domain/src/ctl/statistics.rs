@@ -6,6 +6,7 @@
 use super::{
     statistics_time::{Bounds, micros_to_seconds},
     statistics_walk::Walk,
+    task_rows::ChainRoot,
 };
 use crate::task_read::TaskId;
 use std::collections::{BTreeMap, BTreeSet};
@@ -33,7 +34,7 @@ pub struct StatFacts {
     pub model: Option<String>,
     pub repo_path: String,
     pub continuation_of: Option<TaskId>,
-    pub chain_root: Option<TaskId>,
+    pub chain_root: ChainRoot,
 }
 
 /// One source of the projection, in id order.
@@ -75,7 +76,7 @@ pub struct StatItem {
     pub title: Option<String>,
     pub elapsed_seconds: f64,
     pub continuation_of: Option<TaskId>,
-    pub chain_root: Option<TaskId>,
+    pub chain_root: ChainRoot,
     pub backend: String,
     pub model: Option<String>,
 }

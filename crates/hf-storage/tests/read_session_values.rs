@@ -121,7 +121,9 @@ fn built() -> Built {
         .replace_task_fixture(
             &TaskFixture {
                 rows: all_rows.clone(),
-                pending: vec![id("pending-task-9999")],
+                launches: vec![hf_storage::LaunchRow::waiting_for_resources(id(
+                    "pending-task-9999",
+                ))],
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,
@@ -227,7 +229,11 @@ fn ids_reads_return_found_pending_and_missing_with_the_stored_rows() {
         result.lookups,
         vec![
             Lookup::Found(row(1, 3).id),
-            Lookup::Pending(id("pending-task-9999")),
+            Lookup::Pending(hf_domain::task_read::PendingLaunch {
+                id: id("pending-task-9999"),
+                state: "waiting_for_resources".into(),
+                not_started_reason: None,
+            }),
             Lookup::Found(row(1, 1).id),
             Lookup::Missing,
         ]

@@ -200,10 +200,18 @@ pub struct StoredObservation {
     pub drained: Option<bool>,
     pub owned: Option<bool>,
 }
+/// A launch attempt that has no ordinary record yet: its receipt is pending-kind (it asked
+/// for resources or a worktree) and not yet spawned or settled.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingLaunch {
+    pub id: TaskId,
+    pub state: String,
+    pub not_started_reason: Option<String>,
+}
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Lookup {
     Found(TaskId),
-    Pending(TaskId),
+    Pending(PendingLaunch),
     Missing,
     InvalidPrefix,
     Incomplete,

@@ -17,11 +17,12 @@ use hf_domain::{
         caller::{EnvMarkers, PidObservation, ProcessView},
         state_root::StateRoot,
         task_rows::{
-            BatchQuery, CallerRow, ProcessRecord, TaskFacts, TaskRecord, TaskSummary, UnobservedRow,
+            BatchQuery, CallerRow, ChainRoot, ProcessRecord, TaskFacts, TaskRecord, TaskSummary,
+            UnobservedRow,
         },
     },
     process::ProcessIdentity,
-    task_read::{Lookup, TaskId},
+    task_read::{Lookup, PendingLaunch, TaskId},
 };
 pub use history::{History, items, log_facts, page_of, stored_prompt};
 use std::{cell::RefCell, collections::HashMap, time::Instant};
@@ -68,7 +69,7 @@ pub fn facts(n: u32, status: &str, exit: Option<i64>) -> TaskFacts {
         title: None,
         model: None,
         continuation_of: None,
-        chain_root: None,
+        chain_root: ChainRoot::Absent,
     }
 }
 
@@ -230,7 +231,11 @@ impl TaskSnapshotPort for World {
     fn lookup(&self, id: &TaskId) -> Result<Lookup, StoreFailure> {
         self.note(format!("lookup:{}", id.as_str()));
         if self.pending.contains(id) {
-            return Ok(Lookup::Pending(id.clone()));
+            return Ok(Lookup::Pending(PendingLaunch {
+                id: id.clone(),
+                state: "waiting_for_resources".into(),
+                not_started_reason: None,
+            }));
         }
         if self.tasks.iter().any(|task| &task.facts.id == id) {
             return Ok(Lookup::Found(id.clone()));

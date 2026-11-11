@@ -381,3 +381,25 @@ pub fn seqs(result: &EventReadResult) -> Vec<u64> {
 pub fn ids(result: &TaskReadResult) -> Vec<&str> {
     result.rows.iter().map(|r| r.id.as_str()).collect()
 }
+
+/// A stored column read with the system `sqlite3`, read-only.
+pub fn query(root: &Path, sql: &str) -> String {
+    let out = Command::new("/usr/bin/sqlite3")
+        .arg("-readonly")
+        .arg(root.join("store.sqlite3"))
+        .arg(sql)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{sql}: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout).unwrap().trim_end().to_owned()
+}
+
+pub fn empty() -> Scratch {
+    let scratch = Scratch::new();
+    ok(&scratch.root, "initialize_empty", "{}");
+    scratch
+}

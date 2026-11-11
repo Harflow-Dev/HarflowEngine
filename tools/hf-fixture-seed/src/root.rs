@@ -76,7 +76,7 @@ pub fn initialize(context: &Context) -> Result<Store> {
     };
     let empty = TaskFixture {
         rows: Vec::new(),
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: all,
     };
     store.replace_task_fixture(&empty, context.deadline())?;

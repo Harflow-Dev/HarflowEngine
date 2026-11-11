@@ -1,5 +1,5 @@
-//! Dispatch of the seventeen port operations.
-use crate::{artifacts, digest, events, fail::Result, root, root::Context, tasks};
+//! Dispatch of the twenty port operations.
+use crate::{artifacts, digest, events, fail::Result, launch, root, root::Context, tasks};
 use hf_interfaces::fixture_port::{Request, Response};
 
 pub fn execute(context: &Context, request: Request) -> Result<Response> {
@@ -11,7 +11,7 @@ pub fn execute(context: &Context, request: Request) -> Result<Response> {
         Request::AuthoritativeDigest => digest::authoritative_digest(context),
         Request::SeedWorld(world) => tasks::seed_world(context, &world),
         Request::AddTask(spec) => {
-            context.with_store(|store| tasks::add_task(context, store, *spec))
+            context.with_store(|store| tasks::add_task(context, store, *spec, &[]))
         }
         Request::AddLiveCaller(caller) => {
             context.with_store(|store| tasks::add_live_caller(context, store, &caller))
@@ -38,5 +38,14 @@ pub fn execute(context: &Context, request: Request) -> Result<Response> {
         } => context
             .with_store(|store| artifacts::write_artifacts(store, &task, &items, header_valid)),
         Request::ChangeArtifactTarget(id, name) => artifacts::change_target(context, &id, &name),
+        Request::StopChain(spec) => {
+            context.with_store(|store| launch::stop_chain(context, store, &spec))
+        }
+        Request::AddLaunch(spec) => {
+            context.with_store(|store| launch::add_launch(context, store, &spec))
+        }
+        Request::AddInvalidLaunchName(name) => {
+            context.with_store(|store| launch::add_invalid_launch_name(context, store, &name))
+        }
     }
 }

@@ -247,11 +247,24 @@ pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc
         ReadError::InvalidParams(message) => ErrorDoc::new("invalid_params", message.clone()),
         ReadError::Resolution(found) => resolution(found),
         ReadError::Coded { code, message } => ErrorDoc::new(code, message.clone()),
-        ReadError::PendingLaunch(raw) => ErrorDoc::new(
-            "task_pending_launch",
-            format!(
-                "task {raw} has not started: its launch is pending; no task record exists until it spawns"
-            ),
-        ),
+        ReadError::PendingLaunch {
+            raw,
+            state,
+            not_started_reason,
+        } => {
+            let mut doc = ErrorDoc::new(
+                "task_pending_launch",
+                format!(
+                    "task {raw} has not started: its launch is {state}; no task record exists until it spawns"
+                ),
+            );
+            let mut data = serde_json::Map::new();
+            data.insert("launch_state".into(), json!(state));
+            if let Some(reason) = not_started_reason {
+                data.insert("not_started_reason".into(), json!(reason));
+            }
+            doc.data = Some(Value::Object(data));
+            doc
+        }
     }
 }

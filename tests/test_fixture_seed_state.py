@@ -65,7 +65,7 @@ class TaskRowTests(SeedCase):
                          [(1, "running", 0, 0)])
 
     def test_a_continuation_sets_both_links_and_an_empty_one_sets_neither(self):
-        self.initialized(task(C, continuation_of=A), task(B, continuation_of=""), task(D, continuation_of=None))
+        self.initialized(task(C, continuation_of=A, chain_root=A), task(B, continuation_of=""), task(D, continuation_of=None))
         self.assertEqual(self.fetch("continuation_of,chain_root", "task_facts", "id", C), [(A, A)])
         self.assertEqual(self.fetch("continuation_of,chain_root", "task_facts", "id", B), [(None, None)])
         self.assertEqual(self.fetch("continuation_of,chain_root", "task_facts", "id", D), [(None, None)])

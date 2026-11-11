@@ -56,7 +56,7 @@ pub fn world() -> World {
         .replace_task_fixture(
             &TaskFixture {
                 rows: Vec::new(),
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: all,
             },
             later(5),

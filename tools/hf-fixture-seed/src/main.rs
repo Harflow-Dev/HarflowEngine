@@ -7,6 +7,7 @@ mod digest;
 mod events;
 mod fail;
 mod identity;
+mod launch;
 mod ops;
 mod root;
 mod tasks;

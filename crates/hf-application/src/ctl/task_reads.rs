@@ -110,8 +110,12 @@ pub enum ReadError {
     InvalidTaskId(String),
     InvalidParams(String),
     Resolution(Resolution),
-    /// The id names a task whose launch has not produced a record.
-    PendingLaunch(String),
+    /// The id names a task whose launch has not produced a record. `raw` is the id as typed.
+    PendingLaunch {
+        raw: String,
+        state: String,
+        not_started_reason: Option<String>,
+    },
     /// An event cursor that is malformed, or belongs to another task, filter or version.
     CursorInvalid,
     /// A well-formed event cursor that no longer applies.

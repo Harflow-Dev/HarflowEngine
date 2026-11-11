@@ -3,7 +3,7 @@ use super::{PortError, args::Args};
 use hf_domain::{task_read::TaskId, timestamp::parse_micros};
 use serde_json::{Value, json};
 pub const PREVIEW_CHARS: usize = 2000;
-const KEYS: [&str; 17] = [
+const KEYS: [&str; 18] = [
     "task_id",
     "backend",
     "repo_path",
@@ -21,6 +21,7 @@ const KEYS: [&str; 17] = [
     "continuation_of",
     "prompt_store",
     "real_workspace",
+    "chain_root",
 ];
 const REQUIRED: [&str; 11] = [
     "task_id",
@@ -43,6 +44,15 @@ pub enum PromptStore {
     SidecarMismatch,
     SidecarForeignName,
 }
+/// Where a task's stored chain root comes from. `Default` follows the reference store: the
+/// predecessor's stored chain root, else the predecessor itself (a task without a
+/// predecessor stores none). `Verbatim` stores any text, valid task identity or not.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChainRootSpec {
+    Default,
+    Absent,
+    Verbatim(String),
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TaskSpec {
     pub id: TaskId,
@@ -64,6 +74,7 @@ pub struct TaskSpec {
     pub continuation_of: Option<TaskId>,
     pub prompt_store: PromptStore,
     pub real_workspace: bool,
+    pub chain_root: ChainRootSpec,
 }
 /// The prompt as stored: inline text, or a preview with its sidecar binding.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -119,10 +130,12 @@ impl TaskSpec {
             continuation_of,
             prompt_store: store(args.opt_string("prompt_store")?.as_deref())?,
             real_workspace: args.opt_bool("real_workspace")?.unwrap_or(false),
+            chain_root: chain_root(&args)?,
         })
     }
-    /// The identity fields of the task: what was asked for, not how it went.
-    pub fn header_blob(&self) -> Vec<u8> {
+    /// The identity fields of the task: what was asked for, not how it went. `chain_root`
+    /// is the stored chain root, resolved by the writer.
+    pub fn header_blob(&self, chain_root: Option<&str>) -> Vec<u8> {
         encode(&json!({
             "task_id": self.id.as_str(),
             "backend": self.backend,
@@ -134,7 +147,7 @@ impl TaskSpec {
             "group": self.group,
             "model": self.model,
             "continuation_of_task_id": self.continuation_of.as_ref().map(TaskId::as_str),
-            "chain_root_task_id": self.continuation_of.as_ref().map(TaskId::as_str),
+            "chain_root_task_id": chain_root,
         }))
     }
     /// The projection of a task. `identity` is the decided state of a recorded caller process
@@ -218,6 +231,14 @@ impl TaskSpec {
             PromptStore::SidecarForeignName => sidecar(None, "bad-name.txt".to_owned(), None),
         })
     }
+}
+fn chain_root(args: &Args) -> Result<ChainRootSpec, PortError> {
+    if !args.has("chain_root") {
+        return Ok(ChainRootSpec::Default);
+    }
+    Ok(args
+        .opt_string("chain_root")?
+        .map_or(ChainRootSpec::Absent, ChainRootSpec::Verbatim))
 }
 fn store(text: Option<&str>) -> Result<PromptStore, PortError> {
     Ok(match text {

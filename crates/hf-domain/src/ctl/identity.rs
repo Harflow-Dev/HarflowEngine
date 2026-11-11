@@ -1,23 +1,52 @@
 //! Public wire identity constants and host naming.
 pub const PRODUCT: &str = "harflow";
-pub const PRODUCT_VERSION: &str = "0.0.11+rust";
+pub const PRODUCT_VERSION: &str = "0.0.13+rust";
 pub const WIRE_VERSION: u32 = 1;
 pub const CTL_FORMAT: &str = "harflow.ctl";
 pub const SETUP_FORMAT: &str = "harflow.setup";
 pub const EVENT_FORMAT: &str = "harflow.event";
 pub const VERSION_INFO_FORMAT: &str = "harflow.version-info";
 pub const PROGRAM: &str = "harflow-ctl";
-/// Advertised capabilities. The list grows only when a path and its evidence land.
-pub const CAPABILITIES: [&str; 2] = ["ctl.v1", "version-info.v1"];
-/// Advertised only where the store-backed reads exist (macOS arm64), after the paths they
-/// qualify pass. The rest of the read surface sits under `ctl.v1`.
-pub const STORE_READ_CAPABILITIES: [&str; 5] = [
-    "task-successors.v1",
-    "task-event-page.v1",
-    "task-prompt.v1",
-    "interaction-events.v1",
-    "statistics-page.v1",
+/// One advertised capability. A store-gated capability is advertised only where the
+/// store-backed reads exist (macOS arm64), after the paths it qualifies pass.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Capability {
+    pub name: &'static str,
+    pub store_gated: bool,
+}
+const fn always(name: &'static str) -> Capability {
+    Capability {
+        name,
+        store_gated: false,
+    }
+}
+const fn gated(name: &'static str) -> Capability {
+    Capability {
+        name,
+        store_gated: true,
+    }
+}
+/// Advertised capabilities in the order of the canonical Python list (`wire_contracts.py`
+/// `CAPABILITIES`). The list grows only when a path and its evidence land: the pending
+/// launch, artifact-reason and continuation-stop capabilities are added with their commands.
+pub const CAPABILITIES: [Capability; 7] = [
+    gated("interaction-events.v1"),
+    always("ctl.v1"),
+    always("version-info.v1"),
+    gated("statistics-page.v1"),
+    gated("task-event-page.v1"),
+    gated("task-prompt.v1"),
+    gated("task-successors.v1"),
 ];
+/// The names a handshake lists, in canonical order, with the store-gated ones only when
+/// the store-backed reads exist.
+pub fn capabilities(store_reads: bool) -> Vec<&'static str> {
+    CAPABILITIES
+        .iter()
+        .filter(|capability| store_reads || !capability.store_gated)
+        .map(|capability| capability.name)
+        .collect()
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostIdentity {
     pub os: String,

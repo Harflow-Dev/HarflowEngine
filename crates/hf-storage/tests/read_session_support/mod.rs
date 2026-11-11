@@ -55,7 +55,7 @@ pub fn expected(mut rows: Vec<TaskRow>) -> Vec<TaskRow> {
 pub fn fixture_of(rows: Vec<TaskRow>) -> TaskFixture {
     TaskFixture {
         rows,
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

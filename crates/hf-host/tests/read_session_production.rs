@@ -83,7 +83,7 @@ impl Drop for Scratch {
 fn fixture(generation: u32) -> TaskFixture {
     TaskFixture {
         rows: (0..ROWS).map(|number| row(generation, number)).collect(),
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

@@ -163,7 +163,7 @@ fn a_scan_row_holds_every_fact_the_projection_reads() {
     let mut one = task("c1");
     one.facts.model = Some("m".into());
     one.facts.continuation_of = Some(id("p1"));
-    one.facts.chain_root = Some(id("p1"));
+    one.facts.chain_root = Some("p1".to_owned());
     one.facts.title = None;
     let root = root(vec![one]);
     let rows = read(&root, host(), |s| {
@@ -190,7 +190,7 @@ fn a_scan_row_holds_every_fact_the_projection_reads() {
     assert_eq!(
         (
             found.continuation_of.as_ref().map(TaskId::as_str),
-            found.chain_root.as_ref().map(TaskId::as_str)
+            found.chain_root.raw()
         ),
         (Some("p1"), Some("p1"))
     );

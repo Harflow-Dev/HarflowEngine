@@ -36,7 +36,10 @@ fn seed(store: &Store, rows: Vec<TaskRow>, pending: &[&str], coverage: Coverage)
         .replace_task_fixture(
             &TaskFixture {
                 rows,
-                pending: pending.iter().map(|value| id(value)).collect(),
+                launches: pending
+                    .iter()
+                    .map(|value| hf_storage::LaunchRow::waiting_for_resources(id(value)))
+                    .collect(),
                 coverage,
             },
             deadline(),
@@ -77,7 +80,7 @@ fn fixture_payload_bounds_reject_oversized_fields_and_page_stops_at_byte_budget(
         store.replace_task_fixture(
             &TaskFixture {
                 rows: vec![oversized],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: complete()
             },
             deadline()
@@ -90,7 +93,7 @@ fn fixture_payload_bounds_reject_oversized_fields_and_page_stops_at_byte_budget(
         store.replace_task_fixture(
             &TaskFixture {
                 rows: vec![oversized_status],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: complete()
             },
             deadline()

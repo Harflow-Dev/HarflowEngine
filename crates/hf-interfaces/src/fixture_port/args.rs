@@ -26,6 +26,10 @@ impl Args {
     fn wrong(&self, key: &str, expected: &str) -> PortError {
         PortError::new(format!("{}: {key:?} must be {expected}", self.context))
     }
+    /// Whether `key` is absent or JSON null.
+    pub(super) fn is_null(&self, key: &str) -> bool {
+        matches!(self.object.get(key), None | Some(Value::Null))
+    }
     pub(super) fn has(&self, key: &str) -> bool {
         self.object.contains_key(key)
     }

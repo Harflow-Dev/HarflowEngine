@@ -2,7 +2,7 @@
 use super::{
     PortError,
     args::Args,
-    spec::{PromptStore, TaskSpec, task_id},
+    spec::{ChainRootSpec, PromptStore, TaskSpec, task_id},
 };
 use hf_domain::{task_read::TaskId, timestamp::parse_micros};
 use serde_json::{Map, Value, json};
@@ -214,6 +214,7 @@ impl LiveCaller {
             continuation_of: None,
             prompt_store: PromptStore::Inline,
             real_workspace: false,
+            chain_root: ChainRootSpec::Default,
         }
     }
     pub fn process_identity_state(&self) -> &'static str {

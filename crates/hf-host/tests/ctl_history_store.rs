@@ -90,7 +90,7 @@ fn roomy_store(root: &std::path::Path) -> hf_storage::Store {
     };
     let empty = hf_storage::TaskFixture {
         rows: Vec::new(),
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: all,
     };
     writer.replace_task_fixture(&empty, later()).unwrap();
@@ -246,7 +246,12 @@ fn a_pending_launch_is_task_pending_launch_for_events_and_prompts_and_unknown_fo
     writer
         .add_task_fixture(&task(1, "completed", Some(0), 1, "/r"), later())
         .unwrap();
-    writer.replace_pending_fixture(&[id(5)], later()).unwrap();
+    writer
+        .replace_launch_fixture(
+            &[hf_storage::LaunchRow::waiting_for_resources(id(5))],
+            later(),
+        )
+        .unwrap();
     drop(writer);
     let pending = id(5);
     for command in ["task-events", "task-prompt"] {
@@ -254,7 +259,11 @@ fn a_pending_launch_is_task_pending_launch_for_events_and_prompts_and_unknown_fo
         assert_eq!(out.status.code(), Some(1), "{command}");
         let body = text(&out);
         assert!(body.contains("\"code\":\"task_pending_launch\""), "{body}");
-        assert!(!body.contains("launch_state"), "{body}");
+        assert!(
+            body.contains("\"data\":{\"launch_state\":\"waiting_for_resources\"}")
+                && body.contains("its launch is waiting_for_resources;"),
+            "{body}"
+        );
     }
     let out = ctl(&root, &["task-artifacts", pending.as_str()]);
     assert_eq!(out.status.code(), Some(1));

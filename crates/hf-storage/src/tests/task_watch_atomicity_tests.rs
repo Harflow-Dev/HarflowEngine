@@ -231,7 +231,7 @@ fn fixture(header: &[u8]) -> TaskFixture {
             header: header.into(),
             status: None,
         }],
-        pending: vec![],
+        launches: Vec::new(),
         coverage: Coverage {
             discovery_complete: true,
             ownership_complete: true,

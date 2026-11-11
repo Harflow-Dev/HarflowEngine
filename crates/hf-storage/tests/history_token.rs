@@ -171,7 +171,7 @@ fn roomy() -> World {
         .replace_task_fixture(
             &hf_storage::TaskFixture {
                 rows: Vec::new(),
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: all,
             },
             later(5),

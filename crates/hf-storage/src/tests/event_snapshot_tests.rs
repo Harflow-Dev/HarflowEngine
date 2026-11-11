@@ -93,7 +93,7 @@ fn event_read_observes_one_snapshot_during_concurrent_fixture_replacement() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![snapshot_row("snapshot-event-task")],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: snapshot_coverage(),
             },
             Instant::now() + Duration::from_secs(2),

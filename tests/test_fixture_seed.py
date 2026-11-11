@@ -1,4 +1,4 @@
-"""The hf-fixture-seed process protocol: all 17 operations, stdout shapes, exit codes,
+"""The hf-fixture-seed process protocol: all 20 operations, stdout shapes, exit codes,
 refusals, the digest and the `-wal` guard. Values stored in the root are in
 test_fixture_seed_state.py."""
 
@@ -12,8 +12,13 @@ OPERATIONS = (
     "initialize_empty", "remove_root", "make_foreign_root", "root_state", "seed_world", "add_task",
     "add_live_caller", "damage_task", "append_event", "append_malformed_line", "append_partial_line",
     "truncate_log", "remove_log", "tamper_prompt", "write_artifacts", "change_artifact_target",
-    "authoritative_digest",
+    "authoritative_digest", "stop_chain", "add_launch", "add_invalid_launch_name",
 )
+LAUNCH = {
+    "name": "11111111-1111-4111-8111-111111111111", "state": "waiting_for_resources", "generation": "c" * 32,
+    "backend": "claude", "title": "t", "repo_path": "/r", "created_at": "2026-11-10T00:00:00+00:00",
+    "not_started_reason": None, "lineage": {}, "resources": {"names": ["fixture"]}, "worktree": None, "refusal": None,
+}
 WRITERS = (
     ("add_task", {"spec": task(B)}),
     ("add_live_caller", {"task_id": B, "pid": os.getpid(), "identity": "unknown", "status": "running", "marker": None}),
@@ -36,7 +41,7 @@ def compact(value):
 
 
 class ShapeTests(SeedCase):
-    def test_all_seventeen_operations_answer_with_their_documented_shapes(self):
+    def test_all_twenty_operations_answer_with_their_documented_shapes(self):
         repo = os.path.join(self.base, "repos", A)
         self.assertEqual(self.ok("root_state", expect='"missing"\n'), "missing")
         self.ok("make_foreign_root")
@@ -60,6 +65,10 @@ class ShapeTests(SeedCase):
                 "registered_at": "2026-01-10T10:04:00+00:00", "provenance_method": "verified_process_lineage"}
         self.ok("write_artifacts", {"task_id": A, "items": [item]}, expect=compact({"paths": [repo + "/out/a.txt"]}))
         self.ok("change_artifact_target", {"task_id": A, "name": "a.txt"})
+        self.ok("stop_chain", {"spec": {"chain_root": A, "mode": "marker",
+                                        "attribution": {"kind": "valid", "cancelled_task_id": B}}})
+        self.ok("add_launch", {"spec": LAUNCH})
+        self.ok("add_invalid_launch_name", {"name": "bad name"})
         self.assertRegex(self.digest(), "^[0-9a-f]{64}$")
         self.ok("remove_root")
         self.ok("seed_world", {"world": world()})
@@ -88,7 +97,7 @@ class ShapeTests(SeedCase):
         with open(marker) as stream:
             current = stream.read()
         with open(marker, "w") as stream:
-            stream.write(current.replace("\n6\n", "\n5\n"))
+            stream.write(current.replace("\n7\n", "\n6\n"))
         self.ok("root_state", expect='"other"\n')
         with open(marker, "w") as stream:
             stream.write("not a marker\n")

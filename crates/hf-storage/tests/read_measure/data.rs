@@ -285,7 +285,7 @@ pub fn generate(
     };
     let empty = |rows| TaskFixture {
         rows,
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage,
     };
     match bytes {

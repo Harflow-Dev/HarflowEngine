@@ -53,7 +53,7 @@ fn task_read_uses_one_sqlite_snapshot_while_a_fixture_is_replaced() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![snapshot_row("old-task")],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: snapshot_coverage(),
             },
             Instant::now() + Duration::from_secs(2),
@@ -66,7 +66,7 @@ fn task_read_uses_one_sqlite_snapshot_while_a_fixture_is_replaced() {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![snapshot_row("new-task")],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: snapshot_coverage(),
             },
             Instant::now() + Duration::from_secs(2),

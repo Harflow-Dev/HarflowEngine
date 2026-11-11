@@ -6,6 +6,7 @@ use hf_domain::{
     ctl::{
         feed::FeedSource,
         statistics::{GenerationEntry, StatFacts},
+        task_rows::ChainRoot,
     },
     event_read::CaptureState,
     task_read::TaskId,
@@ -84,7 +85,7 @@ pub fn stat_facts(id: &str, status: &str, start_us: i64, end_us: Option<i64>) ->
         model: None,
         repo_path: "/repo".into(),
         continuation_of: None,
-        chain_root: None,
+        chain_root: ChainRoot::Absent,
     }
 }
 

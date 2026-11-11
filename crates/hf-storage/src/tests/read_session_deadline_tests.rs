@@ -100,7 +100,7 @@ fn seeded_root(parent: &std::path::Path) -> (std::path::PathBuf, Store) {
         .replace_task_fixture(
             &TaskFixture {
                 rows: vec![row],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,

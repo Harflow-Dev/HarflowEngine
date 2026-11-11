@@ -122,7 +122,7 @@ fn production_selects_return_only_their_bounded_generation_and_identifier_prefix
                     header: Vec::new(),
                     status: None,
                 }],
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: Coverage {
                     discovery_complete: true,
                     ownership_complete: true,

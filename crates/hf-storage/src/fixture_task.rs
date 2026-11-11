@@ -21,7 +21,8 @@ pub struct FixtureFacts {
     pub title: Option<String>,
     pub model: Option<String>,
     pub continuation_of: Option<TaskId>,
-    pub chain_root: Option<TaskId>,
+    /// The stored text, verbatim; it need not be a task identity.
+    pub chain_root: Option<String>,
 }
 /// `inline_text` is set exactly when `inline`; otherwise a preview, a source name and,
 /// optionally, a claimed digest and the stored full text.
@@ -59,6 +60,24 @@ impl Store {
             insert(tx, task)?;
             crate::fixture_tx::task_changed(tx)
         })
+    }
+    /// The chain root stored for `id`: the outer `None` means the task is missing or damaged,
+    /// the inner one that it stores none. Used to resolve a continuation's default chain root.
+    pub fn fixture_chain_root(
+        &self,
+        id: &TaskId,
+        deadline: Instant,
+    ) -> Result<Option<Option<String>>> {
+        let connection = self.admit(deadline)?;
+        let found: Option<Option<String>> = connection
+            .query_row(
+                "SELECT chain_root FROM task_facts WHERE id=?1 AND valid=1",
+                [id.as_str()],
+                |r| r.get(0),
+            )
+            .optional()?;
+        self.binding.check()?;
+        Ok(found)
     }
     /// Replaces the task's metadata with a damaged record: the header and process rows go and
     /// the facts row becomes `valid=0` with every fact NULL. Prompt, artifact and event rows
@@ -134,7 +153,7 @@ fn insert(tx: &Transaction<'_>, task: &FixtureTask) -> Result<()> {
             f.title,
             f.model,
             f.continuation_of.as_ref().map(TaskId::as_str),
-            f.chain_root.as_ref().map(TaskId::as_str)
+            f.chain_root
         ],
     )?;
     tx.execute(

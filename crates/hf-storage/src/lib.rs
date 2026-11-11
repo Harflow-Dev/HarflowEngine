@@ -42,7 +42,7 @@ use std::{
     time::Instant,
 };
 
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
@@ -260,7 +260,10 @@ pub use task_watch::WatchSession;
 mod watch_control;
 pub use watch_control::RealWatchControl;
 
-mod pending_fixture;
+mod chain_stops;
+mod launch_attempts;
+pub use chain_stops::ChainStop;
+pub use launch_attempts::LaunchRow;
 
 mod capture;
 mod capture_codec;

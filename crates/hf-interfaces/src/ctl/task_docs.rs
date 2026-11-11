@@ -36,7 +36,10 @@ fn facts_keys(facts: &TaskFacts) -> [(&'static str, Value); 12] {
         ("title", text(&facts.title)),
         ("model", text(&facts.model)),
         ("continuation_of_task_id", link(&facts.continuation_of)),
-        ("chain_root_task_id", link(&facts.chain_root)),
+        (
+            "chain_root_task_id",
+            facts.chain_root.raw().map_or(Value::Null, |raw| json!(raw)),
+        ),
         (
             "exit_code",
             facts.exit_code.map_or(Value::Null, |code| json!(code)),

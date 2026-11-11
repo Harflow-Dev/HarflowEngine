@@ -140,7 +140,9 @@ fn pending_overlay_does_not_publish_and_real_watch_deadline_returns_timeout() {
         .cursor
         .unwrap();
     let id = TaskId::new("pending-only".into()).unwrap();
-    writer.replace_pending_fixture(&[id], deadline()).unwrap();
+    writer
+        .replace_launch_fixture(&[crate::LaunchRow::waiting_for_resources(id)], deadline())
+        .unwrap();
     writer
         .apply_batch(
             &[Mutation::Insert {

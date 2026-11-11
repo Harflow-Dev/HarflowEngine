@@ -78,7 +78,7 @@ pub fn root_with(tasks: Vec<FixtureTask>, stream: bool) -> Root {
         .replace_task_fixture(
             &TaskFixture {
                 rows: Vec::new(),
-                pending: Vec::new(),
+                launches: Vec::new(),
                 coverage: all,
             },
             deadline(),

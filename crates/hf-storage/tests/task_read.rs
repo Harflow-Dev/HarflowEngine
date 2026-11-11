@@ -30,12 +30,23 @@ fn row(value: &str, stamp: i64, active: Option<bool>, session: Option<&str>) -> 
     }
 }
 
+fn waiting(id: TaskId) -> hf_domain::task_read::PendingLaunch {
+    hf_domain::task_read::PendingLaunch {
+        id,
+        state: "waiting_for_resources".into(),
+        not_started_reason: None,
+    }
+}
+
 fn seed(store: &Store, rows: Vec<TaskRow>, pending: &[&str], coverage: Coverage) {
     store
         .replace_task_fixture(
             &TaskFixture {
                 rows,
-                pending: pending.iter().map(|value| id(value)).collect(),
+                launches: pending
+                    .iter()
+                    .map(|value| hf_storage::LaunchRow::waiting_for_resources(id(value)))
+                    .collect(),
                 coverage,
             },
             deadline(),
@@ -220,7 +231,10 @@ fn exact_pending_lookup_is_separate_and_prefix_resolution_caps_ambiguity() {
         .task_read(&AuthorizedScope::Global, &query, deadline())
         .unwrap();
 
-    assert_eq!(result.lookups[0], Lookup::Pending(id("pending-123456")));
+    assert_eq!(
+        result.lookups[0],
+        Lookup::Pending(waiting(id("pending-123456")))
+    );
     assert_eq!(result.lookups[1], Lookup::Missing);
     assert_eq!(
         result.lookups[2],

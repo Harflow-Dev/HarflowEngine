@@ -96,7 +96,7 @@ pub fn store(root: &Path) -> Store {
     };
     let empty = TaskFixture {
         rows: Vec::new(),
-        pending: Vec::new(),
+        launches: Vec::new(),
         coverage: all,
     };
     store.replace_task_fixture(&empty, later()).unwrap();

@@ -149,9 +149,15 @@ manual-checkpoint and64MiB qualification limits for open/recover/probe remain un
 
 The separate [private capture/completion foundation](capture-completion.md)
 introduced schema4; schema5 changed the locking protocol. Current fresh roots use
-schema6, adding `task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`
-and `artifact_items` beside the existing task/event/watch tables. Header/status
-blobs remain the served bytes. Schema5 reads refuse as `unsupported_layout`,
-without upgrade or repair. Open/recover/probe retain the 64MiB cap; public ctl
+schema7. Schema6 added `task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`
+and `artifact_items` beside the existing task/event/watch tables; schema7 replaces the
+`task_pending` id list with `launch_attempts` (pre-record launch receipts: one row per receipt
+filename stem, with invalid names, refused receipts and the status columns the ordinary
+reads need) and adds `chain_stops` (one row per chain root: a `marker` with its raw
+attribution text, or a `fault`; no row is not stopped). `task_facts.chain_root` is stored
+text and is qualified when read: absent, a task identity, or invalid text kept verbatim.
+Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
+`unsupported_layout`, without upgrade or repair; no checked-in database fixture or
+internal root depends on an older schema. Open/recover/probe retain the 64MiB cap; public ctl
 reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
 `RecoveryReadSession` remains a distinct capped private-copy path.

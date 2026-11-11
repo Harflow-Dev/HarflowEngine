@@ -1,8 +1,8 @@
 //! JSON documents: sorted keys, compact, envelope stamped after the payload.
 use hf_domain::ctl::{
     identity::{
-        CAPABILITIES, CTL_FORMAT, EVENT_FORMAT, HostIdentity, PRODUCT, PRODUCT_VERSION,
-        SETUP_FORMAT, STORE_READ_CAPABILITIES, WIRE_VERSION,
+        CTL_FORMAT, EVENT_FORMAT, HostIdentity, PRODUCT, PRODUCT_VERSION, SETUP_FORMAT,
+        WIRE_VERSION, capabilities,
     },
     inspect::{Scalar, StateInspection},
     state_root::StateRoot,
@@ -35,10 +35,6 @@ pub fn usage_error(format: &str, message: &str) -> Value {
     )
 }
 pub fn version_info(root: &StateRoot, host: &HostIdentity, store_reads: bool) -> Value {
-    let mut capabilities: Vec<&str> = CAPABILITIES.to_vec();
-    if store_reads {
-        capabilities.extend(STORE_READ_CAPABILITIES);
-    }
     let contract = |format: &str| json!({"format": format, "v": WIRE_VERSION});
     stamp(
         hf_domain::ctl::identity::VERSION_INFO_FORMAT,
@@ -49,7 +45,7 @@ pub fn version_info(root: &StateRoot, host: &HostIdentity, store_reads: bool) ->
                 "setup": contract(SETUP_FORMAT),
                 "events": contract(EVENT_FORMAT),
             },
-            "capabilities": capabilities,
+            "capabilities": capabilities(store_reads),
             "os": host.os,
             "architecture": host.architecture,
             "state_root": root.as_str(),

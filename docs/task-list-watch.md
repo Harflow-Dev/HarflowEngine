@@ -62,7 +62,8 @@ one atomic write; those private mechanics are not copied into Rust.
 | --- | --- |
 | replace_task_fixture | Republishes task_headers and advances revision atomically, even for identical bytes. Pending values in that whole replacement do not make it a pending-only operation. |
 | add_task_fixture / damage_task_fixture | Changes task metadata, rotates the paging dataset generation and advances revision in the same transaction. |
-| replace_pending_fixture | Writes only task_pending and advances the paging dataset generation; no task metadata invalidation. Duplicate/header-colliding IDs refuse atomically. |
+| replace_launch_fixture / put_launch_attempt | Write only launch_attempts and advance the paging dataset generation; no task metadata invalidation. A launch may share its id with an ordinary record (the record wins); duplicate launch names refuse atomically. |
+| put_chain_stop / remove_chain_stop | Write only chain_stops; neither the paging generation nor task metadata changes. |
 | Task/status/list reads and watch observations | Read only; no revision/lease/fence writes or observation-side publication completion. |
 | Stored event fixture DML | Separate namespace; no task metadata publication. |
 | Prompt blob / artifact manifest fixture DML | Separate namespace; no task metadata publication. |

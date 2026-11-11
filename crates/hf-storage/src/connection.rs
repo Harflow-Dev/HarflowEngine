@@ -140,6 +140,8 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
     transaction.execute_batch(crate::watch_meta::SCHEMA)?;
     transaction.execute_batch(crate::event_fixture::EVENT_SCHEMA)?;
     transaction.execute_batch(crate::fixture_schema::FACTS_SCHEMA)?;
+    transaction.execute_batch(crate::launch_attempts::SCHEMA)?;
+    transaction.execute_batch(crate::chain_stops::SCHEMA)?;
     timeout(&transaction, deadline)?;
     transaction
         .commit()

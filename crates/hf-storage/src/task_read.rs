@@ -69,8 +69,8 @@ pub(crate) fn run(
     crate::task_query::execute(context, db, scope, query, &generation, coverage, deadline)
 }
 pub(crate) fn require_tables(connection: &Connection) -> Result<()> {
-    let count: i64 = connection.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('task_dataset','task_headers','task_pending')",[],|r|r.get(0))?;
-    if count == 3 {
+    let count: i64 = connection.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('task_dataset','task_headers','launch_attempts','chain_stops')",[],|r|r.get(0))?;
+    if count == 4 {
         Ok(())
     } else {
         Err(Error::TaskReadUnavailable)
