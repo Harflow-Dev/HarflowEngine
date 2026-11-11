@@ -3,7 +3,9 @@
 mod task_artifacts_support;
 mod task_reads_support;
 use hf_application::ctl::task_reads::{
-    ArtifactCursorArg, ArtifactEntry, ArtifactRequest, NextCursor, artifacts,
+    ArtifactCursorArg,
+    ArtifactCursorFailure::{Invalid, Stale},
+    ArtifactEntry, ArtifactRequest, NextCursor, artifacts,
 };
 use hf_domain::ctl::history::ManifestHead;
 use task_artifacts_support::*;
@@ -87,14 +89,17 @@ fn a_cursor_of_another_task_revision_or_range_is_stale() {
         revision: "f".repeat(32),
         offset: 1,
     });
-    for arg in [
-        other_task,
-        other_revision,
-        cursor(5),
-        cursor(-1),
-        ArtifactCursorArg::Malformed,
+    for (arg, kind) in [
+        (other_task, Stale),
+        (other_revision, Stale),
+        (cursor(5), Invalid),
+        (cursor(-1), Invalid),
+        (ArtifactCursorArg::Malformed, Invalid),
     ] {
-        assert_eq!(read(&world, NONE_MARKERS, &request(3, arg)), bad_cursor());
+        assert_eq!(
+            read(&world, NONE_MARKERS, &request(3, arg)),
+            bad_cursor(kind)
+        );
     }
 }
 
@@ -109,7 +114,7 @@ fn a_cursor_where_there_is_no_manifest_is_stale_and_none_is_an_empty_page() {
     );
     assert_eq!(
         read(&world, NONE_MARKERS, &request(3, cursor(0))),
-        bad_cursor()
+        bad_cursor(Stale)
     );
     assert_eq!(world.calls("items"), 0);
 }
@@ -290,4 +295,53 @@ fn ancestry_is_walked_through_continuation_links_only_and_never_reads_a_record()
         1,
         "only the task itself is read as a record"
     );
+}
+
+fn bound(revision: &str, offset: i64) -> ArtifactCursorArg {
+    ArtifactCursorArg::Valid(NextCursor {
+        task: task_id(1).as_str().to_string(),
+        revision: revision.into(),
+        offset,
+    })
+}
+
+#[test]
+fn the_binding_is_checked_before_the_range_and_the_range_against_the_current_manifest() {
+    let world = world(4);
+    for (arg, kind) in [
+        (bound(&"f".repeat(32), i64::MAX), Stale),
+        (bound(&"f".repeat(32), 5), Stale),
+        (bound(REVISION, i64::MAX), Invalid),
+        (bound(REVISION, 5), Invalid),
+    ] {
+        assert_eq!(
+            read(&world, NONE_MARKERS, &request(3, arg)),
+            bad_cursor(kind)
+        );
+    }
+    assert_eq!(world.calls("items"), 0);
+}
+
+#[test]
+fn a_task_without_a_manifest_is_a_zero_item_manifest_of_the_empty_file_revision() {
+    let empty = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    let mut world = world(4);
+    world.history.manifests.clear();
+    world.history.items.clear();
+    let page = read(&world, NONE_MARKERS, &request(3, bound(empty, 0))).unwrap();
+    assert_eq!(
+        (page.readable, page.count, page.entries.len(), page.has_more),
+        (true, 0, 0, false)
+    );
+    for (arg, kind) in [
+        (bound(empty, 1), Invalid),
+        (bound(empty, i64::MAX), Invalid),
+        (bound(REVISION, 0), Stale),
+        (bound(REVISION, 1), Stale),
+    ] {
+        assert_eq!(
+            read(&world, NONE_MARKERS, &request(3, arg)),
+            bad_cursor(kind)
+        );
+    }
 }

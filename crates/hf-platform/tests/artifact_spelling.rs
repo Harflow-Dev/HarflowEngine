@@ -37,6 +37,7 @@ fn item(path: &Path, registered: Observation) -> ArtifactItem {
         note: String::new(),
         registered_at: "2026-01-01T00:00:00+00:00".into(),
         method: "verified_process_lineage".into(),
+        plan: None,
         registered,
     }
 }

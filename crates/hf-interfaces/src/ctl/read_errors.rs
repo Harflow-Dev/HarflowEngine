@@ -1,6 +1,8 @@
 //! Error documents of the task reads: code, message and data, per path.
 use super::{cli_scan::py_repr, read_errors_feeds};
-use hf_application::ctl::task_reads::{ReadError, Resolution, StoreFailure, UnknownReason};
+use hf_application::ctl::task_reads::{
+    ArtifactCursorFailure, ReadError, Resolution, StoreFailure, UnknownReason,
+};
 use hf_domain::ctl::{caller::RefusalKind, identity::PRODUCT_VERSION, inspect::InspectReason};
 use serde_json::{Map, Value, json};
 
@@ -116,6 +118,13 @@ fn cursor(code: &'static str, message: &str) -> ErrorDoc {
     doc
 }
 
+/// The one artifact error that carries `data.reason`.
+fn artifact_cursor(kind: ArtifactCursorFailure) -> ErrorDoc {
+    let mut doc = ErrorDoc::new("artifact_error", "Invalid or stale artifact cursor");
+    doc.data = Some(json!({"reason": kind.reason()}));
+    doc
+}
+
 /// What an artifact read says about its own failures: all of them are artifact errors.
 fn artifact_failure(error: &ReadError) -> Option<ErrorDoc> {
     match error {
@@ -124,6 +133,7 @@ fn artifact_failure(error: &ReadError) -> Option<ErrorDoc> {
             format!("not a valid task id: {}", py_repr(raw)),
         )),
         ReadError::InvalidParams(message) => Some(ErrorDoc::new("artifact_error", message.clone())),
+        ReadError::ArtifactCursor(kind) => Some(artifact_cursor(*kind)),
         _ => None,
     }
 }
@@ -245,6 +255,7 @@ pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc
             format!("not a valid task id: {}", py_repr(raw)),
         ),
         ReadError::InvalidParams(message) => ErrorDoc::new("invalid_params", message.clone()),
+        ReadError::ArtifactCursor(kind) => artifact_cursor(*kind),
         ReadError::Resolution(found) => resolution(found),
         ReadError::Coded { code, message } => ErrorDoc::new(code, message.clone()),
         ReadError::PendingLaunch {

@@ -110,7 +110,7 @@ class ValidationTests(SeedCase):
     def test_a_present_artifact_item_with_an_observation_is_refused(self):
         self.initialized(task(A))
         item = {"artifact_id": "x", "name": "a.txt", "target": "present", "kind": "k", "note": "n", "registered_at": "t",
-                "provenance_method": "m", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
+                "provenance_method": "engine_output", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
         before = self.digest()
         self.refused("write_artifacts", {"task_id": A, "items": [item]}, message="carries no observation")
         self.assertEqual(self.digest(), before)

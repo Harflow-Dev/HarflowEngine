@@ -285,6 +285,7 @@ pub fn artifact_item(id: &str, path: &str) -> hf_storage::FixtureArtifact {
         note: "n".into(),
         registered_at: "2026-01-10T10:04:00+00:00".into(),
         provenance_method: "verified_process_lineage".into(),
+        plan: None,
         device: 1,
         inode: 2,
         size: 3,

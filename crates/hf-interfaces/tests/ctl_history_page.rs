@@ -23,6 +23,7 @@ fn item(n: usize, note: usize) -> ArtifactItem {
         note: "n".repeat(note),
         registered_at: "2026-01-01T00:00:00+00:00".into(),
         method: "verified_process_lineage".into(),
+        plan: None,
         registered: Observation {
             device: 1,
             inode: n as u64,

@@ -300,7 +300,7 @@ fn manifest_and_item_rows_enforce_their_domains() {
     );
     let item = |ordinal: i64, size: i64| {
         format!(
-            "INSERT INTO artifact_items VALUES('m',{ordinal},'id','/p','k','n','t','method','1','2',{size},'4')"
+            "INSERT INTO artifact_items VALUES('m',{ordinal},'id','/p','k','n','t','method','1','2',{size},'4',NULL,NULL,NULL,NULL)"
         )
     };
     w.raw().execute_batch(&item(0, 0)).unwrap();

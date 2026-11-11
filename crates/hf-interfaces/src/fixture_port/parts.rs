@@ -81,7 +81,19 @@ pub struct ArtifactSpec {
     pub note: String,
     pub registered_at: String,
     pub provenance_method: String,
+    pub plan: Option<PlanSpec>,
 }
+/// The evidence of an `observed_backend_plan` reference: the tool-use id, and the recorded
+/// plan directory with its device and inode.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanSpec {
+    pub tool_use_id: String,
+    pub directory: Option<(String, u64, u64)>,
+}
+const PLAN_METHOD: &str = "observed_backend_plan";
+/// The provenance methods and kinds a Python manifest can hold (`artifacts.py`).
+const METHODS: [&str; 3] = ["verified_process_lineage", "engine_output", PLAN_METHOD];
+const KINDS: [&str; 4] = ["screenshot", "log", "report", "other"];
 const ARTIFACT_KEYS: [&str; 7] = [
     "artifact_id",
     "name",
@@ -94,7 +106,12 @@ const ARTIFACT_KEYS: [&str; 7] = [
 impl ArtifactSpec {
     pub(super) fn parse(value: Value) -> Result<Self, PortError> {
         let mut keys = ARTIFACT_KEYS.to_vec();
-        keys.push("observation");
+        keys.extend([
+            "observation",
+            "tool_use_id",
+            "plan_directory",
+            "plan_directory_identity",
+        ]);
         let mut args = Args::new(value, "artifact item", &keys, &ARTIFACT_KEYS)?;
         let name = args.string("name")?;
         check_name(&name)?;
@@ -119,19 +136,87 @@ impl ArtifactSpec {
             }
             other => return Err(PortError::new(format!("unknown artifact target {other:?}"))),
         };
+        let provenance_method = args.string("provenance_method")?;
+        if !METHODS.contains(&provenance_method.as_str()) {
+            return Err(PortError::new(format!(
+                "unknown provenance method {provenance_method:?}"
+            )));
+        }
+        let kind = args.string("kind")?;
+        if !KINDS.contains(&kind.as_str()) {
+            return Err(PortError::new(format!("unknown artifact kind {kind:?}")));
+        }
+        let plan = PlanSpec::parse(&mut args, &provenance_method)?;
         Ok(Self {
             artifact_id: args.string("artifact_id")?,
             name,
             target,
-            kind: args.string("kind")?,
+            kind,
             note: args.string("note")?,
             registered_at: args.string("registered_at")?,
-            provenance_method: args.string("provenance_method")?,
+            provenance_method,
+            plan,
         })
     }
     /// `<repo_path>/out/<name>`, the port's artifact location.
     pub fn path(&self, repo_path: &str) -> String {
         format!("{repo_path}/out/{}", self.name)
+    }
+}
+impl PlanSpec {
+    /// `tool_use_id` is required for an observed plan and refused for any other method;
+    /// `plan_directory` and its `{device, inode}` identity come together, with an absolute
+    /// path free of `..` parts, as the reference validates them.
+    fn parse(args: &mut Args, method: &str) -> Result<Option<Self>, PortError> {
+        let keyed = ["tool_use_id", "plan_directory", "plan_directory_identity"];
+        if method != PLAN_METHOD {
+            return match keyed.iter().find(|key| args.has(key)) {
+                Some(key) => Err(PortError::new(format!("{key} needs {PLAN_METHOD}"))),
+                None => Ok(None),
+            };
+        }
+        let tool_use_id = args.string("tool_use_id")?;
+        if tool_use_id.is_empty() || tool_use_id.len() > 256 {
+            return Err(PortError::new("tool_use_id must be 1 to 256 bytes"));
+        }
+        let (directory, identity) = (
+            args.has("plan_directory"),
+            args.has("plan_directory_identity"),
+        );
+        if directory != identity {
+            return Err(PortError::new(
+                "plan_directory and its identity come together",
+            ));
+        }
+        if !directory {
+            return Ok(Some(Self {
+                tool_use_id,
+                directory: None,
+            }));
+        }
+        let path = args.string("plan_directory")?;
+        let parts = std::path::Path::new(&path);
+        if path.is_empty()
+            || path.len() > 4096
+            || !parts.is_absolute()
+            || parts
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err(PortError::new(
+                "plan_directory must be an absolute path without ..",
+            ));
+        }
+        let identity = Args::new(
+            args.take("plan_directory_identity"),
+            "plan_directory_identity",
+            &["device", "inode"],
+            &["device", "inode"],
+        )?;
+        Ok(Some(Self {
+            tool_use_id,
+            directory: Some((path, identity.u64("device")?, identity.u64("inode")?)),
+        }))
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -133,7 +133,11 @@ pub fn artifact_items() -> &'static str {
     "SELECT i.artifact_id,i.path,i.kind,i.note,i.registered_at,i.provenance_method,\
      i.device,i.inode,i.size,i.mtime_ns,length(CAST(i.path AS BLOB)),length(CAST(i.note AS BLOB)),\
      length(CAST(i.artifact_id AS BLOB))+length(CAST(i.kind AS BLOB))\
-     +length(CAST(i.registered_at AS BLOB))+length(CAST(i.provenance_method AS BLOB)) \
+     +length(CAST(i.registered_at AS BLOB))+length(CAST(i.provenance_method AS BLOB))\
+     ,\
+     length(CAST(coalesce(i.tool_use_id,'') AS BLOB)),\
+     length(CAST(coalesce(i.plan_directory,'') AS BLOB)),\
+     i.tool_use_id,i.plan_directory,i.plan_device,i.plan_inode \
      FROM artifact_items i JOIN task_facts f ON f.id=i.task AND f.valid=1 \
      WHERE i.task=?1 ORDER BY i.ordinal LIMIT ?2 OFFSET ?3"
 }

@@ -260,6 +260,23 @@ pub struct ArtifactItem {
     /// How the reference was registered: `provenance.method`.
     pub method: String,
     pub registered: Observation,
+    /// The tool-use id and recorded directory of an observed backend plan.
+    pub plan: Option<PlanEvidence>,
+}
+
+/// Provenance of an `observed_backend_plan` reference: the tool call that wrote the plan
+/// and, when recorded, the directory it lives in with that directory's identity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanEvidence {
+    pub tool_use_id: String,
+    pub directory: Option<PlanDirectory>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanDirectory {
+    pub path: String,
+    pub device: u64,
+    pub inode: u64,
 }
 
 /// A task's manifest: its header state, revision and item count (read up to 101).

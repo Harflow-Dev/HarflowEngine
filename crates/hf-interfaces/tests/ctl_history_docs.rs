@@ -24,6 +24,7 @@ fn artifact(number: u64, observation: Observation) -> ArtifactItem {
         note: "n".into(),
         registered_at: "2026-01-01T00:00:00+00:00".into(),
         method: "verified_process_lineage".into(),
+        plan: None,
         registered: observation,
     }
 }
@@ -162,7 +163,7 @@ fn the_next_cursor_is_padded_urlsafe_base64_of_task_revision_offset() {
     let cursor = doc["result"]["next_cursor"].as_str().unwrap();
     assert_eq!(
         URL_SAFE.decode(cursor).unwrap(),
-        format!("[\"{ID}\",\"{REVISION}\",2]").into_bytes()
+        format!("[\"{ID}\", \"{REVISION}\", 2]").into_bytes()
     );
     let (_, next, _) = artifacts(&fake, &["--limit", "2", "--cursor", cursor]);
     assert_eq!(next["result"]["items"][0]["artifact_id"], "x2");

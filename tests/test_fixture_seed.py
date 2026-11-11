@@ -160,8 +160,8 @@ class RefusalTests(SeedCase):
     def test_every_required_key_of_every_operation_is_refused_when_missing(self):
         self.initialized(task(A))
         before = self.digest()
-        item = {"artifact_id": "x", "name": "a.txt", "target": "absent", "kind": "k", "note": "n",
-                "registered_at": "t", "provenance_method": "m", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
+        item = {"artifact_id": "x", "name": "a.txt", "target": "absent", "kind": "report", "note": "n",
+                "registered_at": "t", "provenance_method": "engine_output", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
         full = {
             "seed_world": {"world": world()}, "add_task": {"spec": task(B)},
             "add_live_caller": {"task_id": B, "pid": 4242, "identity": "unknown", "status": "running", "marker": None},
@@ -185,8 +185,8 @@ class RefusalTests(SeedCase):
                 continue
             spec = {k: v for k, v in task(B).items() if k != key}
             self.refused("add_task", {"spec": spec}, message=f'missing key "{key}"')
-        item = {"artifact_id": "x", "name": "a.txt", "target": "absent", "kind": "k", "note": "n",
-                "registered_at": "t", "provenance_method": "m", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
+        item = {"artifact_id": "x", "name": "a.txt", "target": "absent", "kind": "report", "note": "n",
+                "registered_at": "t", "provenance_method": "engine_output", "observation": {"device": 1, "inode": 2, "size": 3, "mtime_ns": 4}}
         for key in [k for k in item if k != "observation"] + ["observation"]:
             self.refused("write_artifacts", {"task_id": A, "items": [{k: v for k, v in item.items() if k != key}]},
                          message=key if key != "observation" else "observation")
@@ -255,8 +255,8 @@ class WalGuardTests(SeedCase):
     def test_every_mutating_operation_leaves_a_regular_wal(self):
         self.prepare()
         self.ok("add_task", {"spec": task("12121212-1212-4212-8212-121212121212", real_workspace=True)}, expect=None)
-        present = {"artifact_id": "x", "name": "a.txt", "target": "present", "kind": "k", "note": "n",
-                   "registered_at": "t", "provenance_method": "m"}
+        present = {"artifact_id": "x", "name": "a.txt", "target": "present", "kind": "report", "note": "n",
+                   "registered_at": "t", "provenance_method": "engine_output"}
         self.ok("write_artifacts", {"task_id": "12121212-1212-4212-8212-121212121212", "items": [present]}, expect=None)
         self.assert_wal()
         self.ok("change_artifact_target", {"task_id": "12121212-1212-4212-8212-121212121212", "name": "a.txt"})

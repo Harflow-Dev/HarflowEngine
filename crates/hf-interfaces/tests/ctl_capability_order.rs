@@ -60,6 +60,7 @@ fn emitted_lists_keep_the_canonical_order_in_both_availability_states() {
             "task-event-page.v1",
             "task-prompt.v1",
             "task-successors.v1",
+            "task-artifacts.v1",
         ]
     );
 }

@@ -107,5 +107,5 @@ class CursorSpellingTests(ArtifactCase):
         raw = base64.urlsafe_b64decode(cursor)
         self.assertEqual(cursor, base64.urlsafe_b64encode(raw).decode())
         self.assertEqual(json.loads(raw), [A, self.revision, 2])
-        # Known difference: the reference writes default separators; the cursor is opaque.
-        self.assertEqual(raw.decode(), json.dumps([A, self.revision, 2], separators=(",", ":")))
+        # The reference writes json.dumps default separators.
+        self.assertEqual(raw.decode(), json.dumps([A, self.revision, 2]))

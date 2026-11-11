@@ -96,6 +96,23 @@ pub enum Resolution {
     },
 }
 
+/// Why an artifact cursor is refused: malformed or out of range, or bound to another owner
+/// or manifest revision.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArtifactCursorFailure {
+    Invalid,
+    Stale,
+}
+
+impl ArtifactCursorFailure {
+    pub fn reason(self) -> &'static str {
+        match self {
+            Self::Invalid => "cursor_invalid",
+            Self::Stale => "cursor_stale",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReadError {
     Store(StoreFailure),
@@ -109,6 +126,8 @@ pub enum ReadError {
     Internal,
     InvalidTaskId(String),
     InvalidParams(String),
+    /// An artifact cursor the read refuses; `data.reason` names which kind.
+    ArtifactCursor(ArtifactCursorFailure),
     Resolution(Resolution),
     /// The id names a task whose launch has not produced a record. `raw` is the id as typed.
     PendingLaunch {

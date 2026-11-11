@@ -1,7 +1,7 @@
 //! The artifact page read and the artifact summary: caller authority, ancestry, the
 //! manifest, the cursor and the observation of each reference's target.
 use super::{
-    ReadError, Reads, Resolution, TaskSnapshotPort, UnknownReason,
+    ArtifactCursorFailure, ReadError, Reads, Resolution, TaskSnapshotPort, UnknownReason,
     gate::{Entry, Family, Observer, enter_checked, guard, timely},
     history_ports::ArtifactTargetPort,
     resolve::{drift, resolve, valid_id},
@@ -9,7 +9,7 @@ use super::{
 use hf_domain::{
     ctl::{
         caller::{EnvMarkers, GatePath},
-        history::{ArtifactItem, ArtifactSummary, Availability},
+        history::{ArtifactItem, ArtifactSummary, Availability, ManifestHead},
         state_root::StateRoot,
         task_rows::TaskFacts,
     },
@@ -21,6 +21,10 @@ const ANCESTORS_MAX: usize = 100;
 const BUILDER: &str = "Managed workflow artifact access is not supported";
 /// A page document is at most this many bytes under `ensure_ascii` sizing.
 pub const PAGE_BYTES: usize = 63_000;
+
+/// The revision of a task without a manifest: the SHA-256 of no bytes, as the reference
+/// digests an absent file.
+const EMPTY_REVISION: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
 /// Where a page continues: the task, the manifest revision and the item offset.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -187,6 +191,29 @@ pub fn artifacts(
     out.ok_or(ReadError::Internal)
 }
 
+/// The offset a cursor continues from. Shape comes first (a malformed token), then the
+/// binding to this owner and manifest revision (stale, whatever its offset: the offset counts
+/// rows of that revision), then the offset against this manifest.
+fn cursor_offset(
+    cursor: &ArtifactCursorArg,
+    task: &TaskId,
+    head: &ManifestHead,
+) -> Result<usize, ReadError> {
+    let fail = |kind| ReadError::ArtifactCursor(kind);
+    let cursor = match cursor {
+        ArtifactCursorArg::Absent => return Ok(0),
+        ArtifactCursorArg::Malformed => return Err(fail(ArtifactCursorFailure::Invalid)),
+        ArtifactCursorArg::Valid(cursor) => cursor,
+    };
+    if cursor.task != task.as_str() || cursor.revision != head.revision {
+        return Err(fail(ArtifactCursorFailure::Stale));
+    }
+    usize::try_from(cursor.offset)
+        .ok()
+        .filter(|offset| *offset <= head.count)
+        .ok_or_else(|| fail(ArtifactCursorFailure::Invalid))
+}
+
 fn read_page(
     snapshot: &dyn TaskSnapshotPort,
     targets: &dyn ArtifactTargetPort,
@@ -194,11 +221,25 @@ fn read_page(
     request: &ArtifactRequest,
     size: &dyn Fn(&str, &[ArtifactEntry]) -> usize,
 ) -> Result<ArtifactPage, ReadError> {
-    let (task, resolved_from) = resolve(snapshot, &request.task_id).map_err(not_found)?;
-    let limit = usize::try_from(request.limit)
-        .ok()
-        .filter(|_| (1..=LIMIT_MAX).contains(&request.limit))
-        .ok_or_else(|| refused("Artifact limit must be between 1 and 50"))?;
+    let limit = || {
+        usize::try_from(request.limit)
+            .ok()
+            .filter(|_| (1..=LIMIT_MAX).contains(&request.limit))
+            .ok_or_else(|| refused("Artifact limit must be between 1 and 50"))
+    };
+    // A missing exact id passes through resolution, so the limit is checked before the
+    // task is found missing; ambiguity and prefix failures come first.
+    let (task, resolved_from) = match resolve(snapshot, &request.task_id) {
+        Ok(found) => found,
+        Err(error) => {
+            let error = not_found(error);
+            if error == refused("Unknown task") {
+                limit()?;
+            }
+            return Err(error);
+        }
+    };
+    let limit = limit()?;
     let record = snapshot.record(&task)?.ok_or_else(drift)?;
     if let Some(message) = ancestry(snapshot, &record.facts)? {
         return Err(refused(message));
@@ -212,24 +253,20 @@ fn read_page(
         next: None,
         has_more: false,
     };
-    let head = match snapshot.artifact_manifest(&task)? {
+    let manifest = snapshot.artifact_manifest(&task)?;
+    if manifest.is_none() && request.cursor == ArtifactCursorArg::Absent {
+        return Ok(empty(true));
+    }
+    let head = match manifest {
         Some(head) if !head.readable() => return Ok(empty(false)),
         Some(head) => head,
-        None if request.cursor == ArtifactCursorArg::Absent => return Ok(empty(true)),
-        None => return Err(refused("Invalid or stale artifact cursor")),
+        None => ManifestHead {
+            header_valid: true,
+            revision: EMPTY_REVISION.to_string(),
+            count: 0,
+        },
     };
-    let offset = match &request.cursor {
-        ArtifactCursorArg::Absent => 0,
-        ArtifactCursorArg::Valid(cursor)
-            if cursor.task == task.as_str() && cursor.revision == head.revision =>
-        {
-            usize::try_from(cursor.offset)
-                .ok()
-                .filter(|offset| *offset <= head.count)
-                .ok_or_else(|| refused("Invalid or stale artifact cursor"))?
-        }
-        _ => return Err(refused("Invalid or stale artifact cursor")),
-    };
+    let offset = cursor_offset(&request.cursor, &task, &head)?;
     let mut entries: Vec<ArtifactEntry> = Vec::new();
     for item in snapshot.artifact_items(&task, offset, limit)? {
         timely(reads.deadline)?;

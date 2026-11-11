@@ -15,6 +15,14 @@ pub struct FixtureArtifact {
     pub inode: u64,
     pub size: u64,
     pub mtime_ns: u64,
+    /// Required for `observed_backend_plan`, absent for every other method.
+    pub plan: Option<FixturePlan>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FixturePlan {
+    pub tool_use_id: String,
+    /// The recorded directory and its device and inode.
+    pub directory: Option<(String, u64, u64)>,
 }
 impl Store {
     /// Appends `suffix` to the stored full prompt, leaving the claimed digest untouched.
@@ -56,7 +64,7 @@ impl Store {
     ) -> Result<()> {
         let bytes = items
             .iter()
-            .map(|i| i.path.len() + i.note.len() + 128)
+            .map(|i| i.path.len() + i.note.len() + 128 + plan_bytes(i))
             .sum();
         self.check_bounds(items.len(), bytes)?;
         if items.iter().any(|i| i.size > i64::MAX as u64) {
@@ -84,8 +92,9 @@ fn insert_item(
     ordinal: usize,
     item: &FixtureArtifact,
 ) -> Result<()> {
+    let directory = item.plan.as_ref().and_then(|p| p.directory.as_ref());
     tx.execute(
-        "INSERT INTO artifact_items VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
+        "INSERT INTO artifact_items VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",
         rusqlite::params![
             id.as_str(),
             ordinal as i64,
@@ -98,8 +107,17 @@ fn insert_item(
             item.device.to_string(),
             item.inode.to_string(),
             item.size as i64,
-            item.mtime_ns.to_string()
+            item.mtime_ns.to_string(),
+            item.plan.as_ref().map(|p| p.tool_use_id.as_str()),
+            directory.map(|d| d.0.as_str()),
+            directory.map(|d| d.1.to_string()),
+            directory.map(|d| d.2.to_string()),
         ],
     )?;
     Ok(())
+}
+fn plan_bytes(item: &FixtureArtifact) -> usize {
+    item.plan.as_ref().map_or(0, |p| {
+        p.tool_use_id.len() + p.directory.as_ref().map_or(0, |d| d.0.len())
+    })
 }

@@ -156,6 +156,10 @@ filename stem, with invalid names, refused receipts and the status columns the o
 reads need) and adds `chain_stops` (one row per chain root: a `marker` with its raw
 attribution text, or a `fault`; no row is not stopped). `task_facts.chain_root` is stored
 text and is qualified when read: absent, a task identity, or invalid text kept verbatim.
+`artifact_items` also carries the evidence of an `observed_backend_plan` reference (`tool_use_id`,
+and `plan_directory` with the decimal-text `plan_device` and `plan_inode`): `tool_use_id` is
+present exactly for that method, and the directory columns are all present or all absent. Schema7
+has not been released, so these columns did not bump the version.
 Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
 `unsupported_layout`, without upgrade or repair; no checked-in database fixture or
 internal root depends on an older schema. Open/recover/probe retain the 64MiB cap; public ctl

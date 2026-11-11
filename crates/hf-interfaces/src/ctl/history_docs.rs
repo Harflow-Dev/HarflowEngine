@@ -1,11 +1,14 @@
 //! Results of `task-prompt` and `task-artifacts`, the artifact summary and the artifact
 //! cursor.
-use super::bound::python_size;
+use super::{bound::python_size, py_json::parse, py_value::Json};
 use base64::{Engine, engine::general_purpose::URL_SAFE};
 use hf_application::ctl::task_reads::{
     ArtifactCursorArg, ArtifactEntry, ArtifactPage, NextCursor, PromptOut,
 };
-use hf_domain::{ctl::history::ArtifactSummary, timestamp::civil_from_days};
+use hf_domain::{
+    ctl::history::{ArtifactItem, ArtifactSummary},
+    timestamp::civil_from_days,
+};
 use serde_json::{Value, json};
 
 const CURSOR_CHARS: usize = 512;
@@ -74,6 +77,24 @@ pub fn summary_json(summary: &ArtifactSummary, task: &str) -> Value {
     value
 }
 
+/// `provenance` of an item: the method and task, plus the tool-use id and recorded plan
+/// directory of an observed backend plan.
+fn provenance(item: &ArtifactItem, task: &str) -> Value {
+    let mut value = json!({"method": item.method, "task_id": task});
+    let (Some(map), Some(plan)) = (value.as_object_mut(), &item.plan) else {
+        return value;
+    };
+    map.insert("tool_use_id".into(), json!(plan.tool_use_id));
+    if let Some(directory) = &plan.directory {
+        map.insert("plan_directory".into(), json!(directory.path));
+        map.insert(
+            "plan_directory_identity".into(),
+            json!({"device": directory.device, "inode": directory.inode}),
+        );
+    }
+    value
+}
+
 fn entry_json(entry: &ArtifactEntry, task: &str, observed_at: &Value) -> Value {
     let item = &entry.item;
     let seen = item.registered;
@@ -84,7 +105,7 @@ fn entry_json(entry: &ArtifactEntry, task: &str, observed_at: &Value) -> Value {
         "kind": item.kind,
         "note": item.note,
         "registered_at": item.registered_at,
-        "provenance": {"method": item.method, "task_id": task},
+        "provenance": provenance(item, task),
         "registered_observation": {
             "device": seen.device,
             "inode": seen.inode,
@@ -140,8 +161,17 @@ pub fn artifact_result(page: &ArtifactPage, now: Option<i64>) -> Value {
     result
 }
 
+/// `base64.urlsafe_b64encode(json.dumps([task, revision, offset]))`: the same bytes the
+/// reference writes, so a cursor decodes to `["task", "revision", 2]` with Python's spacing.
 fn encode_cursor(next: &NextCursor) -> String {
-    URL_SAFE.encode(json!([next.task, next.revision, next.offset]).to_string())
+    let text = |value: &str| json!(value).to_string();
+    let body = format!(
+        "[{}, {}, {}]",
+        text(&next.task),
+        text(&next.revision),
+        next.offset
+    );
+    URL_SAFE.encode(body)
 }
 
 /// Python's non-validating `base64.urlsafe_b64decode`: `-` and `_` stand for `+` and `/`,
@@ -189,23 +219,33 @@ fn lenient_base64(raw: &str) -> Option<Vec<u8>> {
     (quad == 0).then_some(out)
 }
 
-/// A cursor that is not `[task, revision, offset]` with an integer offset is malformed.
+/// A cursor that is not `[task, revision, offset]` with a non-negative integer offset is
+/// malformed, as the reference reads it (`json.loads`, any integer size, `-0` is 0). An
+/// offset beyond `i64::MAX` saturates: it is refused against the manifest after the binding.
 pub fn decode_cursor(raw: &str) -> ArtifactCursorArg {
     let parsed = (raw.chars().count() <= CURSOR_CHARS)
         .then(|| lenient_base64(raw))
         .flatten()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
-    let Some(Value::Array(parts)) = parsed else {
+        .and_then(|bytes| parse(&bytes));
+    let Some(Json::Array(parts)) = parsed else {
         return ArtifactCursorArg::Malformed;
     };
+    let text = |codes: &[u32]| -> String {
+        codes
+            .iter()
+            .map(|c| char::from_u32(*c).unwrap_or('\u{fffd}'))
+            .collect()
+    };
     match parts.as_slice() {
-        [Value::String(task), Value::String(revision), offset] if offset.is_i64() => {
-            ArtifactCursorArg::Valid(NextCursor {
-                task: task.clone(),
-                revision: revision.clone(),
-                offset: offset.as_i64().unwrap_or(-1),
-            })
-        }
+        [
+            Json::Text(task),
+            Json::Text(revision),
+            Json::Int { negative, digits },
+        ] if !*negative || digits == "0" => ArtifactCursorArg::Valid(NextCursor {
+            task: text(task),
+            revision: text(revision),
+            offset: digits.parse().unwrap_or(i64::MAX),
+        }),
         _ => ArtifactCursorArg::Malformed,
     }
 }

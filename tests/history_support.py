@@ -130,9 +130,14 @@ PREDECESSOR_DIRECTORY = ".poly" + "bridge"
 FORBIDDEN_NAMES = (".harflow", PREDECESSOR_DIRECTORY, ".codex", ".claude", ".vibe", ".config", ".git")
 
 
-def item(artifact_id, name, method="verified_process_lineage", note="n", kind="report"):
-    return {"artifact_id": artifact_id, "name": name, "target": "present", "kind": kind, "note": note,
-            "registered_at": REGISTERED, "provenance_method": method}
+def item(artifact_id, name, method="verified_process_lineage", note="n", kind="report", **plan):
+    """An observed backend plan carries a tool-use id; `plan_directory` and its identity are optional."""
+    entry = {"artifact_id": artifact_id, "name": name, "target": "present", "kind": kind, "note": note,
+             "registered_at": REGISTERED, "provenance_method": method}
+    if method == "observed_backend_plan":
+        entry["tool_use_id"] = "tool-use-1"
+    entry.update(plan)
+    return entry
 
 
 class ArtifactCase(HistoryCase):

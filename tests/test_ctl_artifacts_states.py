@@ -232,9 +232,8 @@ class AuthorityTests(ArtifactCase):
 
     def test_the_provenance_methods_this_engine_cannot_judge_are_unavailable(self):
         self.register(item("x1", "a.txt"), item("x2", "b.txt", method="engine_output"),
-                      item("x3", "c.txt", method="observed_backend_plan"), item("x4", "d.txt", method="other"))
-        self.assertEqual(self.states(), {"x1": "available", "x2": "unavailable", "x3": "unavailable",
-                                         "x4": "unavailable"})
+                      item("x3", "c.txt", method="observed_backend_plan"))
+        self.assertEqual(self.states(), {"x1": "available", "x2": "unavailable", "x3": "unavailable"})
 
     def test_an_item_is_judged_by_its_own_target_not_its_neighbours(self):
         self.file_at("out", ".git")

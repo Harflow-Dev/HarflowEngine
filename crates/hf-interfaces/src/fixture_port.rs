@@ -13,8 +13,8 @@ pub use launch::{
     LAUNCH_STATES, LaunchSpec, Lineage, REFUSAL_CHECKS, Resources, StopMode, StopSpec, Worktree,
 };
 pub use parts::{
-    ArtifactSpec, CallerStatus, EventSpec, IdentityState, LiveCaller, Observation, Target,
-    check_name,
+    ArtifactSpec, CallerStatus, EventSpec, IdentityState, LiveCaller, Observation, PlanSpec,
+    Target, check_name,
 };
 use serde_json::Value;
 pub use spec::{

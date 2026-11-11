@@ -13,7 +13,10 @@ use hf_application::{event_read::EventReadResult, owner_runtime::DigestPort};
 use hf_domain::{
     ctl::{
         history::sidecar_digest,
-        history::{ArtifactItem, LogObject, ManifestHead, Observation, PromptBlob, StoredPrompt},
+        history::{
+            ArtifactItem, LogObject, ManifestHead, Observation, PlanDirectory, PlanEvidence,
+            PromptBlob, StoredPrompt,
+        },
         task_rows::TaskRecord,
     },
     event_read::EventQuery,
@@ -94,6 +97,30 @@ fn hex_digest(parts: &[Vec<u8>]) -> String {
 
 fn unsigned(text: &str) -> Result<u64> {
     text.parse().map_err(|_| Error::MalformedRow)
+}
+
+/// The plan evidence columns of an artifact row (15 to 18); the schema keeps them
+/// consistent, so a half-present directory is a malformed row.
+fn plan_evidence(row: &rusqlite::Row<'_>) -> Result<Option<PlanEvidence>> {
+    let Some(tool_use_id) = row.get::<_, Option<String>>(15)? else {
+        return Ok(None);
+    };
+    let path: Option<String> = row.get(16)?;
+    let device: Option<String> = row.get(17)?;
+    let inode: Option<String> = row.get(18)?;
+    let directory = match (path, device, inode) {
+        (None, None, None) => None,
+        (Some(path), Some(device), Some(inode)) => Some(PlanDirectory {
+            path,
+            device: unsigned(&device)?,
+            inode: unsigned(&inode)?,
+        }),
+        _ => return Err(Error::MalformedRow),
+    };
+    Ok(Some(PlanEvidence {
+        tool_use_id,
+        directory,
+    }))
 }
 
 impl TaskSnapshot<'_> {
@@ -270,6 +297,8 @@ impl TaskSnapshot<'_> {
             bytes += within(row.get(10)?, 4096)?
                 + within(row.get(11)?, 4096)?
                 + within(row.get(12)?, 1024)?
+                + within(row.get(13)?, 256)?
+                + within(row.get(14)?, 4096)?
                 + 96;
             self.context.check_bounds(found.len() + 1, bytes)?;
             found.push(ArtifactItem {
@@ -288,6 +317,7 @@ impl TaskSnapshot<'_> {
                         .parse()
                         .map_err(|_| Error::MalformedRow)?,
                 },
+                plan: plan_evidence(row)?,
             });
         }
         Ok(found)

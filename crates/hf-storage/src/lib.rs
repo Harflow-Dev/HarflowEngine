@@ -307,7 +307,7 @@ mod fixture_schema;
 mod fixture_task;
 mod fixture_tx;
 pub use fixture_events::FixtureLine;
-pub use fixture_extras::FixtureArtifact;
+pub use fixture_extras::{FixtureArtifact, FixturePlan};
 pub use fixture_task::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask};
 
 /// Whether `root` holds a readable store marker for this schema. Reads one file and

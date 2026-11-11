@@ -7,8 +7,8 @@ use super::task_reads_support::{
 use hf_application::ctl::{
     state_inspect::RootClass,
     task_reads::{
-        ArtifactCursorArg, ArtifactEntry, ArtifactPage, ArtifactRequest, ArtifactTargetPort,
-        NextCursor, ReadError, Resolution, UnknownReason, artifacts,
+        ArtifactCursorArg, ArtifactCursorFailure, ArtifactEntry, ArtifactPage, ArtifactRequest,
+        ArtifactTargetPort, NextCursor, ReadError, Resolution, UnknownReason, artifacts,
     },
 };
 use hf_domain::ctl::{
@@ -95,8 +95,8 @@ pub fn refused(message: &str) -> Result<ArtifactPage, ReadError> {
     Err(ReadError::InvalidParams(message.to_string()))
 }
 
-pub fn bad_cursor() -> Result<ArtifactPage, ReadError> {
-    refused("Invalid or stale artifact cursor")
+pub fn bad_cursor(kind: ArtifactCursorFailure) -> Result<ArtifactPage, ReadError> {
+    Err(ReadError::ArtifactCursor(kind))
 }
 
 pub fn cursor(offset: i64) -> ArtifactCursorArg {

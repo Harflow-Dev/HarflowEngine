@@ -52,6 +52,14 @@ CREATE TABLE artifact_items(
   registered_at TEXT NOT NULL, provenance_method TEXT NOT NULL,
   device TEXT NOT NULL, inode TEXT NOT NULL, size INTEGER NOT NULL CHECK(size>=0),
   mtime_ns TEXT NOT NULL,
-  PRIMARY KEY(task,ordinal)
+  tool_use_id TEXT, plan_directory TEXT, plan_device TEXT, plan_inode TEXT,
+  PRIMARY KEY(task,ordinal),
+  CHECK((provenance_method='observed_backend_plan')=(tool_use_id IS NOT NULL)),
+  CHECK(tool_use_id IS NULL OR length(CAST(tool_use_id AS BLOB)) BETWEEN 1 AND 256),
+  CHECK(plan_device IS NULL OR (plan_device<>'' AND plan_device NOT GLOB '*[^0-9]*')),
+  CHECK(plan_inode IS NULL OR (plan_inode<>'' AND plan_inode NOT GLOB '*[^0-9]*')),
+  CHECK((plan_directory IS NULL)=(plan_device IS NULL) AND (plan_directory IS NULL)=(plan_inode IS NULL)),
+  CHECK(plan_directory IS NULL OR (tool_use_id IS NOT NULL
+        AND length(CAST(plan_directory AS BLOB)) BETWEEN 1 AND 4096))
 );
 ";

@@ -134,3 +134,30 @@ no app private persistence or agent-MCP fallback is introduced. See the
 
 B10/B11/B17, production catalog lifecycle, R03 capture/execution, scale/copy cost,
 WAL-growth/checkpoint scheduling and broader fault/R14 gates remain outstanding.
+
+## Artifact errors
+
+Every `task-artifacts` failure is an `artifact_error`. A cursor failure carries
+`data.reason`, which the reference exposes as `cursor_invalid` or `cursor_stale`; no other
+artifact error has `data`. The cursor is checked after the limit, the task, its ancestry and
+the manifest (an unreadable manifest answers `state: unavailable` without looking at the
+cursor), in this order:
+
+1. Shape: a cursor longer than 512 characters, not decodable as base64 JSON, or not a list of
+   an owner string, a revision string and a non-negative integer offset is `cursor_invalid`.
+2. Binding: a cursor naming another owner or another manifest revision is `cursor_stale`,
+   whatever its offset (the offset counts rows of that revision).
+3. Range: an offset above the manifest's item count is `cursor_invalid`; an offset equal to
+   the count is the empty end page.
+
+A task without a manifest has the revision of an empty file (the SHA-256 of no bytes) and no
+items, as in the reference. A cursor is `base64.urlsafe_b64encode(json.dumps([task, revision,
+offset]))`, so the reference's own cursors and this engine's decode the same way.
+
+The cursor JSON is read as `json.loads` reads it (any integer size, `-0` is 0); an offset beyond
+`i64::MAX` is refused against the manifest only after the binding is checked.
+
+Carried deltas: `ownership_preparing` is never produced, because this engine has no workflow
+catalog to prepare (carried to E6). The `observed_backend_plan` availability stays
+`unavailable`: the recorded plan directory is stored and served in `provenance`, but its
+identity is not yet checked against the file system.

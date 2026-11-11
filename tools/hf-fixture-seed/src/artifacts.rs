@@ -5,7 +5,7 @@ use crate::{
 };
 use hf_domain::task_read::{AuthorizedScope, TaskId, TaskQuery};
 use hf_interfaces::fixture_port::{ArtifactSpec, Response, Target, header_repo_path};
-use hf_storage::{FixtureArtifact, ReadSession, Store};
+use hf_storage::{FixtureArtifact, FixturePlan, ReadSession, Store};
 use std::{
     io::Write,
     path::PathBuf,
@@ -51,6 +51,10 @@ pub fn write_artifacts(
             inode,
             size,
             mtime_ns,
+            plan: item.plan.as_ref().map(|plan| FixturePlan {
+                tool_use_id: plan.tool_use_id.clone(),
+                directory: plan.directory.clone(),
+            }),
         });
         paths.push(path);
     }

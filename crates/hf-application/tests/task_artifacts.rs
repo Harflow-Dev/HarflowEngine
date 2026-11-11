@@ -194,6 +194,12 @@ fn the_limit_is_checked_after_resolution_and_before_the_record() {
     }
     let mut unknown = request(0, ArtifactCursorArg::Absent);
     unknown.task_id = task_id(2).as_str().to_string();
+    // A missing exact id passes through resolution, so the limit still comes first.
+    assert_eq!(
+        read(&world(1), NONE_MARKERS, &unknown),
+        refused("Artifact limit must be between 1 and 50")
+    );
+    unknown.limit = 20;
     assert_eq!(
         read(&world(1), NONE_MARKERS, &unknown),
         refused("Unknown task")
