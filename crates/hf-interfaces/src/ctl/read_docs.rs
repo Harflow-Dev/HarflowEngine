@@ -3,13 +3,18 @@ use super::{
     bound::{bound_header, needs_direct_lookup, python_size},
     brief::brief_status,
     cursor,
-    history_docs::summary_json,
+    history_docs::{iso_micros, summary_json},
     recent_activity::recent_lines,
     task_docs::{Inconsistent, task_document},
 };
 use hf_application::ctl::task_reads::{BatchOut, PageOut, StatusOut, TaskView};
 use hf_domain::{
-    ctl::history::ArtifactSummary, process::ProcessIdentity, timestamp::civil_from_days,
+    ctl::{
+        continuation_stop::{ContinuationStop, StopState},
+        history::ArtifactSummary,
+    },
+    process::ProcessIdentity,
+    timestamp::civil_from_days,
 };
 use serde_json::{Map, Value, json};
 
@@ -97,6 +102,25 @@ fn with_summary(document: &mut Map<String, Value>, summary: &ArtifactSummary) {
     document.insert("artifact_summary".into(), value);
 }
 
+/// `continuation_stop`, stamped with the reader clock. With no clock the stamp is null,
+/// which the brief does not copy.
+fn with_stop(document: &mut Map<String, Value>, stop: &ContinuationStop, now: Option<i64>) {
+    let id = |id: &Option<hf_domain::task_read::TaskId>| {
+        id.as_ref().map_or(Value::Null, |id| json!(id.as_str()))
+    };
+    let observed = now.map_or(Value::Null, |micros| json!(iso_micros(micros)));
+    document.insert(
+        "continuation_stop".into(),
+        json!({
+            "state": stop.state.as_str(),
+            "chain_root_task_id": id(&stop.root),
+            "reason": if stop.state == StopState::Stopped { json!("chain_cancelled") } else { Value::Null },
+            "cancelled_task_id": id(&stop.cancelled),
+            "observed_at": observed,
+        }),
+    );
+}
+
 /// With `brief` the document is the bounded projection, with the recent activity.
 pub fn status_task(
     out: &StatusOut,
@@ -107,6 +131,7 @@ pub fn status_task(
     let mut document = task_document(&out.view, now)?;
     observe(&mut document, parent);
     with_summary(&mut document, &out.artifacts);
+    with_stop(&mut document, &out.stop, now);
     if brief {
         let lines = recent_lines(out.recent_bodies.as_deref().unwrap_or_default());
         document = brief_status(&document, &lines);
@@ -127,6 +152,7 @@ pub fn batch_body(
         let mut document = task_document(&row.view, now)?;
         observe(&mut document, parent);
         with_summary(&mut document, &row.artifacts);
+        with_stop(&mut document, &row.stop, now);
         prefix_echo(&mut document, &row.resolved_from);
         tasks.push(Value::Object(document));
     }

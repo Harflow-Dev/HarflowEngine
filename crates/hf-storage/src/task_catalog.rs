@@ -78,12 +78,24 @@ impl TaskSnapshot<'_> {
         params: Vec<Value>,
         max_rows: usize,
     ) -> Result<Vec<TaskRecord>> {
+        let rows = self.select_with(sql, params, max_rows, &|_| Ok(()))?;
+        Ok(rows.into_iter().map(|(record, ())| record).collect())
+    }
+
+    /// As `select`, with `extra` read from each row after its record.
+    pub(crate) fn select_with<X>(
+        &self,
+        sql: &str,
+        params: Vec<Value>,
+        max_rows: usize,
+        extra: &dyn Fn(&Row<'_>) -> Result<X>,
+    ) -> Result<Vec<(TaskRecord, X)>> {
         self.context.check_bounds(max_rows, 0)?;
         self.step()?;
         let budget = self.context.limits.max_bytes;
         let mut statement = self.db.prepare(sql)?;
         let mut rows = statement.query(params_from_iter(params.iter()))?;
-        let mut found: Vec<TaskRecord> = Vec::new();
+        let mut found: Vec<(TaskRecord, X)> = Vec::new();
         let mut bytes = 0usize;
         while let Some(row) = rows.next()? {
             let size = declared_size(row)?;
@@ -97,7 +109,7 @@ impl TaskSnapshot<'_> {
             }
             let (next, size) = record(row)?;
             bytes += size;
-            found.push(next);
+            found.push((next, extra(row)?));
             if found.len() >= max_rows {
                 break;
             }

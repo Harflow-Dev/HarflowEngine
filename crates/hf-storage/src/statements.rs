@@ -24,6 +24,18 @@ pub fn record() -> String {
     format!("SELECT {COLUMNS} FROM {FROM} WHERE f.valid=1 AND f.id=?1")
 }
 
+/// One record by id with the stop row of its chain root, joined by the table's primary key
+/// in the same statement: columns 24 and 25 are the row's kind and its attribution, the
+/// attribution only when it is 1 to 64 bytes (nothing longer is ever copied). The join key
+/// is the stored root, or the task itself when none is stored.
+pub fn record_with_stop() -> String {
+    format!(
+        "SELECT {COLUMNS},c.kind,CASE WHEN length(CAST(c.cancelled_task_id AS BLOB)) BETWEEN 1 AND 64 \
+         THEN c.cancelled_task_id END FROM {FROM} \
+         LEFT JOIN chain_stops c ON c.root=coalesce(f.chain_root,f.id) WHERE f.valid=1 AND f.id=?1"
+    )
+}
+
 /// A keyset batch, newest first. Order, filters and `after` all use `started_at_us`, the
 /// column the partial and session indexes cover.
 pub fn batch(query: &BatchQuery) -> (String, Vec<Value>) {

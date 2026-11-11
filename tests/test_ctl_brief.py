@@ -15,7 +15,7 @@ ALLOWED = {
     "dispatch_origin", "responding_server", "persisted_status", "observed_exit", "phase_slots",
     "needs_reconciliation", "process_identity_state", "needs_direct_lookup", "note", "exit_code",
     "owned_by_live_server", "workflow_run_id", "workflow_node_id",
-    "supervision", "successor_tasks", "artifact_summary", "summary", "error", "outcome", "failure_diagnostic",
+    "supervision", "successor_tasks", "continuation_stop", "artifact_summary", "summary", "error", "outcome", "failure_diagnostic",
     "recent_activity", "detail_refs", "truncated_fields", "resolved_from",
 }
 LEFT_OUT = ("freedom", "model", "chain_root_task_id", "continuation_of_task_id", "output_drained")

@@ -47,6 +47,11 @@ pub struct Fake {
     pub damaged: bool,
     pub header_extra: &'static str,
     pub clock: bool,
+    /// The reader clock when `clock` is set, in microseconds since the epoch.
+    pub now_us: i64,
+    /// The stored chain root of the task and the stop row served with its record.
+    pub chain_root: ChainRoot,
+    pub stop: hf_domain::ctl::continuation_stop::StopRow,
     /// A continuation link to a related task whose header is `related_extra`.
     pub related_extra: Option<&'static str>,
     pub history: History,
@@ -86,7 +91,7 @@ impl Fake {
                 title: None,
                 model: None,
                 continuation_of: self.related_extra.map(|_| TaskId::new(OTHER.to_string()).unwrap()),
-                chain_root: ChainRoot::Absent,
+                chain_root: self.chain_root.clone(),
             },
             header: format!(r#"{{"task_id":"{ID}"{}}}"#, self.header_extra).into_bytes(),
             status_blob: Some(format!(r#"{{"task_id":"{ID}","needs_reconciliation":true,"process_identity_state":"dead"{}}}"#, self.status_extra).into_bytes()),
@@ -155,6 +160,18 @@ impl TaskSnapshotPort for Fake {
         }
         Ok(Some(self.record()))
     }
+    fn record_with_stop(
+        &self,
+        id: &TaskId,
+    ) -> Result<Option<(TaskRecord, hf_domain::ctl::continuation_stop::StopRow)>, StoreFailure>
+    {
+        let row = if id.as_str() == OTHER {
+            hf_domain::ctl::continuation_stop::StopRow::Absent
+        } else {
+            self.stop.clone()
+        };
+        Ok(TaskSnapshotPort::record(self, id)?.map(|record| (record, row)))
+    }
     fn batch(&self, q: &BatchQuery) -> Result<Vec<TaskRecord>, StoreFailure> {
         Ok(if q.after.is_some() {
             vec![]
@@ -209,7 +226,7 @@ impl CtlServices for Fake {
         })
     }
     fn now_micros(&self) -> Option<i64> {
-        self.clock.then_some(1_800_000_000_000_000)
+        self.clock.then_some(self.now_us)
     }
     fn retention_days(&self) -> Option<String> {
         self.retention.clone()
@@ -235,6 +252,9 @@ pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
         damaged: false,
         header_extra: "",
         clock: true,
+        now_us: 1_800_000_000_000_000,
+        chain_root: ChainRoot::Absent,
+        stop: hf_domain::ctl::continuation_stop::StopRow::Absent,
         related_extra: None,
         history: History::default(),
         related: Vec::new(),

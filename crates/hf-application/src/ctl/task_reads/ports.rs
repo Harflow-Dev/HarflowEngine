@@ -4,6 +4,7 @@ use crate::ctl::state_inspect::RootClass;
 use hf_domain::{
     ctl::{
         caller::{PidObservation, ProcessView},
+        continuation_stop::StopRow,
         inspect::InspectReason,
         state_root::StateRoot,
         task_rows::{BatchQuery, CallerRow, TaskRecord, TaskSummary, UnobservedRow},
@@ -43,6 +44,8 @@ pub trait TaskSnapshotPort: HistoryPort + FeedPort {
     fn lookup(&self, id: &TaskId) -> Result<Lookup, StoreFailure>;
     fn summaries(&self, ids: &[TaskId]) -> Result<Vec<TaskSummary>, StoreFailure>;
     fn record(&self, id: &TaskId) -> Result<Option<TaskRecord>, StoreFailure>;
+    /// The record with the stop row of its chain root, from the same snapshot.
+    fn record_with_stop(&self, id: &TaskId) -> Result<Option<(TaskRecord, StopRow)>, StoreFailure>;
     /// Newest first; stops early at the byte limit and never returns an empty batch while
     /// rows remain.
     fn batch(&self, query: &BatchQuery) -> Result<Vec<TaskRecord>, StoreFailure>;

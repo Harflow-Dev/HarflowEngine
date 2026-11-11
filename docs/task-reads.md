@@ -161,3 +161,26 @@ Carried deltas: `ownership_preparing` is never produced, because this engine has
 catalog to prepare (carried to E6). The `observed_backend_plan` availability stays
 `unavailable`: the recorded plan directory is stored and served in `provenance`, but its
 identity is not yet checked against the file system.
+
+## Continuation stop
+
+`status`, `status --brief` and every `status-batch` row carry a `continuation_stop` object:
+`state`, `chain_root_task_id`, `reason`, `cancelled_task_id` and `observed_at`. It is read from
+the `chain_stops` table (schema 7) in the same snapshot as the task record: the record
+statement joins the table by its primary key, on the stored chain root or, when none is
+stored, on the task's own id. The brief copies the object from that status document; it does
+no lookup of its own.
+
+| State | Meaning | Root | `reason` | `cancelled_task_id` |
+| --- | --- | --- | --- | --- |
+| `not_stopped` | no row for the root | the root | null | null |
+| `stopped` | a `marker` row | the root | `chain_cancelled` | the stored attribution if it is a task identity; null for none, malformed, oversize, undecodable or invalid text |
+| `unknown` | a `fault` row | the root | null | null |
+| `unknown` | the stored chain root is not a task identity, the empty string included | null | null | null |
+
+An absent stored chain root means the task is its own root. An invalid stored root never
+falls back to the task id and its row is not consulted. `observed_at` is the reader clock
+(Python `isoformat`, fraction only when non-zero); with no clock it is null and the brief
+leaves the object out. Only observer failures degrade to `unknown`; an ownership or lease
+refusal of the enclosing read stays that refusal. The capability `task-continuation-stop.v1`
+is store-gated, like the other store reads.

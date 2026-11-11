@@ -5,6 +5,7 @@ use hf_application::ctl::{
 };
 use hf_domain::{
     ctl::{
+        continuation_stop::StopRow,
         inspect::{InspectReason, InspectStatus},
         state_root::StateRoot,
         task_rows::{BatchQuery, CallerRow, TaskRecord, TaskSummary, UnobservedRow},
@@ -113,6 +114,9 @@ impl TaskSnapshotPort for Snapshot<'_, '_> {
     }
     fn record(&self, id: &TaskId) -> Result<Option<TaskRecord>, StoreFailure> {
         read(self.0.record(id))
+    }
+    fn record_with_stop(&self, id: &TaskId) -> Result<Option<(TaskRecord, StopRow)>, StoreFailure> {
+        read(self.0.record_with_stop(id))
     }
     fn batch(&self, query: &BatchQuery) -> Result<Vec<TaskRecord>, StoreFailure> {
         read(self.0.batch(query))

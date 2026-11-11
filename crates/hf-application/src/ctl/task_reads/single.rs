@@ -5,7 +5,10 @@ use super::{
     gate::{Entry, Family, Observer, enter_checked, guard},
     resolve::{drift, missing_resolution, resolve, valid_id},
 };
-use hf_domain::ctl::{caller::GatePath, history::ArtifactSummary, state_root::StateRoot};
+use hf_domain::ctl::{
+    caller::GatePath, continuation_stop::ContinuationStop, history::ArtifactSummary,
+    state_root::StateRoot,
+};
 
 const BATCH_MAX: usize = 100;
 
@@ -15,6 +18,8 @@ pub struct StatusOut {
     /// The input, when it was a prefix.
     pub resolved_from: Option<String>,
     pub artifacts: ArtifactSummary,
+    /// Whether the task's chain was stopped, read in the same snapshot as the record.
+    pub stop: ContinuationStop,
     /// For `--brief`: stored event bodies from the log's last megabyte, oldest first.
     pub recent_bodies: Option<Vec<Vec<u8>>>,
 }
@@ -24,6 +29,7 @@ pub struct BatchRow {
     pub view: TaskView,
     pub resolved_from: Option<String>,
     pub artifacts: ArtifactSummary,
+    pub stop: ContinuationStop,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -67,7 +73,8 @@ pub fn status_with(
                 &mut observer,
             )?;
             let (found, resolved_from) = resolve(snapshot, raw)?;
-            let record = snapshot.record(&found)?.ok_or_else(drift)?;
+            let (record, row) = snapshot.record_with_stop(&found)?.ok_or_else(drift)?;
+            let stop = ContinuationStop::observe(&record.facts.id, &record.facts.chain_root, &row);
             let artifacts = summary(snapshot, &record.facts)?;
             let recent_bodies = if brief {
                 Some(snapshot.recent_event_bodies(&found)?)
@@ -78,6 +85,7 @@ pub fn status_with(
                 view: observer.view(record),
                 resolved_from,
                 artifacts,
+                stop,
                 recent_bodies,
             });
             Ok(())
@@ -145,15 +153,18 @@ pub fn status_batch(
             };
             for (raw, _) in &valid {
                 let found = resolve(snapshot, raw).and_then(|(id, from)| {
-                    let record = snapshot.record(&id)?.ok_or_else(drift)?;
+                    let (record, row) = snapshot.record_with_stop(&id)?.ok_or_else(drift)?;
+                    let stop =
+                        ContinuationStop::observe(&record.facts.id, &record.facts.chain_root, &row);
                     let artifacts = summary(snapshot, &record.facts)?;
-                    Ok((record, from, artifacts))
+                    Ok((record, from, artifacts, stop))
                 });
                 match found {
-                    Ok((record, resolved_from, artifacts)) => batch.rows.push(BatchRow {
+                    Ok((record, resolved_from, artifacts, stop)) => batch.rows.push(BatchRow {
                         view: observer.view(record),
                         resolved_from,
                         artifacts,
+                        stop,
                     }),
                     Err(error @ ReadError::Store(_)) => return Err(error),
                     Err(error) => batch.errors.push((raw.to_string(), error)),

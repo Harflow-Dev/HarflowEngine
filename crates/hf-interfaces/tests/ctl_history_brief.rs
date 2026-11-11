@@ -116,6 +116,7 @@ fn a_large_outcome_and_diagnostic_are_trimmed_in_the_references_order() {
         [
             "artifact_summary",
             "backend",
+            "continuation_stop",
             "detail_refs",
             "duration_seconds",
             "error",

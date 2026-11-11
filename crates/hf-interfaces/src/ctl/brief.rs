@@ -203,6 +203,14 @@ pub fn brief_status(payload: &Map<String, Value>, recent: &[String]) -> Map<Stri
             result.insert(key.to_string(), value.clone());
         }
     }
+    // Copied whole from the status document (one snapshot); without a clock stamp it is not
+    // a complete observation and is left out.
+    if let Some(stop) = payload
+        .get("continuation_stop")
+        .filter(|stop| stop.get("observed_at").is_some_and(Value::is_string))
+    {
+        result.insert("continuation_stop".into(), stop.clone());
+    }
     for key in ["owner", "dispatch_origin", "responding_server"] {
         if let Some(value) = identity(payload.get(key)) {
             result.insert(key.to_string(), value);

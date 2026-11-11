@@ -1,5 +1,6 @@
 //! Pure values for the public ctl surface.
 pub mod caller;
+pub mod continuation_stop;
 pub mod feed;
 pub mod history;
 pub mod identity;

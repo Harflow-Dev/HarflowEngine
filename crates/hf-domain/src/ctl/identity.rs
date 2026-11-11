@@ -28,8 +28,8 @@ const fn gated(name: &'static str) -> Capability {
 }
 /// Advertised capabilities in the order of the canonical Python list (`wire_contracts.py`
 /// `CAPABILITIES`). The list grows only when a path and its evidence land: the pending
-/// launch and continuation-stop capabilities are added with their commands.
-pub const CAPABILITIES: [Capability; 8] = [
+/// launch capability is added with its commands.
+pub const CAPABILITIES: [Capability; 9] = [
     gated("interaction-events.v1"),
     always("ctl.v1"),
     always("version-info.v1"),
@@ -38,6 +38,7 @@ pub const CAPABILITIES: [Capability; 8] = [
     gated("task-prompt.v1"),
     gated("task-successors.v1"),
     gated("task-artifacts.v1"),
+    gated("task-continuation-stop.v1"),
 ];
 /// The names a handshake lists, in canonical order, with the store-gated ones only when
 /// the store-backed reads exist.

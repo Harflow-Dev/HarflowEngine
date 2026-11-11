@@ -10,7 +10,10 @@ use crate::{
 };
 use hf_application::owner_runtime::DigestPort;
 use hf_domain::{
-    ctl::task_rows::{TaskRecord, TaskSummary},
+    ctl::{
+        continuation_stop::StopRow,
+        task_rows::{TaskRecord, TaskSummary},
+    },
     task_read::{AuthorizedScope, Lookup, TaskId},
 };
 use rusqlite::Connection;
@@ -96,6 +99,35 @@ impl<'a> TaskSnapshot<'a> {
             &statements::record(),
             vec![rusqlite::types::Value::Text(id.as_str().to_owned())],
             1,
+        )?;
+        Ok(found.pop())
+    }
+
+    /// The record and the stop row of its chain root, from one statement. The attribution is
+    /// at most 64 bytes, so the row adds no unbounded value to the record's budget.
+    pub fn record_with_stop(&self, id: &TaskId) -> Result<Option<(TaskRecord, StopRow)>> {
+        let mut found = self.select_with(
+            &statements::record_with_stop(),
+            vec![rusqlite::types::Value::Text(id.as_str().to_owned())],
+            1,
+            &|row| {
+                let kind: Option<String> = row.get(24)?;
+                Ok(match kind.as_deref() {
+                    None => StopRow::Absent,
+                    // Raw bytes: text that is not UTF-8 is an undecodable attribution (none),
+                    // never a failed read.
+                    Some("marker") => StopRow::Marker {
+                        attribution: match row.get_ref(25)? {
+                            rusqlite::types::ValueRef::Text(bytes)
+                            | rusqlite::types::ValueRef::Blob(bytes) => {
+                                String::from_utf8(bytes.to_vec()).ok()
+                            }
+                            _ => None,
+                        },
+                    },
+                    Some(_) => StopRow::Fault,
+                })
+            },
         )?;
         Ok(found.pop())
     }

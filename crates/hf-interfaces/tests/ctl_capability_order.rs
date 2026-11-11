@@ -61,6 +61,7 @@ fn emitted_lists_keep_the_canonical_order_in_both_availability_states() {
             "task-prompt.v1",
             "task-successors.v1",
             "task-artifacts.v1",
+            "task-continuation-stop.v1",
         ]
     );
 }
