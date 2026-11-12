@@ -195,13 +195,12 @@ impl PlanSpec {
             }));
         }
         let path = args.string("plan_directory")?;
-        let parts = std::path::Path::new(&path);
+        // Receipt paths are POSIX text whatever the host, so they are not
+        // interpreted with the host's path rules.
         if path.is_empty()
             || path.len() > 4096
-            || !parts.is_absolute()
-            || parts
-                .components()
-                .any(|c| matches!(c, std::path::Component::ParentDir))
+            || !path.starts_with('/')
+            || path.split('/').any(|part| part == "..")
         {
             return Err(PortError::new(
                 "plan_directory must be an absolute path without ..",
