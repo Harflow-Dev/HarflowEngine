@@ -30,7 +30,7 @@ covers the entire wrapper. Unknown assignment/version, changed fields and malfor
 or over-budget payloads refuse. Neither a backend name nor arbitrary argv is a
 launch option.
 
-HFPL1 is built only after fresh schema5 initialization. `initialize=true` with an
+HFPL1 is built only after fresh initialization (schema5 at that stage; current roots use schema 7). `initialize=true` with an
 HFPL wrapper refuses before initialization or preparation mutation. No schema5
 conversion or stored-row adoption is added. Legacy HFOP1 bytes and fixed-helper
 selection remain separate.

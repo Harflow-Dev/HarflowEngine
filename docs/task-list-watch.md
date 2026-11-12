@@ -37,7 +37,7 @@ not authentication, authorization or evidence of task state.
 
 The schema3 stage introduced one task_watch_meta row (singleton1, version1,
 revision0) in the exclusive root initialization transaction. Current fresh roots
-use schema6 and retain this row. Root generation is its epoch.
+use schema 7 and retain this row. Root generation is its epoch.
 Older/future roots refuse, with no automatic upgrade, reader initialization,
 reset or repair. The selected fresh schema requires canonical lowercase32hex store
 generation in marker/database, exact UTF8 byte length checked before allocation.
@@ -102,7 +102,7 @@ cursor encoding, before returning a result.
 Source reads project at most two rows of integer scalars, with type checks before
 allocation. They do not scan task headers or recursively snapshot catalog JSON.
 Routine root/identity qualification and source binding checks still occur; the
-initial Store qualification may copy up to the existing64MiB limit. No memory/RSS,
+initial Store qualification may copy up to the existing64MiB limit (this governs the watch seam, which opens the Store; public ctl reads use the read session and have no such cap). No memory/RSS,
 scan throughput, p99 or scale qualification is inferred from these structural bounds.
 
 Readers drop the Store mutex/transaction before waiting. RealWatchControl has a
@@ -163,7 +163,7 @@ only to that temporary producer; it is not permission to weaken Rust continuity.
 
 The separate [private capture/completion foundation](capture-completion.md)
 introduced schema4; schema5 then changed the locking protocol. Current fresh roots
-use schema6 with typed task/process/prompt/artifact facts beside the existing
-task/event/watch tables. Schema5 reads refuse as `unsupported_layout`, without
-upgrade or repair. The schema3 watch foundation above remains historical;
+use schema 7 with typed task/process/prompt/artifact facts, launch receipts and chain stops
+beside the existing task/event/watch tables. Schema 6 and schema5 reads refuse as
+`unsupported_layout`, without upgrade or repair. The schema3 watch foundation above remains historical;
 current publication still joins task metadata and revision in one commit.

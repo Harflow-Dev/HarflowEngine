@@ -7,7 +7,7 @@ Current `harflow-ctl task-events` is implemented on macOS arm64 with a caller ga
 wire cursor encoding, log/change-token projection and document fitting. It uses
 one read-only `ReadSession` snapshot under a shared lease, without a private copy
 or per-call `quick_check`. This adds no ingestion or supervision. Watch
-command/capability remains unavailable until E2; see the [partial E1 receipt](migration-receipts/E1.md).
+command/capability remains unavailable until E2; see the [E1 receipt](migration-receipts/E1.md).
 
 ## Inputs and ownership
 
@@ -52,7 +52,7 @@ these consumer-only mappings.
 ## Qualification boundaries
 
 Only explicit fixture initialization creates event tables under the existing
-exclusive initializer. Current fresh roots use schema6; schema5 roots refuse as
+exclusive initializer. Current fresh roots use schema 7; schema 6 and schema5 roots refuse as
 `unsupported_layout`. Reads and fixture replacements do not upgrade old
 roots or silently replace a future schema. Replacements and appends are test-input
 operations, not product ingestion APIs. Facts about capture, drain, grace and stored

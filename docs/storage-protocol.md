@@ -47,7 +47,7 @@ Probe never opens the source using SQLite. Under lifecycle and I/O gates, copy
 only the bounded main database and WAL to an isolated private scratch directory,
 never source SHM. SQLite validates/replays that private copy; compare logical
 application/schema/generation against the marker before source writable access.
-The combined main+WAL snapshot cap is 64MiB; chunk/deadline checks fail closed. Qualification
+The combined main+WAL snapshot cap is 64MiB for open, recover and probe, and it stays in force until E2 (public ctl reads use the read session, which has no cap of its own); chunk/deadline checks fail closed. Qualification
 failure never authorizes source recovery. No custom WAL parser, immutable live-WAL
 shortcut, sidecar deletion or original-file reset is used.
 
@@ -165,3 +165,27 @@ Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
 internal root depends on an older schema. Open/recover/probe retain the 64MiB cap; public ctl
 reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
 `RecoveryReadSession` remains a distinct capped private-copy path.
+
+## Tables read by the public ctl commands
+
+`harflow-ctl` reads only through the `ReadSession` (see the [read-path design](store-read-path.md)),
+inside one snapshot per command. Reading a table is not a guarantee that a writer produces it:
+until E2 the rows come from fixture writers, and the reads prove behaviour on seeded data only.
+Statements are in `crates/hf-storage/src/statements.rs` and the `*_reads.rs` modules; the
+mapping below is by statement owner, not an exhaustive per-command contract.
+
+| Tables | Read by |
+| --- | --- |
+| `task_dataset` (generation), `task_headers` (header and status blobs, the served bytes) | every task read; the dataset generation binds list and page cursors |
+| `task_facts` (typed task facts, `valid` flag, `chain_root`) | `list`, `status`, `status-batch`, `task-list-page`, interaction and statistics feeds, caller candidate scans |
+| `task_processes` | caller gate and the recovered/observation projection |
+| `task_prompts` | `task-prompt` and the brief preview |
+| `artifact_manifests`, `artifact_items` | `task-artifacts` and the artifact summary in `status` |
+| `event_streams`, `event_records` | `task-events`, `status --brief`, `recovery-activity`, event token |
+| `chain_stops` | `continuation_stop` on `status`, `status --brief` and `status-batch` |
+| `launch_attempts` | `task-pending-page`, `task-pending-status` and the ordinary reads of a launch receipt |
+
+`task_watch_meta` and the ownership, capture and conversation tables are not read by any
+public ctl command. The 64MiB cap above still governs `Store::open`, `recover` and `probe`
+(and the internal private-copy `RecoveryReadSession`) until E2; the read session has no
+size cap of its own.

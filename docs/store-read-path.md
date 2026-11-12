@@ -2,9 +2,9 @@
 
 Status: read session implemented; the revision-3 measurements below remain historical
 S2 evidence, not release-binary budget acceptance. Current macOS arm64 ctl reads use
-`ReadSession` and one snapshot per command; fresh roots use schema6, and schema5
+`ReadSession` and one snapshot per command; fresh roots use schema 7, and schema 6 and schema5
 reads refuse as `unsupported_layout` without migration. The
-[partial E1 receipt](migration-receipts/E1.md) records coordinator-verified release
+[E1 receipt](migration-receipts/E1.md) records coordinator-verified release
 evidence and outstanding gates. E1 has not exited or been accepted.
 The protocol and its amendments are in
 [measurement protocol](store-read-measurement.md); guarantees named here are in
@@ -27,7 +27,9 @@ Two parts, kept separate throughout:
 
 - **Implemented in S2.** The read session (a new read-only way to
   answer reads) and the `state-inspect` `-wal` row. Subsequent E1 slices compose
-  the public read-only ctl commands with it. `Store::open`, `recover`,
+  the public read-only ctl commands with it: S3 to S5 put all ten store-backed
+  reads on it, and S5 adopted it for `recovery-activity`, which no longer uses the
+  private-copy path. `Store::open`, `recover`,
   `probe`, `probe_with_scratch`, `open_with_scratch`, the capped copy and their
   tests stay exactly as they are, because E1 has no writer and no guarantee may
   weaken. The 64 MiB limit therefore remains in force for those paths at E1.
@@ -35,6 +37,11 @@ Two parts, kept separate throughout:
   writer open and recover, which E1's exit requires as a design, together with
   checkpoint ownership and qualification policy. Several choices are named
   decisions that this document does not settle.
+- **Owner decision D20 (2026-11-07), accepted for E1 only.** Silent rollback of
+  history on WAL damage is accepted for E1, which has no public writer. This is not
+  a guarantee that damaged fixtures cannot meet it. The commit watermark (below) is
+  a named E2 decision and is carried there with the generation write sequence and
+  the recovery signal.
 
 ## Decision
 
@@ -376,10 +383,13 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 
 Fixtures are not forced checkpointed: the nonempty-WAL rebuild is the real E1
 path. The seed tool pins no checkpoint on close and never leaves a root without
-`-wal` (an empty file is fine). `authoritative_digest` excludes `-shm`. S6 must
-measure on the release binary with the production lease adapter, on both a seeded
-nonempty-WAL store and a checkpointed one, including 4 concurrent cold readers
-with no holder, and cover cross-process lease behaviour.
+`-wal` (an empty file is fine). `authoritative_digest` excludes `-shm`. S6 measured
+the release binary with the production lease adapter on a nonempty-WAL store, a
+checkpointed one and a tail state, with 4 concurrent cold readers in the recorded
+contention cases, and covered cross-process lease behaviour in
+`hf-storage/tests/read_session_process.rs` and `hf-host/tests/read_session_production.rs`.
+The figures are in the [E1 receipt](migration-receipts/E1.md); the contention cases are
+recorded, not gated.
 
 ## Implementation note
 
@@ -542,8 +552,8 @@ unflagged repetitions relied on.
 
 The S2 measurements did not cover cold file cache (needs privileges), the production
 lease adapter across processes (the recover tests were in-process), or production
-queries on a read-only handle. Those queries are now implemented; no W4 phaseB
-budget samples are recorded in the partial E1 receipt. Other unmeasured items:
+queries on a read-only handle. Those queries are now implemented and the release-binary
+budget runs are recorded in the [E1 receipt](migration-receipts/E1.md). Other unmeasured items:
 a live owner with a write transaction; damaged frames behind
 a trusted wal-index; `F_FULLFSYNC` cost; open-time checkpoint cost and multi-owner
 `io.lock` behaviour; RESTART checkpoint behaviour; the stress dataset, workflows

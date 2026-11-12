@@ -14,13 +14,14 @@ The domain metadata check rejects build scripts and custom target source roots; 
 
 Inline modules gated by the exact #[cfg(test)] attribute are exempt from source purity analysis, allowing ordinary unit-test attributes and assertion macros. Out-of-line test modules and files named tests.rs receive no exemption. Production cfg modules and cfg_attr remain subject to the policy. Keep test-specific Clippy allowances inside the inline test module; production denies remain inherited. Non-domain crate roots allow unwrap/expect/panic only under cfg(test).
 
-hf-storage also provides a read session that answers task and event reads from the real store read-only under a shared lease; it is specified in the [read-path design](store-read-path.md) and the [storage protocol](storage-protocol.md) and adds no ctl command. Internal task-read values, ports, fixture queries and consumer-only mappings are
-described in [task reads](task-reads.md). They add no supported host command or
-production caller/lifecycle verification.
+hf-storage also provides a read session that answers task and event reads from the real store read-only under a shared lease; it is specified in the [read-path design](store-read-path.md) and the [storage protocol](storage-protocol.md); the ctl reads listed above are its only production callers. Internal task-read values, ports, fixture queries and consumer-only mappings are
+described in [task reads](task-reads.md). They are the internal seam beneath the ctl read
+commands and add no host command of their own or production lifecycle verification.
 
 Internal stored event paging and consumer-only mappings are described in
 [event reads](event-reads.md). They retain fixture authority and observation
-boundaries; that stage added no public host operation or watcher.
+boundaries; that stage added no public host operation or watcher, and no watch command
+or `task-list-watch.v1` capability exists until E2.
 
 The macOS arm64 fixture-only [process primitives](process-primitives.md) retain
 qualified direct-child handles and independent capture/exit evidence. They add no
@@ -28,7 +29,7 @@ detached owner, public execution capability or descendant-containment guarantee.
 
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
 intent/reservation/claim transactions and fenced observations. The original B1 stage selected
-schema2; current fresh roots use schema6 as described in the fixture seed paragraph below. No automatic upgrade,
+schema2; current fresh roots use schema 7 as described in the fixture seed paragraph below. No automatic upgrade,
 detached runtime or public execution API is added.
 
 The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned

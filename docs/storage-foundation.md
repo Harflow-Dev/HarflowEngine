@@ -76,7 +76,7 @@ is selected or advertised. See [task-list invalidation](task-list-watch.md).
 
 ## Subsequent B2c schema
 
-B2c introduced schema4 for the separate [private capture/completion
+B2c introduced schema4 (current fresh roots use schema 7) for the separate [private capture/completion
 foundation](capture-completion.md). The schema3 watch foundation above is its
 historical entry stage; schema3 roots now refuse without upgrade or repair.
 Watcher publication and its current writer inventory are otherwise unchanged.

@@ -30,7 +30,7 @@ Containment remains Unknown. No restart discovery, adoption or replacement is ad
 
 ## Fresh schema and private evidence
 
-Fresh isolated roots use schema4. Earlier schema3 and older roots refuse without
+This stage introduced schema4 for fresh isolated roots (current roots use schema 7; see the [storage protocol](storage-protocol.md#subsequent-schemas)). Earlier schema3 and older roots refuse without
 upgrade, initialization, normalization or repair. The existing marker protocol stays
 version2 with the actual current schema in its schema field. Prior receipts retain
 the schema selected by their historical delivery.

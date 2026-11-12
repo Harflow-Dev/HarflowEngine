@@ -1,8 +1,9 @@
 # Internal task reads, R02-B
 
 See [receipt](migration-receipts/R02-B.md) and [storage protocol](storage-protocol.md).
-R02-B added no public command, capability, cursor encoding, task lifecycle or
-production caller verifier. The scaffold still reports unsupported engine operations.
+R02-B itself added no public command, capability, cursor encoding, task lifecycle or
+production caller verifier; the ctl commands below were added by the later E1 slices
+over this seam. The scaffold binary still reports unsupported engine operations.
 
 Current `harflow-ctl` provides `version-info` and `state-inspect` everywhere; on
 macOS arm64 it also provides `list`, `status` (including `--brief`), `status-batch`,
@@ -18,7 +19,7 @@ Missing-root reads create nothing. The caller gate admits
 `NoAgentDetected`, not a human credential, and refuses unresolved agents under
 `REFUSE_UNRESOLVED_AGENTS`. This does not qualify managed ownership or lifecycle
 control. Watch command/capability remains unavailable until E2. See the
-[partial E1 receipt](migration-receipts/E1.md).
+[E1 receipt](migration-receipts/E1.md).
 
 ## Two bounded stages
 
@@ -44,11 +45,12 @@ exclusive initialization transaction. Their dataset has its own version/generati
 Explicit `replace_task_fixture` performs bounded DML replacement and generation
 rotation under the writer gate, not execution or a task-write lifecycle. Old roots
 without task tables and unseeded datasets return unavailable; reads and replacement
-do not create/upgrade missing tables. Current fresh roots use schema6: typed
-`task_facts`, `task_processes`, `task_prompts`, `artifact_manifests` and
-`artifact_items` supplement the existing task/event tables. Header/status blobs
-remain the served bytes. Schema5 roots refuse as `unsupported_layout`; no
-migration/public creation path is introduced.
+do not create/upgrade missing tables. Current fresh roots use schema 7: typed
+`task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`,
+`artifact_items`, `launch_attempts` and `chain_stops` supplement the existing task/event
+tables (see the [storage protocol](storage-protocol.md#tables-read-by-the-public-ctl-commands)).
+Header/status blobs remain the served bytes. Schema 6 and schema5 roots refuse as
+`unsupported_layout`; no migration/public creation path is introduced.
 
 ## Query and observation coverage
 
@@ -56,7 +58,7 @@ migration/public creation path is introduced.
 | --- | --- |
 | IDs | ASCII `[A-Za-z0-9][A-Za-z0-9_-]{0,63}`; exact wins, canonical32hex/hyphen UUID never prefix, prefix minimum8, case-sensitive literal underscore. Ambiguity at most5 candidate IDs plus truncation; public diagnostics/echo serialization belong to the separate ctl adapter. |
 | Scope | Namespace precedes exact/prefix lookup; closed scopes bound100 supplied IDs. Actual managed role/ownership derivation remains absent. |
-| Pending | Separate fixture-supplied exact ID presence, not a task record; never prefix candidate/list row. Typed Pending supplies no launch state, reservation/owner liveness or public status body. |
+| Pending | The internal seam supplies exact ID presence only, not a task record; never a prefix candidate or list row, and no launch state, reservation/owner liveness or public status body. The public ctl commands `task-pending-page` and `task-pending-status` read the schema 7 `launch_attempts` table instead and serve `launch_state`; see [pending launch discovery](pending-launch.md). |
 | Pages | Limit1..100; `(stamp,id)` descending keyset; independent supplied active observation and session filter up to256characters. Sort stamps are explicit fixture integers, not a new public timestamp parser. |
 | Explicit IDs | Separate bounded request mode, deduplicated/request order; no silently ignored history filter/cursor. Missing IDs are lookup outcomes and omitted rows. This internal result does not supply public adapter error/drop/echo mapping; ctl has a separate mapping. |
 | Stored status | Same scoped resolver, optional stored status bytes and independent recorded-status/active/exit/drain/owner facts. No supervision/provider replay, current process check or inferred successful delivery. |
