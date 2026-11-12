@@ -8,6 +8,7 @@ mod frames;
 mod index;
 mod lost_reply;
 mod release;
+mod sequence;
 mod store_limits;
 
 use crate::Mutation;

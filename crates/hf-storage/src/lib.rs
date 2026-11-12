@@ -26,6 +26,7 @@ mod task_fixture;
 mod task_page;
 mod task_query;
 mod task_read;
+mod write_tx;
 pub use task_fixture::TaskFixture;
 pub use task_read::TaskReadSession;
 #[cfg(test)]
@@ -306,7 +307,6 @@ mod fixture_events;
 mod fixture_extras;
 mod fixture_schema;
 mod fixture_task;
-mod fixture_tx;
 pub use fixture_events::FixtureLine;
 pub use fixture_extras::{FixtureArtifact, FixturePlan};
 pub use fixture_task::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask};

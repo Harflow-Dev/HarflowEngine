@@ -1,7 +1,10 @@
-use crate::{Error, Result, Store, connection, conversation_data as data, ownership_schema};
+use crate::{
+    Error, Result, Store, connection, conversation_data as data, ownership_schema,
+    write_tx::{Publish, Stage},
+};
 use hf_application::conversation::{Command, ConversationStorePort};
 use hf_domain::{conversation::*, ownership::Id};
-use rusqlite::{Transaction, TransactionBehavior, params};
+use rusqlite::{Transaction, params};
 use std::time::Instant;
 /// One-shot offline fixture token, created only after a new claim commit.
 #[derive(Debug, PartialEq, Eq)]
@@ -21,23 +24,15 @@ fn transaction<T>(
     deadline: Instant,
     action: impl FnOnce(&Transaction<'_>) -> Result<T>,
 ) -> Result<T> {
-    let mut connection = store.admit(deadline)?;
-    let _io = store.binding.io(deadline)?;
-    connection::timeout(&connection, deadline)?;
-    let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    ownership_schema::check(&tx, &store.identity.generation)?;
-    let result = action(&tx)?;
-    store.binding.check()?;
-    #[cfg(all(test, unix))]
-    crate::tests::stage("conversation_before_commit");
-    connection::check_deadline(deadline)?;
-    tx.commit().map_err(|_| Error::CommitOutcomeUnknown)?;
-    #[cfg(all(test, unix))]
-    crate::tests::stage("conversation_after_commit");
-    store
-        .binding
-        .check()
-        .map_err(|_| Error::CommitOutcomeUnknown)?;
+    let result = store.write(
+        deadline,
+        Publish::Nothing,
+        Some(Stage::CONVERSATION),
+        |tx| {
+            ownership_schema::check(tx, &store.identity.generation)?;
+            action(tx)
+        },
+    )?;
     connection::check_deadline(deadline).map_err(|_| Error::CommitOutcomeUnknown)?;
     Ok(result)
 }

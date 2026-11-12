@@ -142,6 +142,7 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
     transaction.execute_batch(crate::fixture_schema::FACTS_SCHEMA)?;
     transaction.execute_batch(crate::launch_attempts::SCHEMA)?;
     transaction.execute_batch(crate::chain_stops::SCHEMA)?;
+    transaction.execute_batch(crate::write_tx::SEQUENCE_SCHEMA)?;
     timeout(&transaction, deadline)?;
     transaction
         .commit()
@@ -177,6 +178,7 @@ pub(crate) fn open_source(
     if self::identity(&connection, deadline)? != *identity {
         return Err(Error::Replaced);
     }
+    crate::write_tx::require_sequence(&connection)?;
     self::configure(&connection, deadline)?;
     binding.check()?;
     Ok(connection)

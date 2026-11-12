@@ -1,6 +1,7 @@
 #![cfg(unix)]
 #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 
+mod sequence;
 mod support;
 use rusqlite::Connection;
 use support::{Actor, Fixture};

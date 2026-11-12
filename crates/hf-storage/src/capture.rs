@@ -2,13 +2,14 @@
 use crate::{
     Error, Result, Store, capture_codec as codec, capture_read, capture_schema, connection,
     ownership_read, ownership_schema, ownership_write,
+    write_tx::{Publish, Stage},
 };
 use hf_domain::{
     capture::*,
     ownership::{Id, Phase},
     process::ProcessExit,
 };
-use rusqlite::{Transaction, TransactionBehavior, params};
+use rusqlite::{Transaction, params};
 use std::time::Instant;
 impl Store {
     pub fn capture_begin(
@@ -92,34 +93,17 @@ impl Store {
         terminal: bool,
         action: impl FnOnce(&Transaction<'_>) -> Result<T>,
     ) -> Result<T> {
-        let mut db = self.admit(deadline)?;
-        let _io = self.binding.io(deadline)?;
-        connection::timeout(&db, deadline)?;
-        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        ownership_schema::check(&tx, &self.identity().generation)?;
-        capture_schema::check(&tx, &self.identity().generation)?;
-        let result = action(&tx)?;
-        self.binding.check()?;
-        stage(false, terminal);
-        connection::check_deadline(deadline)?;
-        tx.commit().map_err(|_| Error::CommitOutcomeUnknown)?;
-        stage(true, terminal);
-        self.binding
-            .check()
-            .map_err(|_| Error::CommitOutcomeUnknown)?;
-        Ok(result)
+        let stage = if terminal {
+            Stage::CAPTURE_TERMINAL
+        } else {
+            Stage::CAPTURE
+        };
+        self.write(deadline, Publish::Nothing, Some(stage), |tx| {
+            ownership_schema::check(tx, &self.identity().generation)?;
+            capture_schema::check(tx, &self.identity().generation)?;
+            action(tx)
+        })
     }
-}
-fn stage(after: bool, terminal: bool) {
-    #[cfg(all(test, unix))]
-    crate::tests::stage(match (after, terminal) {
-        (false, false) => "capture_before_commit",
-        (true, false) => "capture_after_commit",
-        (false, true) => "capture_before_terminal",
-        (true, true) => "capture_after_terminal",
-    });
-    #[cfg(not(all(test, unix)))]
-    let _ = (after, terminal);
 }
 fn current(store: &Store, tx: &Transaction<'_>, b: &CaptureBinding) -> Result<()> {
     codec::encode(b)?;

@@ -1,6 +1,6 @@
 //! Per-task fixture writers: the typed facts, the served blobs, the prompt record and the
 //! optional caller-scan process row are written together in one transaction.
-use crate::{Error, Result, Store};
+use crate::{Error, Result, Store, write_tx::Publish};
 use hf_domain::{process::ProcessIdentity, task_read::TaskId};
 use rusqlite::{OptionalExtension, Transaction};
 use std::time::Instant;
@@ -53,12 +53,11 @@ impl Store {
     pub fn add_task_fixture(&self, task: &FixtureTask, deadline: Instant) -> Result<()> {
         validate(task)?;
         self.check_bounds(1, payload_bytes(task))?;
-        self.fixture_write(deadline, |tx| {
+        self.write(deadline, Publish::GenerationAndRevision, None, |tx| {
             if exists(tx, &task.facts.id)? {
                 return Err(Error::FixtureConflict);
             }
-            insert(tx, task)?;
-            crate::fixture_tx::task_changed(tx)
+            insert(tx, task)
         })
     }
     /// The chain root stored for `id`: the outer `None` means the task is missing or damaged,
@@ -84,7 +83,7 @@ impl Store {
     /// stay, as the Python port keeps those files. Appending an event to a damaged task is
     /// refused, because its stream facts have no source.
     pub fn damage_task_fixture(&self, id: &TaskId, deadline: Instant) -> Result<()> {
-        self.fixture_write(deadline, |tx| {
+        self.write(deadline, Publish::GenerationAndRevision, None, |tx| {
             for table in ["task_headers WHERE id", "task_processes WHERE task"] {
                 tx.execute(&format!("DELETE FROM {table}=?1"), [id.as_str()])?;
             }
@@ -92,7 +91,7 @@ impl Store {
                 "INSERT OR REPLACE INTO task_facts(id,valid) VALUES(?1,0)",
                 [id.as_str()],
             )?;
-            crate::fixture_tx::task_changed(tx)
+            Ok(())
         })
     }
 }

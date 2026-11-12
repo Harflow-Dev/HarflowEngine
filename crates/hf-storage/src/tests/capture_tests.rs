@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 
 mod limits;
+mod sequence;
 mod support;
 use super::super::Error;
 use hf_domain::{

@@ -158,3 +158,4 @@ fn is_busy(error: &Error) -> bool {
 
 mod commit;
 mod races;
+mod sequence;

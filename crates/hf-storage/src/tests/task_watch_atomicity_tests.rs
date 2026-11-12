@@ -7,6 +7,7 @@ use hf_domain::{
     task_read::{Coverage, StoredObservation, TaskId},
     task_watch::{WatchCursor, WatchRequest},
 };
+mod sequence;
 mod support;
 use self::support::{Actor, Fixture};
 use rusqlite::Connection;

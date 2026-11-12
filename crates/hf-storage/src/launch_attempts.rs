@@ -8,9 +8,9 @@
 //!   qualifies as a launch document, so the ordinary reads can see it;
 //! * otherwise a complete launch whose `resource_names` is a JSON array and NULL without
 //!   resources.
-use crate::{Error, Result, Store, connection};
+use crate::{Error, Result, Store, connection, write_tx::Publish};
 use hf_domain::task_read::{PendingLaunch, TaskId};
-use rusqlite::{OptionalExtension, Transaction, TransactionBehavior};
+use rusqlite::{OptionalExtension, Transaction};
 use std::time::Instant;
 
 pub(crate) const SCHEMA: &str = "
@@ -187,14 +187,6 @@ pub(crate) fn refused(db: &rusqlite::Connection, id: &TaskId) -> Result<Option<(
         )
         .optional()?)
 }
-fn advance_paging_generation(tx: &Transaction<'_>) -> Result<()> {
-    crate::task_read::dataset_optional(tx)?.ok_or(Error::TaskReadUnavailable)?;
-    tx.execute(
-        "UPDATE task_dataset SET generation=lower(hex(randomblob(16))) WHERE singleton=1",
-        [],
-    )?;
-    Ok(())
-}
 impl Store {
     /// Launch-only fixture update: replaces the whole set of launch rows and advances the
     /// paging generation, but never task-list metadata. A launch may share its id with an
@@ -211,24 +203,14 @@ impl Store {
                 return Err(Error::Incompatible);
             }
         }
-        let mut connection = self.admit(deadline)?;
-        let _io = self.binding.io(deadline)?;
-        connection::timeout(&connection, deadline)?;
-        let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        advance_paging_generation(&transaction)?;
-        transaction.execute("DELETE FROM launch_attempts", [])?;
-        for row in rows {
-            connection::timeout(&transaction, deadline)?;
-            insert(&transaction, row, false)?;
-        }
-        self.binding.check()?;
-        connection::timeout(&transaction, deadline)?;
-        transaction
-            .commit()
-            .map_err(|_| Error::CommitOutcomeUnknown)?;
-        self.binding
-            .check()
-            .map_err(|_| Error::CommitOutcomeUnknown)
+        self.write(deadline, Publish::Generation, None, |transaction| {
+            transaction.execute("DELETE FROM launch_attempts", [])?;
+            for row in rows {
+                connection::timeout(transaction, deadline)?;
+                insert(transaction, row, false)?;
+            }
+            Ok(())
+        })
     }
     /// Only this row's own bounds are checked here. Namespace totals (entries and name
     /// bytes) are enforced at read time, through `PendingLimits`.
@@ -237,8 +219,7 @@ impl Store {
     /// The paging generation advances; task-list metadata does not change.
     pub fn put_launch_attempt(&self, row: &LaunchRow, deadline: Instant) -> Result<()> {
         self.check_bounds(1, row.bytes())?;
-        self.fixture_write(deadline, |tx| {
-            advance_paging_generation(tx)?;
+        self.write(deadline, Publish::Generation, None, |tx| {
             insert(tx, row, true)
         })
     }

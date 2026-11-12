@@ -58,6 +58,9 @@ safe. A later wait from the retained cursor observes the commit. Python needs
 pre/post file fences because metadata replacement and catalog transactions are not
 one atomic write; those private mechanics are not copied into Rust.
 
+Every row below commits through the single `Store::write` path (see the commit path in
+[storage-protocol](storage-protocol.md)); its publication variant is the participation named in the row.
+
 | Current path | Participation |
 | --- | --- |
 | replace_task_fixture | Republishes task_headers and advances revision atomically, even for identical bytes. Pending values in that whole replacement do not make it a pending-only operation. |

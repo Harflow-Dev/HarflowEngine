@@ -1,34 +1,24 @@
 use crate::{
-    Error, Result, Store, connection, ownership_codec as codec, ownership_read, ownership_schema,
+    Error, Result, Store, ownership_codec as codec, ownership_read, ownership_schema,
+    write_tx::{Publish, Stage},
 };
 use hf_domain::ownership::*;
-use rusqlite::{Transaction, TransactionBehavior, params};
+use rusqlite::{Transaction, params};
 use std::time::Instant;
 pub(crate) fn transaction<T>(
     store: &Store,
     deadline: Instant,
     action: impl FnOnce(&Transaction<'_>) -> Result<T>,
 ) -> Result<T> {
-    let mut connection = store.admit(deadline)?;
-    let _io = store.binding.io(deadline)?;
-    connection::timeout(&connection, deadline)?;
-    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    ownership_schema::check(&transaction, &store.identity().generation)?;
-    let result = action(&transaction)?;
-    store.binding.check()?;
-    #[cfg(all(test, unix))]
-    crate::tests::stage("ownership_before_commit");
-    connection::check_deadline(deadline)?;
-    transaction
-        .commit()
-        .map_err(|_| Error::CommitOutcomeUnknown)?;
-    #[cfg(all(test, unix))]
-    crate::tests::stage("ownership_after_commit");
-    store
-        .binding
-        .check()
-        .map_err(|_| Error::CommitOutcomeUnknown)?;
-    Ok(result)
+    store.write(
+        deadline,
+        Publish::Nothing,
+        Some(Stage::OWNERSHIP),
+        |transaction| {
+            ownership_schema::check(transaction, &store.identity().generation)?;
+            action(transaction)
+        },
+    )
 }
 pub(crate) fn generation(store: &Store, value: &Id) -> Result<()> {
     if value.as_str() != store.identity().generation {

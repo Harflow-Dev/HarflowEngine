@@ -1,10 +1,10 @@
-use crate::{Error, Result, Store, connection};
+use crate::{Error, Result, Store, connection, write_tx::Publish};
 use hf_application::event_read::{EventRecord, RecordClass};
 use hf_domain::{
     event_read::{CaptureState, LogFacts},
     task_read::TaskId,
 };
-use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
+use rusqlite::{Connection, OptionalExtension};
 use std::time::Instant;
 pub(crate) const EVENT_SCHEMA: &str = "CREATE TABLE event_dataset(singleton INTEGER PRIMARY KEY CHECK(singleton=1),version INTEGER NOT NULL); INSERT INTO event_dataset VALUES(1,1); CREATE TABLE event_streams(task TEXT PRIMARY KEY,generation TEXT NOT NULL,complete_end INTEGER NOT NULL,partial_tail INTEGER NOT NULL,available INTEGER NOT NULL,capture INTEGER NOT NULL,drained INTEGER,eof_seq INTEGER,grace INTEGER NOT NULL,task_status TEXT); CREATE TABLE event_records(task TEXT NOT NULL,start INTEGER NOT NULL,end INTEGER NOT NULL,class INTEGER NOT NULL,seq INTEGER,kind TEXT,body BLOB NOT NULL,PRIMARY KEY(task,start)); CREATE INDEX event_starts ON event_records(task,start); CREATE INDEX event_ends ON event_records(task,end);";
 pub struct EventFixture {
@@ -28,16 +28,9 @@ impl Store {
         deadline: Instant,
     ) -> Result<()> {
         validate(self, fixture, deadline)?;
-        let mut db = self.admit(deadline)?;
-        let _io = self.binding.io(deadline)?;
-        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        self.write_in(&tx, fixture, append, deadline)?;
-        self.binding.check()?;
-        connection::timeout(&tx, deadline)?;
-        tx.commit().map_err(|_| Error::CommitOutcomeUnknown)?;
-        self.binding
-            .check()
-            .map_err(|_| Error::CommitOutcomeUnknown)
+        self.write(deadline, Publish::Nothing, None, |tx| {
+            self.write_in(tx, fixture, append, deadline)
+        })
     }
     /// The writes of one event fixture inside a caller-owned immediate transaction.
     pub(crate) fn write_in(

@@ -1,5 +1,5 @@
-use crate::{Error, Mutation, Record, Result, Store, connection};
-use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
+use crate::{Error, Mutation, Record, Result, Store, connection, write_tx::Publish};
+use rusqlite::{Connection, OptionalExtension};
 use std::{
     sync::{MutexGuard, TryLockError},
     time::Instant,
@@ -49,28 +49,19 @@ impl Store {
                 .ok_or(Error::LimitExceeded)?;
         }
         self.check_bounds(mutations.len(), bytes)?;
-        let mut connection = self.admit(deadline)?;
-        let _io = self.binding.io(deadline)?;
-        connection::timeout(&connection, deadline)?;
-        let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        for mutation in mutations {
-            connection::timeout(&transaction, deadline)?;
-            match mutation {
-                Mutation::Insert {key,value}=>transaction.execute("INSERT INTO fixture_records(key,value) VALUES(?1,?2)",rusqlite::params![key,value])?,
-                Mutation::Put {key,value}=>transaction.execute("INSERT INTO fixture_records(key,value) VALUES(?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",rusqlite::params![key,value])?,
-                Mutation::Delete {key}=>transaction.execute("DELETE FROM fixture_records WHERE key=?1",[key])?,
-            };
-        }
-        self.binding.check()?;
-        connection::timeout(&transaction, deadline)?;
-        transaction
-            .commit()
-            .map_err(|_| Error::CommitOutcomeUnknown)?;
         // A synchronous syscall cannot be preempted at the deadline. No request is
         // queued for later execution; a completed commit is reported truthfully.
-        self.binding
-            .check()
-            .map_err(|_| Error::CommitOutcomeUnknown)
+        self.write(deadline, Publish::Nothing, None, |transaction| {
+            for mutation in mutations {
+                connection::timeout(transaction, deadline)?;
+                match mutation {
+                    Mutation::Insert {key,value}=>transaction.execute("INSERT INTO fixture_records(key,value) VALUES(?1,?2)",rusqlite::params![key,value])?,
+                    Mutation::Put {key,value}=>transaction.execute("INSERT INTO fixture_records(key,value) VALUES(?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",rusqlite::params![key,value])?,
+                    Mutation::Delete {key}=>transaction.execute("DELETE FROM fixture_records WHERE key=?1",[key])?,
+                };
+            }
+            Ok(())
+        })
     }
     pub fn read_batch(&self, keys: &[String], deadline: Instant) -> Result<Vec<Record>> {
         connection::check_deadline(deadline)?;

@@ -159,12 +159,33 @@ text and is qualified when read: absent, a task identity, or invalid text kept v
 `artifact_items` also carries the evidence of an `observed_backend_plan` reference (`tool_use_id`,
 and `plan_directory` with the decimal-text `plan_device` and `plan_inode`): `tool_use_id` is
 present exactly for that method, and the directory columns are all present or all absent. Schema7
-has not been released, so these columns did not bump the version.
+has not been released, so these columns did not bump the version. For the same reason the
+`commit_sequence` table (singleton row, `value` integer, seeded with 0 when the root is
+initialized) was added to schema7 without a version bump; a root initialized before it refuses a
+writer open and recovery as incompatible, before any mutation. The value counts committed write
+transactions, including commits that change no row; it is not a change detector.
 Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
 `unsupported_layout`, without upgrade or repair; no checked-in database fixture or
 internal root depends on an older schema. Open/recover/probe retain the 64MiB cap; public ctl
 reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
 `RecoveryReadSession` remains a distinct capped private-copy path.
+
+## Commit path
+
+Every write after initialization goes through one function, `Store::write`
+(`crates/hf-storage/src/write_tx.rs`), in this order: admission, the shared `io.lock`, a
+`BEGIN IMMEDIATE` transaction, the caller's action, the publication the caller asked for, the
+`commit_sequence` increment, the binding check, the commit and a binding check after it. A commit
+failure is `CommitOutcomeUnknown`, and so is a failed post-commit binding check. The publication is
+one of four variants: dataset generation rotation with a watch revision bump, a revision bump only,
+a dataset (paging) generation rotation only, or nothing. `commit_sequence.value` therefore
+increases by exactly one per committed write and never on a rollback, a pre-commit failure or a
+read. Test-only stage hooks keep their names (`before_task_catalog_commit`, `ownership_before_commit`,
+`conversation_before_commit`, `capture_before_commit`, `capture_before_terminal` and the matching
+`after_` hooks) and are selected by a label passed to `Store::write`. Checks that must precede the
+action (table presence, ownership or capture schema) run inside the action, in the same
+transaction. Initialization writes the first schema in its own exclusive transaction and is the only
+commit outside `Store::write`.
 
 ## Tables read by the public ctl commands
 
