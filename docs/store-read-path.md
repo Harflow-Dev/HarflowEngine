@@ -271,7 +271,12 @@ also keeps its private-copy cap and `io.lock`. It is distinct from public
    and opening such a root would create an empty `-wal` and report an empty
    history (experiment f1). A race between this check and the open is
    acknowledged: a `-wal` deleted in that window gives the silent empty result,
-   as damage does today.
+   as damage does today. Then the lost-WAL acceptance record `store.wal-acceptance`
+   (Decision B; format and states in storage-protocol.md): absent or `accepted` for
+   the marker's generation proceeds, `pending` or `failed` refuses as the missing
+   `-wal` row, and a foreign generation, malformed or oversized content or a
+   non-regular file is an invalid marker. Refusal order: marker, header, journal,
+   `-wal`, acceptance record, then later checks.
 3. `SQLITE_OPEN_READ_ONLY`, checkpoint-on-close disabled, identity query against
    the marker, then the existing queries inside one read transaction.
 4. `-shm` may be created or rewritten by a reader. It is derived state, rebuilt
@@ -329,7 +334,11 @@ unchanged, and an empty root stays `ready`. For a root with a valid current
 marker and no `-wal`, or a non-regular `-wal`, the verdict is `incompatible` /
 `infrastructure_unavailable` (`state_incompatible`) with the fixed message
 `State root cannot be read`, never `ready` (`ready` must not describe a root
-every read refuses). `facts.entries` lists names, but `entries_truncated` at 256
+every read refuses). The same holds for the acceptance record: a bounded read of
+`store.wal-acceptance` (after the `-wal` row) gives `incompatible` /
+`infrastructure_unavailable` for `pending`, `failed` or an unreadable record, and
+`invalid_marker` for a foreign generation, malformed or oversized content or a
+non-regular file. `facts.entries` lists names, but `entries_truncated` at 256
 cannot prove absence, so when it is truncated the observer checks `-wal` directly.
 `ready` still does not promise that reads succeed: it also cannot see
 main-file damage, and a read-only directory with no `-shm` or a read-only
@@ -439,7 +448,8 @@ Specified resolution to settle: the maintenance actor first writes a durable,
 generation-bound acceptance record in state `pending`, then qualifies, then marks
 it `accepted` on success or `failed` on failure. Readers and openers treat
 `pending` and `failed` as the missing-`-wal` refusal even when an empty `-wal`
-now exists. Acceptance becomes durable only at `accepted`.
+now exists. Acceptance becomes durable only at `accepted`. The record format, reader
+and precheck hook are implemented (A1b); the maintenance writer arrives in E2-B.
 
 ## Maintenance actor
 

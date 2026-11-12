@@ -36,6 +36,7 @@ mod task_query_tests;
 #[cfg(test)]
 mod tests;
 mod wal;
+mod wal_acceptance;
 mod writer_open;
 use binding::Binding;
 use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};

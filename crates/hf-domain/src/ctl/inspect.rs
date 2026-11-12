@@ -145,6 +145,8 @@ pub struct RootFacts {
     pub journal_pending: FileState,
     /// `lstat` kind of `store.sqlite3-wal`; `None` when it is absent. Never opened.
     pub wal: Option<EntryKind>,
+    /// Bounded read of `store.wal-acceptance`.
+    pub wal_acceptance: FileState,
 }
 impl RootFacts {
     pub fn without_files(stat: RootStat) -> Self {
@@ -158,6 +160,7 @@ impl RootFacts {
             journal: FileState::Absent,
             journal_pending: FileState::Absent,
             wal: None,
+            wal_acceptance: FileState::Absent,
         }
     }
 }

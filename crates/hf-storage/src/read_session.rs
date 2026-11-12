@@ -7,7 +7,7 @@
 //! overrun answer is refused after the fact as `DeadlineExceeded`.
 use crate::{
     Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection,
-    read_context::ReadContext, wal,
+    read_context::ReadContext, wal, wal_acceptance,
 };
 use hf_application::{
     event_read::EventReadResult,
@@ -56,7 +56,7 @@ impl ReadSession {
         let claim = binding
             .acquire(LeaseMode::Shared, lease_deadline)
             .map_err(named("store.lock"))?;
-        // Spec order: marker, header, rollback journal, `-wal`. The `-wal` type is
+        // Spec order: marker, header, rollback journal, `-wal`, acceptance record. The `-wal` type is
         // left out of the sidecar check so that a defect there cannot mask the others.
         binding.check_sidecars(false).map_err(|error| {
             non_regular(&root, &["store.sqlite3-shm", "store.sqlite3-journal"]).unwrap_or(error)
@@ -65,6 +65,7 @@ impl ReadSession {
         connection::qualify_header_distinct(&binding.database()).map_err(named("store.sqlite3"))?;
         wal::reject_nonempty_journal(&binding).map_err(named("store.sqlite3-journal"))?;
         require_wal(&binding)?;
+        acceptance(&binding, &expected)?;
         let connection = open_read_only(&binding, deadline)?;
         if connection::identity(&connection, deadline)? != expected {
             return Err(Error::Incompatible);
@@ -128,6 +129,7 @@ impl ReadSession {
             return Err(Error::Replaced);
         }
         require_wal(&self.binding)?;
+        acceptance(&self.binding, &self.identity)?;
         connection::timeout(&guard, deadline)?;
         let transaction = guard.transaction()?;
         if connection::identity(&transaction, deadline)? != self.identity {
@@ -195,6 +197,12 @@ fn marker_file_fault(root: &Path) -> Option<Error> {
 fn check_files(binding: &Binding) -> Result<()> {
     binding.check_sidecars(false)?;
     require_wal(binding)
+}
+
+/// The lost-WAL acceptance record, checked right after `-wal`.
+fn acceptance(binding: &Binding, identity: &Identity) -> Result<()> {
+    wal_acceptance::check(binding.root(), &identity.generation)
+        .map_err(named("store.wal-acceptance"))
 }
 /// `lstat` only: a missing or non-regular `-wal` is not a legitimate engine state.
 /// SQLite would create an empty one on open (`pagerOpenWalIfPresent` finds none)

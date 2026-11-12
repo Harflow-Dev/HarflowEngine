@@ -53,6 +53,7 @@ impl StateObserverPort for FsStateObserver {
         facts.journal_pending = handle.read(".harflow-recovery.json.pending", JOURNAL_BOUND, true);
         // A stat of the name itself: the 256-entry listing cannot prove absence.
         facts.wal = handle.kind("store.sqlite3-wal");
+        facts.wal_acceptance = handle.read("store.wal-acceptance", IDENTITY_BOUND, true);
         facts
     }
 }

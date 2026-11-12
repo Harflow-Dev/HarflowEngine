@@ -46,8 +46,9 @@ provider effects, resource reservations or unknown mutation outcomes.
 Open, recover and probe qualify the existing store in place; there is no copy, no
 scratch directory and no size cap. Before SQLite is opened they check, in this order,
 the marker, the database header, that the rollback journal is empty, and that `-wal`
-exists and is a regular file (`lstat`). A missing `-wal` is refused (`WalMissing`) and
-none is created, because SQLite would create an empty one and report an empty history.
+exists and is a regular file (`lstat`), then the lost-WAL acceptance record (below).
+A missing `-wal` is refused (`WalMissing`) and none is created, because SQLite would
+create an empty one and report an empty history.
 They then open the source with `SQLITE_OPEN_READ_ONLY` and checkpoints suppressed,
 compare the logical application/schema/generation with the marker, and re-check the
 `-wal` type and identity and the marker after the open. Qualification failure never
@@ -98,14 +99,34 @@ schema migration operation is added; future schema-change
 work must use exclusive lifecycle, preserve generation/provenance and be separately
 assigned. Unknown outcomes do not permit reset/replay.
 
+## Lost-WAL acceptance record
+
+`store.wal-acceptance` in the state root holds
+`harflow-wal-acceptance-1\n<generation>\n<pending|accepted|failed>\n`, at most 128
+bytes, read `lstat`-first as a regular file. Absent means no acceptance is in progress.
+`accepted` for the marker's generation lets the root be used. `pending` and `failed`
+are refused as `WalMissing` even when an empty `-wal` exists. A foreign generation,
+malformed or oversized content, or a non-regular file is `Incompatible`. Open, recover,
+probe, the read session and `state-inspect` check it immediately after `-wal` and
+before any later check; readers never create or write it. Open, recover and probe check
+it before the SQLite open only (the post-open re-check covers `-wal` and the marker); the
+read session checks it at open and at every read. Only the maintenance actor writes it
+(E2-B), in the order `pending`, qualify, `accepted` or `failed`.
+
+Race acknowledged: the storage reader checks the file with `lstat` and then opens it
+without `O_NOFOLLOW`/`O_NONBLOCK` (hf-storage has no libc dependency), as the marker read
+does. A local writer that swaps the record for a FIFO or symlink between the two calls can
+make a read wait or follow the link; the `fstat` after opening still requires a regular
+file. `state-inspect` opens it with `O_NOFOLLOW|O_NONBLOCK` and is not affected.
+
 ## Read session
 
 A read session (`ReadSession`) answers reads from the real store without a copy.
 It takes `store.lock` shared (acquisition capped at 2s) and never `io.lock`, and
 it writes no main or WAL content. Before SQLite is opened it checks the marker,
 the database header, that the rollback journal is empty, and that `-wal` exists
-and is a regular file (`lstat`); a missing `-wal` is refused because opening would
-create an empty one and report an empty history. A `-wal` deleted between that
+and is a regular file (`lstat`), and the lost-WAL acceptance record; a missing `-wal`
+is refused because opening would create an empty one and report an empty history. A `-wal` deleted between that
 check and the open is not detected. It then opens with `SQLITE_OPEN_READ_ONLY` and
 checkpoint-on-close disabled, compares the database identity with the marker, and
 runs the existing queries in one read transaction. It runs no `quick_check` and has

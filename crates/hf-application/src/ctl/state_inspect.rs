@@ -2,7 +2,8 @@
 //!
 //! Nothing here opens a database, takes a lease or creates anything. `ready`
 //! means the identity marker and database header agree with this engine and the
-//! `-wal` file is a regular file; it does not verify database integrity or the
+//! `-wal` file is a regular file and the lost-WAL acceptance record, if present, is
+//! `accepted` for the marker's generation; it does not verify database integrity or the
 //! generation stored inside the database. A current store without a regular `-wal`
 //! is `incompatible`, because every read of it is refused.
 use hf_domain::ctl::{
@@ -229,7 +230,7 @@ fn store_identity_verdict(facts: &RootFacts, policy: StorePolicy) -> Option<Verd
             return Some(Verdict::incompatible(InspectReason::InvalidMarker));
         }
     };
-    let Some(version) = parse_identity(bytes) else {
+    let Some((version, generation)) = parse_identity(bytes) else {
         return Some(Verdict::incompatible(InspectReason::InvalidMarker));
     };
     if version > policy.schema_version {
@@ -245,10 +246,34 @@ fn store_identity_verdict(facts: &RootFacts, policy: StorePolicy) -> Option<Verd
             InspectReason::InfrastructureUnavailable,
         ));
     }
+    if verdict.status == InspectStatus::Ready
+        && let Some(reason) = acceptance_refusal(&facts.wal_acceptance, generation)
+    {
+        return Some(Verdict::incompatible(reason));
+    }
     Some(verdict)
 }
+
+/// The lost-WAL acceptance record, after `-wal`: absent or `accepted` for this
+/// generation passes; `pending`, `failed` and an unreadable record read as a missing
+/// `-wal`; anything else is an invalid marker, as the read session refuses it.
+fn acceptance_refusal(record: &FileState, generation: &str) -> Option<InspectReason> {
+    let bytes = match record {
+        FileState::Absent => return None,
+        FileState::Bytes(bytes) => bytes,
+        FileState::Unreadable => return Some(InspectReason::InfrastructureUnavailable),
+        FileState::NotRegular | FileState::Oversize => return Some(InspectReason::InvalidMarker),
+    };
+    let text = String::from_utf8_lossy(bytes);
+    let prefix = format!("harflow-wal-acceptance-1\n{generation}\n");
+    match text.strip_prefix(&prefix) {
+        Some("accepted\n") => None,
+        Some("pending\n" | "failed\n") => Some(InspectReason::InfrastructureUnavailable),
+        _ => Some(InspectReason::InvalidMarker),
+    }
+}
 /// Parses `harflow-storage-2\n<schema>\n<32 lowercase hex>\n` exactly.
-fn parse_identity(bytes: &[u8]) -> Option<u32> {
+fn parse_identity(bytes: &[u8]) -> Option<(u32, &str)> {
     let text = std::str::from_utf8(bytes).ok()?;
     let mut parts = text.split('\n');
     if parts.next()? != "harflow-storage-2" {
@@ -267,7 +292,7 @@ fn parse_identity(bytes: &[u8]) -> Option<u32> {
     if !parts.next()?.is_empty() || parts.next().is_some() {
         return None;
     }
-    Some(version)
+    Some((version, generation))
 }
 fn header_verdict(header: &FileState, policy: StorePolicy) -> Verdict {
     let bytes = match header {

@@ -5,6 +5,7 @@
 //! is refused before SQLite is opened, because SQLite would create an empty one.
 use crate::{
     Error, Identity, Result, binding::Binding, connection, read_session::open_read_only, scan, wal,
+    wal_acceptance,
 };
 use std::{fs, time::Instant};
 
@@ -24,13 +25,14 @@ pub(crate) struct WalStamp {
     inode: u64,
 }
 
-/// Marker, header, rollback journal, `-wal`, in that order. Returns the marker identity.
+/// Marker, header, rollback journal, `-wal`, acceptance record, in that order. Returns the marker identity.
 pub(crate) fn precheck(binding: &Binding) -> Result<Identity> {
     binding.check_sidecars(false)?;
     let expected = wal::marker(binding)?;
     connection::qualify_header(&binding.database())?;
     wal::reject_nonempty_journal(binding)?;
     require_wal(binding)?;
+    wal_acceptance::check(binding.root(), &expected.generation)?;
     binding.check()?;
     Ok(expected)
 }
