@@ -71,10 +71,10 @@ fn read_then_recover_and_recover_then_read() {
         hf_platform::lease::shared(),
     )
     .unwrap();
-    let refused = Store::recover(&root, deadline(), &base, hf_platform::lease::shared());
+    let refused = Store::recover(&root, deadline(), hf_platform::lease::shared());
     assert!(matches!(refused, Err(Error::Busy)), "{refused:?}");
     drop(reader);
-    Store::recover(&root, deadline(), &base, hf_platform::lease::shared()).unwrap();
+    Store::recover(&root, deadline(), hf_platform::lease::shared()).unwrap();
     assert_eq!(read_back(&root).unwrap(), 1);
     let _ = fs::remove_dir_all(&base);
 }
@@ -101,7 +101,7 @@ fn readers_during_repeated_recover_get_busy_or_complete_data() {
     });
     let (mut done, mut busy) = (0u32, 0u32);
     for _ in 0..200 {
-        match Store::recover(&root, deadline(), &base, hf_platform::lease::shared()) {
+        match Store::recover(&root, deadline(), hf_platform::lease::shared()) {
             Ok(_) => done += 1,
             Err(Error::Busy) => busy += 1,
             other => panic!("unexpected recover outcome {other:?}"),

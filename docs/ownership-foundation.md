@@ -99,7 +99,7 @@ semantic fault qualification.
 Writes use existing admission: handle mutex, cooperative I/O gate, short SQLite
 IMMEDIATE transaction, conditional revision UPDATE and uniqueness constraints.
 They retain WAL/FULL/foreign keys, disabled automatic/close checkpoints, explicit
-recovery and64MiB main+WAL qualification. No network/process/stream wait occurs in
+recovery and in-place qualification (no size cap since E2-A A1a). No network/process/stream wait occurs in
 production transactions. Test-only before/after-commit barriers are compiled only
 for Unix unit tests; normal builds contain no stage environment control.
 

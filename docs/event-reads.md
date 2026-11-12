@@ -61,7 +61,7 @@ an event row, terminal status or cursor exists.
 
 R02-A2's cooperative local-filesystem locking, SQLite-controlled WAL recovery and
 unsupported hostile-path/power-loss/platform/performance limits still apply.
-Open/recover/probe retain capped whole-store qualification (64MiB); ctl reads use
+Open/recover/probe qualify in place with no size cap (E2-A A1a); ctl reads use
 the read session, which has no store-size cap of its own and may create/rewrite
 `-shm`, with soft deadline acceptance. R02-B task dataset generations do not stand
 in for an event stream's append continuity. Managed ownership, lifecycle adapters,

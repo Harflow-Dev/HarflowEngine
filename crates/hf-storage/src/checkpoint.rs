@@ -1,6 +1,5 @@
-use crate::{Error, Result, Store, binding::Binding, connection, open_source, wal};
-use hf_application::lease::{LeaseMode, LeasePort};
-use std::{path::Path, sync::Arc, time::Instant};
+use crate::{Result, Store, connection};
+use std::time::Instant;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Checkpoint {
     pub busy: u32,
@@ -8,7 +7,7 @@ pub struct Checkpoint {
     pub checkpointed_frames: i64,
     pub complete: bool,
 }
-fn checkpoint(
+pub(crate) fn checkpoint(
     connection: &rusqlite::Connection,
     truncate: bool,
     deadline: Instant,
@@ -44,26 +43,6 @@ impl Store {
         connection::check_deadline(deadline)?;
         let result = checkpoint(&connection, false, deadline)?;
         self.binding.check()?;
-        Ok(result)
-    }
-    /// Explicit maintenance refuses while any normal handle exists. No schema migration or reset.
-    pub fn recover(
-        root: impl AsRef<Path>,
-        deadline: Instant,
-        scratch_parent: impl AsRef<Path>,
-        leases: Arc<dyn LeasePort>,
-    ) -> Result<Checkpoint> {
-        connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true, leases)?;
-        let _claim = binding.claim(LeaseMode::Exclusive, deadline)?;
-        let _io = binding.io(deadline)?;
-        let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
-        let connection = open_source(&binding, &identity, deadline)?;
-        let result = checkpoint(&connection, true, deadline)?;
-        binding.check()?;
-        if !result.complete {
-            return Err(Error::Busy);
-        }
         Ok(result)
     }
 }

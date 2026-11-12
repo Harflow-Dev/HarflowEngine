@@ -48,8 +48,7 @@ transaction. A task_headers replacement advances revision before commit, under t
 existing cooperative I/O gate. Abort or precommit process death publishes neither;
 postcommit response loss retains both. Revision exhaustion refuses and rolls back
 rather than wrapping or silently changing epoch. WAL/FULL/foreign keys, manual
-checkpoint policy and64MiB main+WAL qualification for open/recover/probe remain
-unchanged. Public ctl reads instead use the [read session](store-read-path.md).
+checkpoint policy remain unchanged; open/recover/probe qualify in place with no size cap (E2-A A1a). Public ctl reads instead use the [read session](store-read-path.md).
 
 No persistent open-PID fence or begin/end token API exists. The exact lexical SQLite
 transaction owns publication; observers cannot finish it. A live uncommitted writer
@@ -105,7 +104,7 @@ cursor encoding, before returning a result.
 Source reads project at most two rows of integer scalars, with type checks before
 allocation. They do not scan task headers or recursively snapshot catalog JSON.
 Routine root/identity qualification and source binding checks still occur; the
-initial Store qualification may copy up to the existing64MiB limit (this governs the watch seam, which opens the Store; public ctl reads use the read session and have no such cap). No memory/RSS,
+initial Store qualification runs in place with no size cap (the watch seam opens the Store with marker, header, journal, `-wal` and identity checks and no `quick_check`; public ctl reads use the read session). No memory/RSS,
 scan throughput, p99 or scale qualification is inferred from these structural bounds.
 
 Readers drop the Store mutex/transaction before waiting. RealWatchControl has a

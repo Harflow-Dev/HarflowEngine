@@ -80,7 +80,8 @@ impl Binding {
     pub(crate) fn capture(root: &Path, existing: bool, leases: Arc<dyn LeasePort>) -> Result<Self> {
         let binding = Self::identify_all(root, existing, leases)?;
         if existing {
-            binding.check()?;
+            // The `-wal` type is left to `qualify::precheck`, which reports it as `WalMissing`.
+            binding.check_sidecars(false)?;
             crate::wal::marker(&binding)?;
             crate::connection::qualify_header(&binding.database())?;
         }
@@ -153,7 +154,7 @@ impl Binding {
     }
     pub(crate) fn claim(&self, mode: LeaseMode, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
         let guard = self.acquire(mode, deadline)?;
-        self.check()?;
+        self.check_sidecars(false)?;
         crate::wal::marker(self)?;
         crate::connection::qualify_header(&self.database())?;
         Ok(guard)

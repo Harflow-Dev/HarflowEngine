@@ -36,47 +36,52 @@ impl RecoveryReadSession {
         let binding = Binding::capture(&self.root, true, self.leases.clone())?;
         let _claim = binding.claim(LeaseMode::Shared, deadline)?;
         let _io = binding.io(deadline)?;
-        crate::wal::with_qualified_copy(&binding, &self.scratch_parent, deadline, |db, identity| {
-            crate::ownership_schema::check(db, &identity.generation)?;
-            crate::capture_schema::check(db, &identity.generation)?;
-            let context = ReadContext {
-                identity,
-                limits: self.limits,
-            };
-            let Some(ownership) = crate::ownership_read::load_context(&context, db, operation)?
-            else {
-                return Ok(None);
-            };
-            if ownership.phase == Phase::Released {
-                return Err(Error::OwnershipConflict);
-            }
-            let capture = crate::capture_read::load_context(&context, db, operation)?;
-            if let Some(c) = &capture
-                && (ownership.phase != Phase::AcceptanceRecorded
-                    || ownership.cancelled
-                    || ownership.fence().as_ref() != Some(&c.binding.fence)
-                    || ownership.child.as_ref() != Some(&c.binding.child))
-            {
-                return Err(Error::StaleOwnership);
-            }
-            let (events_count, events_digest) = crate::recovery_events::validate(
-                db,
-                operation,
-                capture.as_ref(),
-                self.limits,
-                deadline,
-            )?;
-            let generation =
-                Id::new(identity.generation.clone()).map_err(|_| Error::InvalidOwnership)?;
-            let source = binding.source_stamp(generation)?;
-            Ok(Some(RecoveryRecord {
-                source,
-                ownership,
-                capture,
-                events_count,
-                events_digest,
-            }))
-        })
+        crate::recovery_copy::with_qualified_copy(
+            &binding,
+            &self.scratch_parent,
+            deadline,
+            |db, identity| {
+                crate::ownership_schema::check(db, &identity.generation)?;
+                crate::capture_schema::check(db, &identity.generation)?;
+                let context = ReadContext {
+                    identity,
+                    limits: self.limits,
+                };
+                let Some(ownership) = crate::ownership_read::load_context(&context, db, operation)?
+                else {
+                    return Ok(None);
+                };
+                if ownership.phase == Phase::Released {
+                    return Err(Error::OwnershipConflict);
+                }
+                let capture = crate::capture_read::load_context(&context, db, operation)?;
+                if let Some(c) = &capture
+                    && (ownership.phase != Phase::AcceptanceRecorded
+                        || ownership.cancelled
+                        || ownership.fence().as_ref() != Some(&c.binding.fence)
+                        || ownership.child.as_ref() != Some(&c.binding.child))
+                {
+                    return Err(Error::StaleOwnership);
+                }
+                let (events_count, events_digest) = crate::recovery_events::validate(
+                    db,
+                    operation,
+                    capture.as_ref(),
+                    self.limits,
+                    deadline,
+                )?;
+                let generation =
+                    Id::new(identity.generation.clone()).map_err(|_| Error::InvalidOwnership)?;
+                let source = binding.source_stamp(generation)?;
+                Ok(Some(RecoveryRecord {
+                    source,
+                    ownership,
+                    capture,
+                    events_count,
+                    events_digest,
+                }))
+            },
+        )
     }
 }
 impl RecoveryStorePort for RecoveryReadSession {

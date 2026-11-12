@@ -177,7 +177,7 @@ fn oversized_event_cell_is_invalid_without_source_repair() {
     let store = fixture.store();
     let operation = seed_terminal(&store, 61);
     drop(store);
-    let write = Connection::open(root.join("store.sqlite3")).unwrap();
+    let write = crate::tests::raw_connection(root.join("store.sqlite3"));
     write
         .execute(
             "UPDATE capture_events SET stdout=?2 WHERE operation=?1 AND revision=1",
@@ -218,7 +218,7 @@ fn oversized_ownership_version_text_and_blob_are_bounded_and_refused() {
         rusqlite::types::Value::Text("x".repeat(1024 * 1024)),
         rusqlite::types::Value::Blob(vec![b'x'; 1024 * 1024]),
     ] {
-        let write = Connection::open(root.join("store.sqlite3")).unwrap();
+        let write = crate::tests::raw_connection(root.join("store.sqlite3"));
         write
             .execute("UPDATE ownership_meta SET version=?1", [bad])
             .unwrap();
@@ -227,7 +227,7 @@ fn oversized_ownership_version_text_and_blob_are_bounded_and_refused() {
         assert!(session.read(&operation, deadline()).is_err());
         assert_eq!(before, source_hashes(&root));
         assert_eq!(fs::read_dir(&scratch).unwrap().count(), 0);
-        let restore = Connection::open(root.join("store.sqlite3")).unwrap();
+        let restore = crate::tests::raw_connection(root.join("store.sqlite3"));
         restore
             .execute("UPDATE ownership_meta SET version=1", [])
             .unwrap();

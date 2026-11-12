@@ -3,7 +3,7 @@
 
 mod common;
 use common::{Fixture, deadline, default_limits, snapshot_tree};
-use hf_storage::{Error, Store, probe, probe_with_scratch};
+use hf_storage::{Error, Store, probe};
 use rusqlite::Connection;
 use std::fs;
 
@@ -81,12 +81,7 @@ fn well_formed_marker_generation_mismatch_refuses_all_paths_without_changes() {
     ));
     assert_eq!(snapshot_tree(&root), before);
     assert!(matches!(
-        Store::recover(
-            &root,
-            deadline(),
-            fixture.path(),
-            common::lease::lease_port()
-        ),
+        Store::recover(&root, deadline(), common::lease::lease_port()),
         Err(Error::Incompatible)
     ));
     assert_eq!(snapshot_tree(&root), before);
@@ -144,13 +139,13 @@ fn future_schema_present_only_in_committed_wal_is_rejected_without_source_change
     source.pragma_update(None, "user_version", 900_u32).unwrap();
     let wal = root.join("store.sqlite3-wal");
     assert!(wal.exists() && fs::metadata(&wal).unwrap().len() > 32);
-    let before = snapshot_tree(&root);
+    let before = common::durable_tree(&root);
 
     assert!(matches!(
         probe(&root, common::lease::lease_port()),
         Err(Error::FutureSchema)
     ));
-    assert_eq!(snapshot_tree(&root), before);
+    assert_eq!(common::durable_tree(&root), before);
     assert!(matches!(
         Store::open(
             &root,
@@ -160,17 +155,12 @@ fn future_schema_present_only_in_committed_wal_is_rejected_without_source_change
         ),
         Err(Error::FutureSchema)
     ));
-    assert_eq!(snapshot_tree(&root), before);
+    assert_eq!(common::durable_tree(&root), before);
     assert!(matches!(
-        Store::recover(
-            &root,
-            deadline(),
-            fixture.path(),
-            common::lease::lease_port()
-        ),
+        Store::recover(&root, deadline(), common::lease::lease_port()),
         Err(Error::FutureSchema)
     ));
-    assert_eq!(snapshot_tree(&root), before);
+    assert_eq!(common::durable_tree(&root), before);
     drop(source);
 }
 
@@ -199,31 +189,6 @@ fn expired_lock_handle_cannot_write_after_admission_deadline() {
             .unwrap()
             .is_empty()
     );
-}
-
-#[test]
-fn scratch_parent_inside_source_root_is_rejected_without_source_changes() {
-    let fixture = Fixture::new();
-    let root = fixture.path().join("store");
-    drop(
-        Store::initialize_fixture(
-            &root,
-            default_limits(),
-            deadline(),
-            common::lease::lease_port(),
-        )
-        .unwrap(),
-    );
-    let child = root.join("scratch");
-    fs::create_dir(&child).unwrap();
-    for scratch in [&root, &child, &child.join("..")] {
-        let before = snapshot_tree(&root);
-        assert!(matches!(
-            probe_with_scratch(&root, deadline(), scratch, common::lease::lease_port()),
-            Err(Error::InvalidRoot)
-        ));
-        assert_eq!(snapshot_tree(&root), before);
-    }
 }
 
 #[test]

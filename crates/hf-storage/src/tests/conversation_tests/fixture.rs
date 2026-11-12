@@ -69,7 +69,7 @@ impl Fixture {
     }
     /// Write connection; use only while no `Store` is open on this fixture.
     pub fn raw_write(&self) -> Connection {
-        Connection::open(self.root().join("store.sqlite3")).unwrap()
+        crate::tests::raw_connection(self.root().join("store.sqlite3"))
     }
     pub fn value(&self, key: &str) -> Option<Vec<u8>> {
         use rusqlite::OptionalExtension;

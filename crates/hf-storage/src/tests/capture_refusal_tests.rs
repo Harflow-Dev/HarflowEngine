@@ -96,7 +96,7 @@ fn assert_malformed_row_is_preserved(corruption: &str) {
     store.capture_begin(&binding, deadline()).unwrap();
     drop(store);
 
-    let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
     match corruption {
         "version_type" => raw
             .execute(

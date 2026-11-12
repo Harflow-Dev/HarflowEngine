@@ -31,7 +31,7 @@ fn schema_two_roots_are_refused_without_upgrade_or_source_rewrite() {
     let fixture = Fixture::new("schema-two");
     let store = fixture.initialize();
     drop(store);
-    let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
     raw.pragma_update(None, "user_version", 2).unwrap();
     let before: i64 = raw
         .pragma_query_value(None, "user_version", |row| row.get(0))
@@ -118,7 +118,7 @@ fn uppercase_generation_paired_with_its_marker_is_not_a_cursor_refusal() {
     let fixture = Fixture::new("uppercase-generation");
     let store = fixture.initialize();
     drop(store);
-    let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
     raw.execute(
         "UPDATE store_identity SET generation=upper(generation) WHERE singleton=1",
         [],
@@ -154,7 +154,7 @@ fn embedded_nul_identity_suffix_is_refused_without_rewriting_database_source() {
     let fixture = Fixture::new("identity-nul");
     let store = fixture.initialize();
     drop(store);
-    let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
     raw.execute(
         "UPDATE store_identity SET generation=generation||char(0)||'suffix' WHERE singleton=1",
         [],

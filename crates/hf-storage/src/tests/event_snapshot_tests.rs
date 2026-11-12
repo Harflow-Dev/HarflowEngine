@@ -157,7 +157,7 @@ fn actual_seek_queries_use_deep_indexes_and_bound_metadata_projections() {
     let parent = std::fs::canonicalize(parent).unwrap();
     let root = parent.join("store");
     let store = seed_seek_store(&root);
-    let db = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let db = crate::tests::raw_connection(root.join("store.sqlite3"));
     let total = db
         .query_row(
             "SELECT complete_end FROM event_streams WHERE task='seek-plan-task'",

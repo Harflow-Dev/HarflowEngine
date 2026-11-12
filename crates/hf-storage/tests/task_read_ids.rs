@@ -208,7 +208,7 @@ fn preexisting_root_without_task_tables_is_unavailable_and_never_upgraded() {
     )
     .unwrap();
     drop(store);
-    let raw = Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = common::raw_connection(root.join("store.sqlite3"));
     raw.execute_batch(
         "DROP TABLE launch_attempts; DROP TABLE chain_stops; DROP TABLE task_headers; DROP TABLE task_dataset;",
     )

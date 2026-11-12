@@ -29,10 +29,12 @@ Two parts, kept separate throughout:
   answer reads) and the `state-inspect` `-wal` row. Subsequent E1 slices compose
   the public read-only ctl commands with it: S3 to S5 put all ten store-backed
   reads on it, and S5 adopted it for `recovery-activity`, which no longer uses the
-  private-copy path. `Store::open`, `recover`,
-  `probe`, `probe_with_scratch`, `open_with_scratch`, the capped copy and their
-  tests stay exactly as they are, because E1 has no writer and no guarantee may
-  weaken. The 64 MiB limit therefore remains in force for those paths at E1.
+  private-copy path. At E1, `Store::open`, `recover`,
+  `probe`, `probe_with_scratch`, `open_with_scratch` and the capped copy stayed as they
+  were. E2-A slice A1a replaced them: open, recover and probe now qualify in place
+  (Part 2), `probe_with_scratch` became `probe_with_deadline`, `open_with_scratch`
+  and the `scratch_parent` argument were removed, and only `RecoveryReadSession`
+  keeps a capped private copy. Measurements below describe the E1 paths.
 - **Specified for E2, not implemented.** The replacement of the 64 MiB limit for
   writer open and recover, which E1's exit requires as a design, together with
   checkpoint ownership and qualification policy. Several choices are named
@@ -252,8 +254,8 @@ are in-process; S6 must cover the cross-process case with the release binary.
 # Part 1. Implemented at E1 (slice S2)
 
 S2 scope: the read session and the `state-inspect` `-wal` row.
-`Store::open`, `recover`, `probe`, `probe_with_scratch`, `open_with_scratch`, the
-capped copy and their tests are untouched; `RecoveryReadSession`
+`Store::open`, `recover`, `probe`, `probe_with_scratch`, `open_with_scratch` and the
+capped copy were untouched at E1 (E2-A slice A1a replaced them for open, recover and probe); `RecoveryReadSession`
 also keeps its private-copy cap and `io.lock`. It is distinct from public
 `recovery-activity`, which now uses `ReadSession` through the ctl snapshot adapter.
 
@@ -358,7 +360,7 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
   the sentence about copying and opening source SQLite stays for the paths that do.
 - The source-write boundary records that a read session may create or rewrite
   `-shm`, never main or WAL content, never `-wal`. The probe sentence is unchanged.
-- Probe/copy qualification, recovery ordering and the 64 MiB cap remain unchanged
+- At E1, probe/copy qualification, recovery ordering and the 64 MiB cap were unchanged
   for open/recover/probe and the internal private-copy `RecoveryReadSession`.
 
 ## E1 guarantee ledger (read session only)
@@ -367,15 +369,15 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 | --- | --- |
 | Probe never opens the source with SQLite | Not applicable to probe (unchanged); the read session opens the real file read-only |
 | No sidecar creation or source writes by reads | Changed for the read session: may create or rewrite `-shm`; never main, WAL or `-wal` (missing is refused first, race acknowledged) |
-| 64 MiB cap | Does not apply to the read session; **still applies** to open, recover, probe and `RecoveryReadSession` |
-| `quick_check` at open | The read session does not run it; open and probe still do |
+| 64 MiB cap | Does not apply to the read session; applied to open, recover, probe and `RecoveryReadSession` at E1; since E2-A slice A1a only `RecoveryReadSession` keeps it |
+| `quick_check` at open | The read session does not run it. Changed since E2-A slice A1a: `open` runs identity checks only (Decision A2); `recover` and `probe` scan in place |
 | Lock hierarchy; `io.lock` | Read session skips `io.lock` (0 anomalies in the historical 3.49-million-read experiment, not a general safety qualification); mutators unchanged |
 | No checkpoint on close or by readers | Preserved; a read-only handle cannot checkpoint |
 | No immutable shortcut, no custom WAL parser | Preserved; `immutable=1` drops the WAL silently |
 | Nonempty journal refuses | Preserved |
 | Kill leaves scratch remnants | Improved for the read session (none; the existing path left one in 21 to 28 of 30); a reader that created `-shm` and is killed leaves it, confirmed |
 | Readers do not disturb the single writer | Read session: 0 writer failures in 3 x 4 windows; existing path: 95 to 98 percent |
-| Damage a read does not touch | Not detected by the read session (the existing path's open-time `quick_check` would have); verify is specified for E2, not implemented here |
+| Damage a read does not touch | Not detected by the read session (the E1 path's open-time `quick_check` would have; since E2-A slice A1a `open` does not run it either, only `recover` and `probe` do); verify is specified for E2, not implemented here |
 | Payload damage | Returned as data (7 of 20 flipped-byte trials) by the read session; `quick_check` does not detect it on either path; an owner decision (open question 3) |
 | Silent history loss on WAL damage | Not prevented; unchanged; owner accepted this only for E1 (D20). Watermark/generation sequence/recovery signal remain E2 work, not an E1-exit acceptance |
 
@@ -404,7 +406,11 @@ Nothing in this part changes any E1 path. It specifies the replacement of the
 
 ## Replacement of the 64 MiB limit (writer open and recover)
 
-No size cap on either. Qualification runs in place through a read-only handle
+Implemented in E2-A slice A1a for open, recover and probe: `open` runs the identity
+checks only (decision A2), `recover` and `probe` add one `quick_check` bounded by the
+deadline through an interrupt watchdog, `probe` without `io.lock`.
+
+No size cap on any of them. Qualification runs in place through a read-only handle
 (header, marker, identity, `quick_check`) instead of a copy; recover performs it
 under exclusive `store.lock` and `io.lock` before mutation, once, and does not
 scan again afterwards (an explicit verify is a separate request). Cost is about
@@ -512,7 +518,7 @@ Watermark sketch:
 
 | storage-protocol guarantee | E2 effect |
 | --- | --- |
-| 64 MiB cap | Removed for writer open and recover by in-place qualification |
+| 64 MiB cap | Removed for writer open, recover and probe by in-place qualification (implemented, E2-A slice A1a); kept only for `RecoveryReadSession` |
 | Qualify before writable access | Decision A1 preserves it; A2 weakens it; not claimed otherwise |
 | `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover |
 | Lost WAL | Refused by every writer-role opener; acceptance only in maintenance, per Decision B |

@@ -73,7 +73,7 @@ fn live_storage_root_lease_remains_held_through_actual_child_spawn() {
     )
     .unwrap();
     assert!(matches!(
-        Store::recover(&root, deadline(), &scratch, hf_platform::lease::shared()),
+        Store::recover(&root, deadline(), hf_platform::lease::shared()),
         Err(Error::Busy)
     ));
 
@@ -98,7 +98,7 @@ fn live_storage_root_lease_remains_held_through_actual_child_spawn() {
         WaitOutcome::Exited(ProcessExit::Code(0))
     ));
     assert!(matches!(
-        Store::recover(&root, deadline(), &scratch, hf_platform::lease::shared()),
+        Store::recover(&root, deadline(), hf_platform::lease::shared()),
         Err(Error::Busy)
     ));
     drop(store);

@@ -19,10 +19,9 @@ pub(super) fn run(
     // Fixed diagnostic effect only. This proves the inherited-lock boundary using
     // an independent real helper; fixture DML does not grant ownership authority.
     {
-        let identity = map(hf_storage::probe_with_scratch(
+        let identity = map(hf_storage::probe_with_deadline(
             &start.root,
             until,
-            &parent,
             hf_platform::lease::shared(),
         ))?
         .ok_or_else(invalid)?;

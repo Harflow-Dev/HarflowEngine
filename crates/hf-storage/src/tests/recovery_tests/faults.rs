@@ -73,7 +73,7 @@ fn valid_different_intermediate_history_changes_full_digest_only() {
         crate::tests::lease::lease_port(),
     );
     let first = session.read(&operation, deadline()).unwrap().unwrap();
-    let write = Connection::open(root.join("store.sqlite3")).unwrap();
+    let write = crate::tests::raw_connection(root.join("store.sqlite3"));
     write
         .execute(
             "UPDATE capture_events SET stdout=2 WHERE operation=?1 AND revision=1",
@@ -117,7 +117,7 @@ fn check_corruption(label: &str, sql: &str) {
     let store = fixture.store();
     let operation = seed_history(&store);
     drop(store);
-    let write = Connection::open(root.join("store.sqlite3")).unwrap();
+    let write = crate::tests::raw_connection(root.join("store.sqlite3"));
     write.execute(sql, [operation.as_str()]).unwrap();
     drop(write);
     let before = source_hashes(&root);

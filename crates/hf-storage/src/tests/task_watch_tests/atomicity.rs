@@ -5,7 +5,6 @@ use super::support::*;
 use actors::StageActor;
 use hf_application::task_watch::TaskWatchPort;
 use hf_domain::task_watch::WatchState;
-use rusqlite::Connection;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -16,7 +15,7 @@ fn revision_overflow_aborts_headers_and_watch_revision_in_one_transaction() {
     let writer = fixture.initialize();
     publish(&writer, &[("stable", b"before")]);
     drop(writer);
-    let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
     raw.execute("UPDATE task_watch_meta SET revision=?1", [i64::MAX])
         .unwrap();
     drop(raw);

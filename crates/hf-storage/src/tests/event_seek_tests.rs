@@ -20,7 +20,7 @@ fn production_seek_query_caps_runtime_kind_projection_and_avoids_body_materializ
         crate::tests::lease::lease_port(),
     )
     .unwrap();
-    let db = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let db = crate::tests::raw_connection(root.join("store.sqlite3"));
     let long_kind = "k".repeat(500_000);
     db.execute("INSERT INTO event_records(task,start,end,class,seq,kind,body) VALUES(?1,0,1,0,1,?2,zeroblob(500000))",rusqlite::params!["oversized-kind",long_kind]).unwrap();
     let value = db

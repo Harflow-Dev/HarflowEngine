@@ -94,7 +94,7 @@ pub fn shm_retention() {
     note("after_clean_close_of_read_only_reader");
     drop(Store::open(&root, data::limits(), ops::deadline(), lease_port()).unwrap());
     note("after_reopen_and_close_without_writes");
-    Store::recover(&root, ops::deadline(), &work, lease_port()).unwrap();
+    Store::recover(&root, ops::deadline(), lease_port()).unwrap();
     note("after_recover_truncate");
     drop(ops::ro_open(&root).unwrap());
     note("after_reader_close_following_recover");

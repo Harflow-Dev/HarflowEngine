@@ -143,7 +143,7 @@ impl ReadSession {
         Ok(value)
     }
 }
-fn open_read_only(binding: &Binding, deadline: Instant) -> Result<Connection> {
+pub(crate) fn open_read_only(binding: &Binding, deadline: Instant) -> Result<Connection> {
     connection::check_deadline(deadline)?;
     let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
     let connection = Connection::open_with_flags(binding.database(), flags)?;

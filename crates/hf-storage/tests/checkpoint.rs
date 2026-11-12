@@ -84,12 +84,7 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
         )
         .unwrap();
     assert!(matches!(
-        Store::recover(
-            &root,
-            deadline(),
-            fixture.path(),
-            common::lease::lease_port()
-        ),
+        Store::recover(&root, deadline(), common::lease::lease_port()),
         Err(Error::Busy)
     ));
     assert_eq!(
@@ -98,13 +93,7 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
     );
     drop(store);
 
-    let recovered = Store::recover(
-        &root,
-        deadline(),
-        fixture.path(),
-        common::lease::lease_port(),
-    )
-    .unwrap();
+    let recovered = Store::recover(&root, deadline(), common::lease::lease_port()).unwrap();
     assert!(recovered.complete);
     assert_eq!(recovered.busy, 0);
     let reopened = Store::open(
@@ -124,7 +113,7 @@ fn explicit_recovery_refuses_while_shared_handles_live_then_truncates_after_clos
 }
 
 #[test]
-fn exclusive_io_gate_blocks_store_and_probe_without_late_effects() {
+fn exclusive_io_gate_blocks_store_and_open_without_late_effects() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
     let store = Store::initialize_fixture(
@@ -151,10 +140,12 @@ fn exclusive_io_gate_blocks_store_and_probe_without_late_effects() {
             store.checkpoint_passive(deadline()),
             Err(Error::Busy)
         ));
-        assert!(matches!(
-            hf_storage::probe(&root, common::lease::lease_port()),
-            Err(Error::Busy)
-        ));
+        // Probe scans read-only without the I/O gate, so a held gate does not block it.
+        assert!(
+            hf_storage::probe(&root, common::lease::lease_port())
+                .unwrap()
+                .is_some()
+        );
         assert!(matches!(
             Store::open(
                 &root,

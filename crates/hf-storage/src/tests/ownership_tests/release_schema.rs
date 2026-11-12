@@ -16,7 +16,7 @@ fn raw_payload_digest_tampering_refuses_observation_before_any_grant() {
     let request = request(&store, 2, 3, 4, 5, b"stored identity bytes");
     store.ownership_prepare(&request, deadline()).unwrap();
     drop(store);
-    let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
     raw.execute(
         "UPDATE ownership_records SET payload=?1 WHERE operation=?2",
         rusqlite::params![b"tampered bytes".as_slice(), request.operation.as_str()],
@@ -91,7 +91,7 @@ fn schema_one_sqlite_header_with_current_marker_refuses_without_rewrite() {
     .unwrap();
     drop(store);
     let database = root.join("store.sqlite3");
-    let raw = rusqlite::Connection::open(&database).unwrap();
+    let raw = crate::tests::raw_connection(&database);
     raw.pragma_update(None, "user_version", 1).unwrap();
     drop(raw);
     let before = fs::read(&database).unwrap();
@@ -121,7 +121,7 @@ fn malformed_ownership_generation_projection_refuses_without_metadata_rewrite() 
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
-    let raw = rusqlite::Connection::open(&database).unwrap();
+    let raw = crate::tests::raw_connection(&database);
     let malformed = format!("{generation}\0{}", "untrusted-suffix".repeat(256));
     raw.execute("UPDATE ownership_meta SET generation=?1", [&malformed])
         .unwrap();
@@ -145,7 +145,7 @@ fn malformed_ownership_generation_projection_refuses_without_metadata_rewrite() 
         Err(Error::OwnershipUnavailable)
     ));
     drop(reopened);
-    let raw = rusqlite::Connection::open(&database).unwrap();
+    let raw = crate::tests::raw_connection(&database);
     let after: String = raw
         .query_row(
             "SELECT hex(CAST(generation AS BLOB)) FROM ownership_meta",
@@ -190,7 +190,7 @@ fn production_preflight_sql_returns_only_scalar_bounds_for_oversized_cells() {
                 .unwrap();
         }
         drop(store);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
         raw.execute_batch(&format!("UPDATE ownership_records SET {statement}"))
             .unwrap();
         let (valid, payload_len, byte_charge): (i64, i64, i64) = raw
@@ -219,7 +219,7 @@ fn production_metadata_sql_returns_null_for_embedded_nul_and_oversize_generation
     .unwrap();
     let generation = store.identity().generation.clone();
     drop(store);
-    let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
     let malformed = format!("{generation}\0{}", "x".repeat(4096));
     raw.execute("UPDATE ownership_meta SET generation=?1", [&malformed])
         .unwrap();
@@ -274,7 +274,7 @@ fn future_ownership_namespace_version_refuses_without_metadata_rewrite() {
         crate::tests::lease::lease_port(),
     )
     .unwrap();
-    let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
     raw.execute("UPDATE ownership_meta SET version=99", [])
         .unwrap();
     let before: i64 = raw
@@ -291,7 +291,7 @@ fn future_ownership_namespace_version_refuses_without_metadata_rewrite() {
         Err(Error::OwnershipUnavailable)
     ));
     drop(store);
-    let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
     let after: i64 = raw
         .query_row("SELECT version FROM ownership_meta", [], |row| row.get(0))
         .unwrap();
@@ -312,7 +312,7 @@ fn missing_ownership_namespace_prepare_does_not_reinitialize_or_reset_tables() {
     let generation = store.identity().generation.clone();
     drop(store);
     let database = root.join("store.sqlite3");
-    let raw = rusqlite::Connection::open(&database).unwrap();
+    let raw = crate::tests::raw_connection(&database);
     raw.execute_batch("DROP TABLE ownership_meta").unwrap();
     let before = table_names(&raw);
     drop(raw);
@@ -337,7 +337,7 @@ fn missing_ownership_namespace_prepare_does_not_reinitialize_or_reset_tables() {
         Err(Error::OwnershipUnavailable)
     ));
     drop(reopened);
-    let raw = rusqlite::Connection::open(&database).unwrap();
+    let raw = crate::tests::raw_connection(&database);
     assert_eq!(table_names(&raw), before);
     assert!(!before.iter().any(|name| name == "ownership_meta"));
 }

@@ -55,6 +55,29 @@ pub fn snapshot_tree(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     entries
 }
 
+/// As `snapshot_tree`, without `-shm`: probing may create or rewrite that volatile index.
+pub fn durable_tree(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    snapshot_tree(root)
+        .into_iter()
+        .filter(|(path, _)| !path.to_string_lossy().ends_with("-shm"))
+        .collect()
+}
+
+/// A raw connection for tampering: like a store owner it leaves `-wal` in place on close.
+pub fn raw_connection(path: impl AsRef<Path>) -> rusqlite::Connection {
+    let connection = rusqlite::Connection::open(path).unwrap();
+    connection
+        .set_db_config(
+            rusqlite::config::DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE,
+            true,
+        )
+        .unwrap();
+    connection
+        .pragma_update(None, "wal_autocheckpoint", 0)
+        .unwrap();
+    connection
+}
+
 fn snapshot_into(root: &Path, entries: &mut Vec<(PathBuf, Vec<u8>)>) {
     for entry in fs::read_dir(root).unwrap() {
         let path = entry.unwrap().path();

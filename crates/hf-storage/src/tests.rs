@@ -21,6 +21,13 @@ static FIXTURE_GATE: Mutex<()> = Mutex::new(());
 #[path = "../tests/common/lease.rs"]
 pub(crate) mod lease;
 
+/// A raw connection for tampering: like a store owner it leaves `-wal` in place on close.
+pub(crate) fn raw_connection(path: impl AsRef<std::path::Path>) -> rusqlite::Connection {
+    let connection = rusqlite::Connection::open(path).unwrap();
+    crate::connection::suppress_checkpoints(&connection).unwrap();
+    connection
+}
+
 pub(crate) fn fixture_guard() -> std::sync::MutexGuard<'static, ()> {
     FIXTURE_GATE
         .lock()
@@ -185,18 +192,16 @@ fn interrupted_open_or_recovery_boundary_child() {
         Some(std::env::var("HF_STORAGE_STAGE_NAME").unwrap());
     let name = std::env::var("HF_STORAGE_STAGE_NAME").unwrap();
     if name.contains("source_open") {
-        let _ = Store::open_with_scratch(
+        let _ = Store::open(
             &root,
             Limits::default(),
             Instant::now() + Duration::from_secs(10),
-            std::path::Path::new(&root).parent().unwrap(),
             crate::tests::lease::lease_port(),
         );
     } else {
         let _ = Store::recover(
             &root,
             Instant::now() + Duration::from_secs(10),
-            std::path::Path::new(&root).parent().unwrap(),
             crate::tests::lease::lease_port(),
         );
     }

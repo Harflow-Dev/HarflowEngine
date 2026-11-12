@@ -68,7 +68,7 @@ impl Fixture {
         .unwrap()
     }
     pub(super) fn raw_writer(&self) -> Connection {
-        Connection::open(self.root().join("store.sqlite3")).unwrap()
+        crate::tests::raw_connection(self.root().join("store.sqlite3"))
     }
     pub(super) fn raw_child(&self, operation: &Id) -> Option<String> {
         self.raw_readonly()

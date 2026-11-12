@@ -23,7 +23,7 @@ fn malformed_scalar_and_partial_nullable_groups_refuse_without_repair() {
         let request = request(&store, 2, 3, 4, 5, b"payload");
         store.ownership_prepare(&request, deadline()).unwrap();
         drop(store);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
         raw.execute_batch(&format!("UPDATE ownership_records SET {column}={value}"))
             .unwrap();
         let before: String = raw
@@ -46,7 +46,7 @@ fn malformed_scalar_and_partial_nullable_groups_refuse_without_repair() {
             Err(Error::InvalidOwnership)
         ));
         drop(reopened);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
         let after: String = raw
             .query_row(
                 &format!("SELECT quote({column}) FROM ownership_records"),
@@ -90,7 +90,7 @@ fn oversized_persisted_payload_and_process_scalar_refuse_before_decoding() {
                 .unwrap();
         }
         drop(store);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
         raw.execute_batch(&format!("UPDATE ownership_records SET {}", update.1))
             .unwrap();
         let before: String = raw
@@ -116,7 +116,7 @@ fn oversized_persisted_payload_and_process_scalar_refuse_before_decoding() {
             Err(Error::InvalidOwnership)
         ));
         drop(reopened);
-        let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(root.join("store.sqlite3"));
         let after: String = raw
             .query_row(
                 &format!(

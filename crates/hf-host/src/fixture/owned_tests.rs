@@ -132,7 +132,6 @@ fn owner_unwind_settles_reader_and_child_before_releasing_store_root_lease() {
         Store::recover(
             scratch.root(),
             Instant::now() + Duration::from_secs(2),
-            &scratch.0,
             hf_platform::lease::shared()
         ),
         Err(hf_storage::Error::Busy)
@@ -156,7 +155,6 @@ fn owner_unwind_settles_reader_and_child_before_releasing_store_root_lease() {
         Store::recover(
             scratch.root(),
             Instant::now() + Duration::from_secs(2),
-            &scratch.0,
             hf_platform::lease::shared()
         ),
         Err(hf_storage::Error::Busy)
@@ -166,7 +164,6 @@ fn owner_unwind_settles_reader_and_child_before_releasing_store_root_lease() {
         Store::recover(
             scratch.root(),
             Instant::now() + Duration::from_secs(2),
-            &scratch.0,
             hf_platform::lease::shared()
         ),
         Ok(checkpoint) if checkpoint.complete

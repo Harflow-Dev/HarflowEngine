@@ -326,9 +326,9 @@ pub fn writer_safety() {
     }
     let mut holder = spawn("ro_hold", &root, &stop);
     wait_ready(&mut holder);
-    let refused = Store::recover(&root, ops::deadline(), &work, lease_port());
+    let refused = Store::recover(&root, ops::deadline(), lease_port());
     kill(&mut holder);
-    let after = Store::recover(&root, ops::deadline(), &work, lease_port());
+    let after = Store::recover(&root, ops::deadline(), lease_port());
     record(
         &mut file,
         &[

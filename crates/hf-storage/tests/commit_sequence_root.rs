@@ -9,8 +9,7 @@ use common::{Fixture, deadline, default_limits, snapshot_tree};
 use fixture_support::{A, B, World, artifact_item, done, event, later, tid, world};
 use hf_domain::task_read::Coverage;
 use hf_storage::{ChainStop, Error, LaunchRow, Mutation, Store, TaskFixture};
-use rusqlite::Connection;
-use std::{fs, path::Path};
+use std::path::Path;
 
 fn state(w: &World) -> (String, i64) {
     (w.generation(), w.watch())
@@ -126,7 +125,7 @@ fn a_refused_publishing_write_changes_neither_generation_nor_revision() {
 }
 
 fn tamper(root: &Path, statement: &str) {
-    let raw = Connection::open(root.join("store.sqlite3")).unwrap();
+    let raw = common::raw_connection(root.join("store.sqlite3"));
     raw.execute_batch(statement).unwrap();
 }
 
@@ -142,7 +141,7 @@ fn durable(root: &Path) -> Vec<(std::path::PathBuf, Vec<u8>)> {
         .collect()
 }
 
-fn assert_refused_before_mutation(root: &Path, scratch: &Path, label: &str) {
+fn assert_refused_before_mutation(root: &Path, label: &str) {
     let before = durable(root);
     let opened = Store::open(
         root,
@@ -152,7 +151,7 @@ fn assert_refused_before_mutation(root: &Path, scratch: &Path, label: &str) {
     );
     assert!(matches!(opened, Err(Error::Incompatible)), "{label}: open");
     assert_eq!(durable(root), before, "{label}: open left bytes");
-    let recovered = Store::recover(root, deadline(), scratch, common::lease::lease_port());
+    let recovered = Store::recover(root, deadline(), common::lease::lease_port());
     assert!(
         matches!(recovered, Err(Error::Incompatible)),
         "{label}: recover {recovered:?}"
@@ -172,8 +171,6 @@ fn a_root_without_a_usable_sequence_row_is_incompatible_for_open_and_recover() {
     ] {
         let fixture = Fixture::new();
         let root = fixture.path().join("store");
-        let scratch = fixture.path().join("scratch");
-        fs::create_dir(&scratch).unwrap();
         drop(
             Store::initialize_fixture(
                 &root,
@@ -184,7 +181,7 @@ fn a_root_without_a_usable_sequence_row_is_incompatible_for_open_and_recover() {
             .unwrap(),
         );
         tamper(&root, statement);
-        assert_refused_before_mutation(&root, &scratch, label);
+        assert_refused_before_mutation(&root, label);
     }
 }
 
@@ -192,8 +189,6 @@ fn a_root_without_a_usable_sequence_row_is_incompatible_for_open_and_recover() {
 fn an_intact_root_still_opens_and_recovers() {
     let fixture = Fixture::new();
     let root = fixture.path().join("store");
-    let scratch = fixture.path().join("scratch");
-    fs::create_dir(&scratch).unwrap();
     drop(
         Store::initialize_fixture(
             &root,
@@ -212,5 +207,5 @@ fn an_intact_root_still_opens_and_recovers() {
         )
         .unwrap(),
     );
-    Store::recover(&root, deadline(), &scratch, common::lease::lease_port()).unwrap();
+    Store::recover(&root, deadline(), common::lease::lease_port()).unwrap();
 }

@@ -13,7 +13,6 @@ pub use event_fixture::EventFixture;
 mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
-use connection::open_source;
 mod operations;
 mod ownership;
 mod ownership_codec;
@@ -29,11 +28,15 @@ mod task_read;
 mod write_tx;
 pub use task_fixture::TaskFixture;
 pub use task_read::TaskReadSession;
+mod qualify;
+mod recovery_copy;
+mod scan;
 #[cfg(test)]
 mod task_query_tests;
 #[cfg(test)]
 mod tests;
 mod wal;
+mod writer_open;
 use binding::Binding;
 use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};
 use rusqlite::Connection;
@@ -42,6 +45,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Instant,
 };
+pub use writer_open::{probe, probe_with_deadline};
 
 pub const SCHEMA_VERSION: u32 = 7;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
@@ -180,38 +184,6 @@ impl Store {
         drop(claim);
         Self::open(root, limits, deadline, leases)
     }
-    pub fn open(
-        root: impl AsRef<Path>,
-        limits: Limits,
-        deadline: Instant,
-        leases: Arc<dyn LeasePort>,
-    ) -> Result<Self> {
-        let root = std::path::absolute(root.as_ref())?;
-        let parent = root.parent().ok_or(Error::InvalidRoot)?;
-        Self::open_with_scratch(&root, limits, deadline, parent, leases)
-    }
-    /// Internal permission to rebuild WAL-index/recover valid crash WAL after isolated qualification.
-    pub fn open_with_scratch(
-        root: impl AsRef<Path>,
-        limits: Limits,
-        deadline: Instant,
-        scratch_parent: impl AsRef<Path>,
-        leases: Arc<dyn LeasePort>,
-    ) -> Result<Self> {
-        connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true, leases)?;
-        let claim = binding.claim(LeaseMode::Shared, deadline)?;
-        let _io = binding.io(deadline)?;
-        let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
-        let connection = open_source(&binding, &identity, deadline)?;
-        Ok(Self {
-            connection: Mutex::new(connection),
-            binding,
-            identity,
-            limits,
-            _claim: claim,
-        })
-    }
     pub fn identity(&self) -> &Identity {
         &self.identity
     }
@@ -226,35 +198,6 @@ fn lease_error(error: LeaseError) -> Error {
         LeaseError::Unavailable => Error::Io(std::io::Error::other("lease unavailable")),
     }
 }
-/// Missing roots create nothing; existing roots are qualified using only a private copy.
-pub fn probe(root: impl AsRef<Path>, leases: Arc<dyn LeasePort>) -> Result<Option<Identity>> {
-    let root = std::path::absolute(root.as_ref())?;
-    probe_with_scratch(
-        &root,
-        Instant::now() + std::time::Duration::from_secs(1),
-        root.parent().ok_or(Error::InvalidRoot)?,
-        leases,
-    )
-}
-pub fn probe_with_scratch(
-    root: impl AsRef<Path>,
-    deadline: Instant,
-    scratch_parent: impl AsRef<Path>,
-    leases: Arc<dyn LeasePort>,
-) -> Result<Option<Identity>> {
-    connection::check_deadline(deadline)?;
-    Binding::validate_probe_path(root.as_ref())?;
-    if !root.as_ref().try_exists()? {
-        return Ok(None);
-    }
-    let binding = Binding::capture(root.as_ref(), true, leases)?;
-    let _claim = binding.claim(LeaseMode::Shared, deadline)?;
-    let _io = binding.io(deadline)?;
-    let identity = wal::qualify(&binding, scratch_parent.as_ref(), deadline)?;
-    binding.check()?;
-    Ok(Some(identity))
-}
-
 mod task_watch;
 mod watch_meta;
 pub use task_watch::WatchSession;

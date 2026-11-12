@@ -370,7 +370,7 @@ fn killed_uncommitted_sqlite_writer_does_not_publish_its_transaction() {
 }
 
 #[test]
-fn one_component_relative_root_uses_valid_scratch_parent() {
+fn one_component_relative_root_round_trips() {
     let fixture = Fixture::new();
     let child = Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "child_relative_root_round_trip"])

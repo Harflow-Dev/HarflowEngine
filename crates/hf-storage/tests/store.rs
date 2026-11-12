@@ -273,7 +273,7 @@ fn normal_open_recovers_committed_wal_without_probe_side_effects() {
         )
         .unwrap(),
     );
-    let connection = Connection::open(root.join("store.sqlite3")).unwrap();
+    let connection = common::raw_connection(root.join("store.sqlite3"));
     connection
         .execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;")
         .unwrap();
@@ -283,10 +283,10 @@ fn normal_open_recovers_committed_wal_without_probe_side_effects() {
             [],
         )
         .unwrap();
-    let before = snapshot_tree(&root);
+    let before = common::durable_tree(&root);
 
     assert!(probe(&root, common::lease::lease_port()).unwrap().is_some());
-    assert_eq!(snapshot_tree(&root), before);
+    assert_eq!(common::durable_tree(&root), before);
     drop(connection);
     let reopened = Store::open(
         &root,

@@ -43,27 +43,53 @@ provider effects, resource reservations or unknown mutation outcomes.
 
 ## Nonmutating qualification and explicit source opening
 
-Probe never opens the source using SQLite. Under lifecycle and I/O gates, copy
-only the bounded main database and WAL to an isolated private scratch directory,
-never source SHM. SQLite validates/replays that private copy; compare logical
-application/schema/generation against the marker before source writable access.
-The combined main+WAL snapshot cap is 64MiB for open, recover and probe, and it stays in force until E2 (public ctl reads use the read session, which has no cap of its own); chunk/deadline checks fail closed. Qualification
-failure never authorizes source recovery. No custom WAL parser, immutable live-WAL
-shortcut, sidecar deletion or original-file reset is used.
+Open, recover and probe qualify the existing store in place; there is no copy, no
+scratch directory and no size cap. Before SQLite is opened they check, in this order,
+the marker, the database header, that the rollback journal is empty, and that `-wal`
+exists and is a regular file (`lstat`). A missing `-wal` is refused (`WalMissing`) and
+none is created, because SQLite would create an empty one and report an empty history.
+They then open the source with `SQLITE_OPEN_READ_ONLY` and checkpoints suppressed,
+compare the logical application/schema/generation with the marker, and re-check the
+`-wal` type and identity and the marker after the open. Qualification failure never
+authorizes source recovery. No custom WAL parser, immutable live-WAL shortcut, sidecar
+deletion or original-file reset is used.
 
-“No source writes” means no source content/sidecar creation/removal by probe;
-ordinary file reads may affect access metadata. A read session may create or
-rewrite `-shm`, never main or WAL content and never `-wal`. Probe may allocate private scratch. Scratch parents equal to or beneath the source
-root refuse before allocation, including normalized aliases. Defaults derive from
-the absolute source root parent, preserving relative-root support.
-A missing root returns absent before scratch or lock creation. Foreign, unknown,
-future, corrupt and mismatched identities refuse before any original SQLite open.
-Normal scratch errors clean up through RAII. SIGKILL cannot run destructors: tests
-supply invocation-owned scratch parents and clean exact remnants after child exit.
-There is no broad scan or automatic stale-directory deletion.
+- `open` checks marker, header, journal, `-wal` and identity only. It runs no
+  `quick_check` (owner decision A2).
+- `recover` runs one `quick_check` through the read-only handle under exclusive
+  `store.lock` and `io.lock`, then requests the TRUNCATE checkpoint.
+- `probe` runs one `quick_check` through the read-only handle under shared
+  `store.lock`, without `io.lock`: a read-only snapshot is consistent and a probe
+  never delays a commit. Its deadline is a parameter (`probe_with_deadline`; `probe`
+  uses one second).
+
+Only the scan is deadline-bounded. The read-only open, WAL-index rebuild and identity
+reads are bounded by `busy_timeout` and an after-the-fact deadline check.
+The `quick_check` is bounded by the caller's deadline: a watchdog thread interrupts
+the statement when the deadline passes and the operation fails with
+`DeadlineExceeded`. The watchdog re-issues the interrupt every 20 ms after the deadline, because SQLite clears the flag when a statement starts. It is joined before the call returns, and the scan
+connection is dropped, never reused.
+
+“No source writes” means no main or WAL content change, no `-wal` creation or
+removal and no sidecar deletion by probe. Like a read session, a probe may create or
+rewrite `-shm`; ordinary file reads may affect access metadata. A missing root returns
+absent before any lock creation. Foreign, unknown, future, corrupt and mismatched
+identities refuse. Only `RecoveryReadSession` still reads a bounded private copy (see
+[recovery observation](recovery-observation.md)); it keeps its 64MiB cap and scratch
+parent.
+
+If an external actor deletes `-wal` between the precheck and the open, SQLite's
+read-only open can create an empty one; the later `-wal` identity re-check reports
+`Replaced` (race acknowledged, as for the read session). `open` and `recover`
+repeat that re-check after their source open.
+
+Error mapping changes from the old copy path: a store over 64MiB now qualifies instead
+of failing with `LimitExceeded`; a missing or non-regular `-wal` is `WalMissing`
+(a symlinked `-wal` is `WalMissing`, not `InvalidRoot`); corruption found while
+opening or scanning is `Incompatible`; probe proceeds while `io.lock` is held.
 
 Normal `open` is explicitly an internally authorized mutating operation: after
-snapshot qualification under the I/O gate, it may let SQLite recreate SHM/WAL-index
+qualification under the I/O gate, it may let SQLite recreate SHM/WAL-index
 and recover legitimate committed WAL. It never converts a probe into recovery.
 Explicit `recover` additionally requires exclusive lifecycle ownership and requests
 SQLite TRUNCATE checkpoint. Live Store handles block that maintenance rather than
@@ -86,8 +112,8 @@ runs the existing queries in one read transaction. It runs no `quick_check` and 
 no size limit of its own. The deadline is soft: SQLite open and WAL recovery cannot
 be interrupted, so a read that overruns is refused after the fact as busy; the
 caller supplies 5s for a read. Any SQLite error is a refusal, and `ReadRefusal`
-classifies refusals for the transport above. Open, recover, probe and the capped
-copy are unchanged and keep the 64MiB cap, `quick_check` and `io.lock`.
+classifies refusals for the transport above. Open, recover and probe qualify in
+place (see above); only `RecoveryReadSession` keeps a capped private copy.
 
 ## Checkpoint and close policy
 
@@ -95,7 +121,8 @@ Source connections disable automatic checkpoints and checkpoints on close before
 SQL access, using `wal_autocheckpoint=0` and the safe rusqlite wrapper for SQLite
 `SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE`. WAL/FULL/foreign keys remain checked. This avoids
 an uncoordinated last-close checkpoint while another process copies source files.
-The private qualification connection may recover its copy; it has no source handle.
+Qualification opens the source read-only with the same suppression, so it never checkpoints and a
+last close never removes `-wal`.
 
 PASSIVE checkpoint runs behind handle admission and the I/O gate. It may coexist
 with readers and must return frame counts and completeness truthfully: a zero busy
@@ -103,7 +130,7 @@ indicator is not proof that all frames were checkpointed. Exclusive recovery use
 TRUNCATE only after other lifecycle holders are gone; incomplete/busy results are
 observable, never permission to delete WAL or force reader release. Disabling auto
 checkpoint requires an eventual scheduling/WAL-growth policy; this suffix supplies
-manual primitives and a bounded qualification cap, not a production scheduler or
+manual primitives, not a production scheduler or
 ratified performance result.
 
 SQLite references: [WAL behavior](https://www.sqlite.org/wal.html),
@@ -130,7 +157,7 @@ R03-B1 introduced SQLite schema2 and an actual schema2 marker. Schema1
 fixtures refuse without automatic upgrade. The new internal ownership namespace
 has its own version/generation checks and is separate from task/event fixture DML;
 see [ownership foundation](ownership-foundation.md). Lock hierarchy, WAL/FULL/FK,
-64MiB qualification, nonmutating probe/source-open distinction and explicit recovery
+qualification (in place since E2-A), nonmutating probe/source-open distinction and explicit recovery
 remain unchanged. This is new-root initialization, not a schema-migration API.
 
 ## R02-W fresh-schema evolution
@@ -143,7 +170,7 @@ Watch-source reads inspect at most two scalar
 rows and never complete a publisher or repair state. Store generation qualification
 checks exact UTF8 byte length before allocation, including embedded-NUL refusal.
 See [task-list invalidation](task-list-watch.md). All prior lock, WAL/FULL/FK,
-manual-checkpoint and64MiB qualification limits for open/recover/probe remain unchanged.
+manual-checkpoint limits remain unchanged; open/recover/probe no longer have a size cap.
 
 ## Subsequent schemas
 
@@ -166,7 +193,7 @@ writer open and recovery as incompatible, before any mutation. The value counts 
 transactions, including commits that change no row; it is not a change detector.
 Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
 `unsupported_layout`, without upgrade or repair; no checked-in database fixture or
-internal root depends on an older schema. Open/recover/probe retain the 64MiB cap; public ctl
+internal root depends on an older schema. Open/recover/probe qualify in place with no size cap; public ctl
 reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
 `RecoveryReadSession` remains a distinct capped private-copy path.
 
@@ -207,6 +234,5 @@ mapping below is by statement owner, not an exhaustive per-command contract.
 | `launch_attempts` | `task-pending-page`, `task-pending-status` and the ordinary reads of a launch receipt |
 
 `task_watch_meta` and the ownership, capture and conversation tables are not read by any
-public ctl command. The 64MiB cap above still governs `Store::open`, `recover` and `probe`
-(and the internal private-copy `RecoveryReadSession`) until E2; the read session has no
-size cap of its own.
+public ctl command. Only the internal private-copy `RecoveryReadSession` keeps a 64MiB cap; `Store::open`,
+`recover`, `probe` and the read session have none.

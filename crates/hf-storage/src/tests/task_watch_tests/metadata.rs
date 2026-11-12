@@ -5,7 +5,6 @@ use hf_domain::{
     task_read::TaskId,
     task_watch::{WatchReason, WatchState},
 };
-use rusqlite::Connection;
 #[test]
 fn malformed_revision_metadata_is_unavailable_and_never_repaired() {
     for malformed in [
@@ -21,7 +20,7 @@ fn malformed_revision_metadata_is_unavailable_and_never_repaired() {
             .cursor
             .unwrap();
         drop(store);
-        let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
         raw.execute_batch(malformed).unwrap();
         drop(raw);
         let result = watch(&fixture.root(), Clock::default())
@@ -69,7 +68,7 @@ fn future_version_extra_rows_and_large_scalar_cells_are_unavailable_without_repa
         let fixture = Fixture::new("watch-meta-shape");
         let store = fixture.initialize();
         drop(store);
-        let raw = Connection::open(fixture.root().join("store.sqlite3")).unwrap();
+        let raw = crate::tests::raw_connection(fixture.root().join("store.sqlite3"));
         raw.execute_batch(schema).unwrap();
         let before: Vec<(Option<i64>, Option<i64>, Option<i64>)> = raw.prepare(
             "SELECT CASE WHEN typeof(singleton)='integer' THEN singleton END, CASE WHEN typeof(version)='integer' THEN version END, CASE WHEN typeof(revision)='integer' THEN revision END FROM task_watch_meta LIMIT 2",
