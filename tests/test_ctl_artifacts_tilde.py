@@ -4,7 +4,6 @@ HarflowMCP a426c5a). Defaults are not expanded."""
 
 import getpass
 import os
-import pwd
 
 from history_support import ArtifactCase, item
 from seed_support import A
@@ -55,6 +54,8 @@ class TildeTests(ArtifactCase):
     def test_a_namespace_given_as_another_accounts_home_protects_a_target_there(self):
         """`~<current user>/<name>` is the account database's home, not HOME. A regular file in
         that home is the target; it is read for its status only."""
+        import pwd  # POSIX only; the module must still import on Windows CI
+
         home = pwd.getpwnam(ME).pw_dir
         name = next((n for n in sorted(os.listdir(home))
                      if os.path.isfile(os.path.join(home, n)) and not os.path.islink(os.path.join(home, n))
