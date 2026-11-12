@@ -2,7 +2,7 @@
 //! macOS arm64, the store-backed reads.
 use hf_application::ctl::{
     state_inspect::{StorePolicy, inspect_state},
-    task_reads::{ArtifactTargetPort, Reads},
+    task_reads::{ArtifactTargetPort, PendingLimits, Reads},
 };
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use hf_domain::ctl::caller::EnvMarkers;
@@ -128,6 +128,31 @@ impl CtlServices for HostServices {
         {
             None
         }
+    }
+    /// A debug-only test seam: `HARFLOW_PENDING_ENTRIES`, `HARFLOW_PENDING_NAME_BYTES` and
+    /// `HARFLOW_PENDING_READ_BYTES` lower the namespace and read bounds so a test can reach
+    /// them on a small store; they can never raise one. A release build always uses the contract's bounds.
+    fn pending_limits(&self) -> PendingLimits {
+        #[allow(unused_mut)]
+        let mut limits = PendingLimits::default();
+        #[cfg(debug_assertions)]
+        {
+            let number = |name: &str| std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok());
+            if let Some(value) = number("HARFLOW_PENDING_ENTRIES") {
+                limits.entries = limits
+                    .entries
+                    .min(usize::try_from(value).unwrap_or(usize::MAX));
+            }
+            if let Some(value) = number("HARFLOW_PENDING_NAME_BYTES") {
+                limits.name_bytes = limits
+                    .name_bytes
+                    .min(usize::try_from(value).unwrap_or(usize::MAX));
+            }
+            if let Some(value) = number("HARFLOW_PENDING_READ_BYTES") {
+                limits.read_bytes = limits.read_bytes.min(value);
+            }
+        }
+        limits
     }
     fn retention_days(&self) -> Option<String> {
         std::env::var_os("HARFLOW_RETENTION_DAYS").map(|value| value.to_string_lossy().into_owned())

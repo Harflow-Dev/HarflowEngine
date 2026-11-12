@@ -131,6 +131,14 @@ pub(crate) fn lookup(
         if let Some(pending) = crate::launch_attempts::pending(db, id)? {
             return Ok(Lookup::Pending(pending));
         }
+        if let Some((code, check)) = crate::launch_attempts::refused(db, id)? {
+            let (code, check) = hf_domain::ctl::pending::refusal_of(&code, &check);
+            return Ok(Lookup::LaunchRefused {
+                id: id.clone(),
+                code,
+                check,
+            });
+        }
     }
     if id.canonical() {
         return Ok(Lookup::Missing);

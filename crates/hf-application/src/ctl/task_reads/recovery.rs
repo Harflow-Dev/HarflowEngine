@@ -59,6 +59,7 @@ pub fn recovery_activity(
             guard(managed.0, snapshot, marker, &view, managed.1, &mut observer)?;
             let (id, resolved_from) = resolve(snapshot, raw).map_err(|error| match error {
                 ReadError::PendingLaunch { raw, .. } => unknown_task(&raw),
+                ReadError::LaunchDocument { id, .. } => unknown_task(&id),
                 other => other,
             })?;
             let record = snapshot

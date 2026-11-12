@@ -271,3 +271,17 @@ fn damage_refuses_and_a_foreign_root_is_judged_before_any_marker() {
         Err(ReadError::State(_))
     ));
 }
+
+#[test]
+fn an_unqualified_launch_receipt_is_an_unknown_task() {
+    let mut world = one("completed", Some(0), "claude", None);
+    world.launch_refused.push(task_id(5));
+    let error = run(&world, NONE_MARKERS, task_id(5).as_str()).unwrap_err();
+    assert_eq!(
+        error,
+        ReadError::Coded {
+            code: "unknown_task",
+            message: format!("unknown task_id: {}", task_id(5).as_str())
+        }
+    );
+}

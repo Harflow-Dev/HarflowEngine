@@ -1,5 +1,5 @@
 //! Error documents of the task reads: code, message and data, per path.
-use super::{cli_scan::py_repr, read_errors_feeds};
+use super::{cli_scan::py_repr, read_errors_feeds, read_errors_pending};
 use hf_application::ctl::task_reads::{
     ArtifactCursorFailure, ReadError, Resolution, StoreFailure, UnknownReason,
 };
@@ -217,6 +217,16 @@ fn resolution(found: &Resolution) -> ErrorDoc {
     }
 }
 
+/// A launch receipt that is not a launch document, as the reference reports it: the receipt
+/// path, the failed check and its reason.
+fn launch_document(state_root: &str, id: &str, code: &'static str, check: &str) -> ErrorDoc {
+    let reason = hf_domain::ctl::pending::document_reason(check);
+    ErrorDoc::new(
+        code,
+        format!("{state_root}/tasks/{id}.launch.json [{check}]: {reason}"),
+    )
+}
+
 /// `state_root` is the selected root, named in state errors.
 pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc {
     if path == ReadPath::Artifacts
@@ -258,6 +268,10 @@ pub fn describe(error: &ReadError, path: ReadPath, state_root: &str) -> ErrorDoc
         ReadError::ArtifactCursor(kind) => artifact_cursor(*kind),
         ReadError::Resolution(found) => resolution(found),
         ReadError::Coded { code, message } => ErrorDoc::new(code, message.clone()),
+        ReadError::Pending(failure) => read_errors_pending::doc(failure),
+        ReadError::LaunchDocument { id, code, check } => {
+            launch_document(state_root, id, code, check)
+        }
         ReadError::PendingLaunch {
             raw,
             state,

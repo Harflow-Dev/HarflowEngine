@@ -27,9 +27,9 @@ const fn gated(name: &'static str) -> Capability {
     }
 }
 /// Advertised capabilities in the order of the canonical Python list (`wire_contracts.py`
-/// `CAPABILITIES`). The list grows only when a path and its evidence land: the pending
-/// launch capability is added with its commands.
-pub const CAPABILITIES: [Capability; 9] = [
+/// `CAPABILITIES`). The list grows only when a path and its evidence land.
+pub const CAPABILITIES: [Capability; 10] = [
+    gated("task-pending-launch.v1"),
     gated("interaction-events.v1"),
     always("ctl.v1"),
     always("version-info.v1"),

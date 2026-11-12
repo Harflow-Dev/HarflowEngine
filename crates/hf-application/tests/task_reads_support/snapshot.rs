@@ -42,6 +42,13 @@ impl TaskSnapshotPort for World {
                 not_started_reason: None,
             }));
         }
+        if self.launch_refused.contains(id) {
+            return Ok(Lookup::LaunchRefused {
+                id: id.clone(),
+                code: "field_shape",
+                check: "field_shape",
+            });
+        }
         if self.tasks.iter().any(|task| &task.facts.id == id) {
             return Ok(Lookup::Found(id.clone()));
         }

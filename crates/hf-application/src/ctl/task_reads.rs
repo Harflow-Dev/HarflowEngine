@@ -14,6 +14,9 @@ mod list;
 mod page;
 mod page_parts;
 mod page_query;
+mod pending;
+mod pending_page;
+pub mod pending_ports;
 pub mod ports;
 mod recovery;
 mod resolve;
@@ -31,6 +34,13 @@ pub use history::{PromptOut, prompt};
 pub use history_ports::{ArtifactTargetPort, EventFailure, HistoryPort};
 pub use list::list;
 pub use page::{Counts, CursorArg, ItemSize, PageMode, PageOut, PageRequest, page_with};
+pub use pending::{PendingFailure, PendingStatusOut, pending_status};
+pub use pending_page::{
+    PendingCursor, PendingCursorArg, PendingItem, PendingPageOut, PendingPageRequest, pending_page,
+};
+pub use pending_ports::{
+    Namespace, NamespaceFailure, PendingBinding, PendingBudget, PendingLimits, PendingPort,
+};
 pub use ports::{
     ProcessViewPort, RootPort, StoreFailure, TaskSnapshotPort, TaskStorePort, ViewFailure,
 };
@@ -139,6 +149,14 @@ pub enum ReadError {
     CursorInvalid,
     /// A well-formed event cursor that no longer applies.
     CursorExpired,
+    /// A pending launch read that ended without an answer.
+    Pending(PendingFailure),
+    /// The id names a launch receipt that does not qualify as a launch document.
+    LaunchDocument {
+        id: String,
+        code: &'static str,
+        check: &'static str,
+    },
     /// A failure with its own wire code and message: a refusal of the feed and statistics
     /// requests, or an unknown task without a resolution diagnostic.
     Coded {

@@ -262,6 +262,7 @@ pub use watch_control::RealWatchControl;
 
 mod chain_stops;
 mod launch_attempts;
+mod pending_reads;
 pub use chain_stops::ChainStop;
 pub use launch_attempts::LaunchRow;
 

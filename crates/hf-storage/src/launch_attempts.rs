@@ -175,6 +175,18 @@ pub(crate) fn pending(db: &rusqlite::Connection, id: &TaskId) -> Result<Option<P
         not_started_reason: reason.filter(|reason| !reason.is_empty()),
     }))
 }
+/// The refusal of a receipt that does not qualify as a launch document: the ordinary reads
+/// cannot say what the task is.
+pub(crate) fn refused(db: &rusqlite::Connection, id: &TaskId) -> Result<Option<(String, String)>> {
+    Ok(db
+        .query_row(
+            "SELECT refusal_code,refusal_check FROM launch_attempts \
+             WHERE name=?1 AND task_id IS NOT NULL AND state IS NULL AND refusal_code IS NOT NULL",
+            [id.as_str()],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?)
+}
 fn advance_paging_generation(tx: &Transaction<'_>) -> Result<()> {
     crate::task_read::dataset_optional(tx)?.ok_or(Error::TaskReadUnavailable)?;
     tx.execute(
@@ -219,7 +231,7 @@ impl Store {
             .map_err(|_| Error::CommitOutcomeUnknown)
     }
     /// Only this row's own bounds are checked here. Namespace totals (entries and name
-    /// bytes) are enforced at read time, through the test-only limit seam planned for RT4.
+    /// bytes) are enforced at read time, through `PendingLimits`.
     ///
     /// Adds a launch row, or replaces the content of the row with the same name in place.
     /// The paging generation advances; task-list metadata does not change.

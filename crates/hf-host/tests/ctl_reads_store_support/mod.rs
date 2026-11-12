@@ -11,6 +11,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub mod pending;
+
 pub struct Scratch(pub PathBuf);
 
 impl Drop for Scratch {
@@ -104,6 +106,11 @@ pub fn store(root: &Path) -> Store {
 }
 
 pub fn ctl(root: &Path, args: &[&str]) -> Output {
+    ctl_env(root, args, &[])
+}
+
+/// `ctl` with extra environment variables, such as the debug-only pending limits.
+pub fn ctl_env(root: &Path, args: &[&str], env: &[(&str, &str)]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_harflow-ctl"))
         .args(args)
         .arg("--json")
@@ -112,6 +119,7 @@ pub fn ctl(root: &Path, args: &[&str]) -> Output {
         .env_remove("HARFLOW_DEPTH")
         .env_remove("PB_TASK_ID")
         .env_remove("PB_DEPTH")
+        .envs(env.iter().copied())
         .output()
         .unwrap()
 }

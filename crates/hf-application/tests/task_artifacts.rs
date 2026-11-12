@@ -227,3 +227,12 @@ fn a_found_task_without_a_record_is_a_store_error_not_an_unknown_task() {
     );
     assert!(matches!(outcome, Err(ReadError::Store(_))), "{outcome:?}");
 }
+
+#[test]
+fn an_unqualified_launch_receipt_is_an_unknown_task() {
+    let mut world = world(1);
+    world.launch_refused.push(task_id(5));
+    let mut asked = request(20, ArtifactCursorArg::Absent);
+    asked.task_id = task_id(5).as_str().to_string();
+    assert_eq!(read(&world, NONE_MARKERS, &asked), refused("Unknown task"));
+}

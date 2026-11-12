@@ -4,6 +4,8 @@ use super::cli_feeds::{self, PAGING_OPTIONS, STATISTICS_OPTIONS};
 pub use super::cli_feeds::{InteractionArgs, RecoveryArgs, StatisticsArgs};
 use super::cli_history::{self, ARTIFACT_OPTIONS, EVENT_OPTIONS, PROMPT_OPTIONS};
 pub use super::cli_history::{ArtifactArgs, EventArgs, PromptArgs};
+use super::cli_pending::{self, PAGE_OPTIONS as PENDING_PAGE, STATUS_OPTIONS as PENDING_STATUS};
+pub use super::cli_pending::{PendingPageArgs, PendingStatusArgs};
 use super::cli_scan::{Opt, Scan, duration_seconds, error, int_option, py_repr, scan};
 
 pub const PROGRAM: &str = "harflow-ctl";
@@ -11,7 +13,7 @@ pub const VERSION_PROGRAM: &str = "harflow-ctl version-info";
 /// Commands that need no store.
 pub const COMMANDS: [&str; 2] = ["version-info", "state-inspect"];
 /// Commands that read the store, in the order the usage text lists them.
-pub const READ_COMMANDS: [&str; 10] = [
+pub const READ_COMMANDS: [&str; 12] = [
     "list",
     "status",
     "status-batch",
@@ -22,6 +24,8 @@ pub const READ_COMMANDS: [&str; 10] = [
     "recovery-activity",
     "interaction-events",
     "statistics-page",
+    "task-pending-page",
+    "task-pending-status",
 ];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UsageError {
@@ -71,6 +75,8 @@ pub enum Parsed {
     Recovery(RecoveryArgs),
     Interactions(InteractionArgs),
     Statistics(StatisticsArgs),
+    PendingPage(PendingPageArgs),
+    PendingStatus(PendingStatusArgs),
 }
 fn unrecognized(program: &str, extras: &[String]) -> UsageError {
     error(
@@ -234,6 +240,8 @@ fn command_options(name: &str) -> Vec<Opt> {
         "task-artifacts" => ARTIFACT_OPTIONS.to_vec(),
         "recovery-activity" | "interaction-events" => PAGING_OPTIONS.to_vec(),
         "statistics-page" => STATISTICS_OPTIONS.to_vec(),
+        "task-pending-page" => PENDING_PAGE.to_vec(),
+        "task-pending-status" => PENDING_STATUS.to_vec(),
         "status-batch" => vec![TASK_IDS, OBSERVER],
         "list" => vec![SINCE],
         "task-list-page" => PAGE_OPTIONS.to_vec(),
@@ -276,6 +284,8 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
         "recovery-activity" => Ok((cli_feeds::recovery(program, parsed)?, 1)),
         "interaction-events" => both(cli_feeds::interactions(program, parsed)?),
         "statistics-page" => both(cli_feeds::statistics(program, parsed)?),
+        "task-pending-page" => both(cli_pending::page(program, parsed)?),
+        "task-pending-status" => both(cli_pending::status(program, parsed)?),
         _ => both(parse_page(program, parsed)?),
     }
 }
@@ -323,7 +333,9 @@ pub fn parse_ctl(argv: &[String], reads: bool) -> Result<Parsed, UsageError> {
     Ok(checked)
 }
 pub fn help_text(command: Option<&str>) -> String {
-    if let Some(text) = command.and_then(cli_feeds::help) {
+    if let Some(text) =
+        command.and_then(|name| cli_feeds::help(name).or_else(|| cli_pending::help(name)))
+    {
         return text;
     }
     match command {

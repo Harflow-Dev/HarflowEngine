@@ -7,10 +7,13 @@ production caller verifier. The scaffold still reports unsupported engine operat
 Current `harflow-ctl` provides `version-info` and `state-inspect` everywhere; on
 macOS arm64 it also provides `list`, `status` (including `--brief`), `status-batch`,
 `task-list-page` (including successors), `task-events`, `task-prompt`,
-`task-artifacts`, `recovery-activity`, `interaction-events` and `statistics-page`.
+`task-artifacts`, `recovery-activity`, `interaction-events`, `statistics-page`,
+`task-pending-page` and `task-pending-status` (see [pending launch discovery](pending-launch.md)).
 Store-backed commands classify the root before store opening and use one
 `ReadSession` snapshot under a shared lease. `task-events`, `task-prompt` and
-`statistics-page` check caller markers and may refuse before root classification.
+`statistics-page` check caller markers and may refuse before root classification. The
+two pending commands refuse on markers, then require a marked store root, then apply the
+direct-only gate.
 Missing-root reads create nothing. The caller gate admits
 `NoAgentDetected`, not a human credential, and refuses unresolved agents under
 `REFUSE_UNRESOLVED_AGENTS`. This does not qualify managed ownership or lifecycle
@@ -184,3 +187,10 @@ falls back to the task id and its row is not consulted. `observed_at` is the rea
 leaves the object out. Only observer failures degrade to `unknown`; an ownership or lease
 refusal of the enclosing read stays that refusal. The capability `task-continuation-stop.v1`
 is store-gated, like the other store reads.
+
+## Launch documents
+
+An id with no task record whose launch receipt does not qualify as a launch document is not
+an unknown task. `status`, `status-batch` and `task-events` return the reference's document
+error for it, from the refusal code stored with the receipt (`field_shape`, `format`, ...), as
+described in [pending launch discovery](pending-launch.md#ordinary-reads-of-a-launch-receipt).

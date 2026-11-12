@@ -43,7 +43,7 @@ class VersionInfoTests(CtlCase):
         expected = ["ctl.v1", "version-info.v1"]
         if sys.platform == "darwin" and platform.machine() == "arm64":
             expected = [
-                "interaction-events.v1", "ctl.v1", "version-info.v1", "statistics-page.v1",
+                "task-pending-launch.v1", "interaction-events.v1", "ctl.v1", "version-info.v1", "statistics-page.v1",
                 "task-event-page.v1", "task-prompt.v1", "task-successors.v1", "task-artifacts.v1",
                 "task-continuation-stop.v1",
             ]

@@ -5,6 +5,8 @@ mod services;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod store_history;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod store_pending;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod store_reads;
 use std::{io::Write, process::ExitCode};
 fn main() -> ExitCode {

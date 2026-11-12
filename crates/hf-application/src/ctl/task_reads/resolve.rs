@@ -53,6 +53,11 @@ pub(crate) fn resolve(
             state: pending.state,
             not_started_reason: pending.not_started_reason,
         }),
+        Lookup::LaunchRefused { id, code, check } => Err(ReadError::LaunchDocument {
+            id: id.as_str().to_owned(),
+            code,
+            check,
+        }),
         Lookup::Missing => Err(ReadError::Resolution(missing_resolution(&id))),
         Lookup::InvalidPrefix => Err(unknown(Some(UnknownReason::PrefixTooShort))),
         Lookup::Incomplete => Err(unknown(Some(UnknownReason::PrefixIndexUnavailable))),

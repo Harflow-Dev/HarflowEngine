@@ -7,6 +7,7 @@ pub mod identity;
 pub mod inspect;
 mod iso_date;
 pub mod iso_parse;
+pub mod pending;
 pub mod py_int;
 pub mod recovery;
 pub mod state_root;

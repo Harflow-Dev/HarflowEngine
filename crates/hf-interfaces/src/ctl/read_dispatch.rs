@@ -3,7 +3,7 @@ use super::{
     cli::{PageArgs, Parsed},
     cursor,
     dispatch::{CtlServices, Outcome, invalid_choice},
-    feed_dispatch, history_dispatch, read_docs,
+    feed_dispatch, history_dispatch, pending_dispatch, read_docs,
     read_errors::{ErrorDoc, ReadPath, describe, inconsistent},
     render,
     task_docs::Inconsistent,
@@ -147,6 +147,8 @@ pub(super) fn run_read(parsed: &Parsed, root: &StateRoot, services: &dyn CtlServ
         Parsed::Recovery(args) => feed_dispatch::recovery(&read, root, args),
         Parsed::Interactions(args) => feed_dispatch::interactions(&read, root, args),
         Parsed::Statistics(args) => feed_dispatch::statistics(&read, root, args, services),
+        Parsed::PendingPage(args) => pending_dispatch::page(&read, root, args, services),
+        Parsed::PendingStatus(args) => pending_dispatch::status(&read, root, args, services),
         other => invalid_choice(command_name(other), false),
     }
 }
@@ -163,6 +165,8 @@ fn command_name(parsed: &Parsed) -> &'static str {
         Parsed::Recovery(_) => "recovery-activity",
         Parsed::Interactions(_) => "interaction-events",
         Parsed::Statistics(_) => "statistics-page",
+        Parsed::PendingPage(_) => "task-pending-page",
+        Parsed::PendingStatus(_) => "task-pending-status",
         Parsed::StateInspect { .. } => "state-inspect",
         Parsed::VersionInfo { .. } => "version-info",
         Parsed::Help(_) => "help",

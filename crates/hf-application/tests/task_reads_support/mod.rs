@@ -4,6 +4,8 @@
 mod feed;
 pub mod gate;
 mod history;
+mod pending;
+pub mod pending_use;
 mod snapshot;
 pub use feed::{FeedWorld, row, source, stat_facts};
 use hf_application::ctl::task_reads::ReadError;
@@ -27,6 +29,7 @@ use hf_domain::{
     task_read::{Lookup, PendingLaunch, TaskId},
 };
 pub use history::{History, items, log_facts, page_of, stored_prompt};
+pub use pending::PendingWorld;
 use std::{cell::RefCell, collections::HashMap, time::Instant};
 
 pub const BOOT: &str = "abcdef01-2345-6789-abcd-ef0123456789";
@@ -107,6 +110,8 @@ pub struct World {
     pub callers: Vec<CallerRow>,
     pub damaged: bool,
     pub pending: Vec<TaskId>,
+    /// Ids whose launch receipt is not a launch document (`field_shape`).
+    pub launch_refused: Vec<TaskId>,
     /// Ids that look up as found but have no record in the snapshot.
     pub vanish: Vec<TaskId>,
     /// The stop row served with a task's record; a task not listed has none.
@@ -116,6 +121,7 @@ pub struct World {
     pub log: RefCell<Vec<String>>,
     pub history: History,
     pub feed: FeedWorld,
+    pub pending_world: PendingWorld,
 }
 
 impl World {
@@ -132,6 +138,7 @@ impl World {
             callers: Vec::new(),
             damaged: false,
             pending: Vec::new(),
+            launch_refused: Vec::new(),
             vanish: Vec::new(),
             stops: Vec::new(),
             unobserved_total: None,
@@ -139,6 +146,7 @@ impl World {
             log: RefCell::new(Vec::new()),
             history: History::default(),
             feed: FeedWorld::default(),
+            pending_world: PendingWorld::default(),
         }
     }
 

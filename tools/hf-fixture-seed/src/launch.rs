@@ -1,10 +1,9 @@
 //! Chain-stop markers and launch receipts: the typed spec becomes a store row, qualifying
 //! it the way the reference engine qualifies the receipt document and then the pending page.
 use crate::{fail::Result, root::Context};
+use hf_domain::ctl::pending::names_valid;
 use hf_interfaces::fixture_port::{LaunchSpec, Response, StopMode, StopSpec};
 use hf_storage::{ChainStop, LaunchRow, Store};
-
-const MAX_NAMES: usize = 16;
 
 pub fn stop_chain(context: &Context, store: &Store, spec: &StopSpec) -> Result<Response> {
     match &spec.mode {
@@ -27,6 +26,12 @@ pub fn add_launch(context: &Context, store: &Store, spec: &LaunchSpec) -> Result
     Ok(Response::Null)
 }
 pub fn add_invalid_launch_name(context: &Context, store: &Store, name: &str) -> Result<Response> {
+    // A receipt named by a task identity is a launch, not an invalid name.
+    if hf_domain::task_read::TaskId::new(name.to_owned()).is_ok() {
+        return Err(crate::fail::Fail::new(
+            "an invalid launch name must not be a task identity",
+        ));
+    }
     let row = LaunchRow {
         name: name.to_owned(),
         ..LaunchRow::default()
@@ -65,23 +70,6 @@ fn verdict(spec: &LaunchSpec) -> Verdict {
             refusal: None,
         },
     }
-}
-/// The reference `validate_names`: 1 to 16 distinct names of lowercase letters, digits and
-/// `. _ : -`, 1 to 64 characters, starting with a letter or digit.
-fn names_valid(names: &[String]) -> bool {
-    let name_ok = |name: &String| {
-        !name.is_empty()
-            && name.len() <= 64
-            && name.bytes().enumerate().all(|(index, byte)| {
-                byte.is_ascii_lowercase()
-                    || byte.is_ascii_digit()
-                    || (index > 0 && matches!(byte, b'.' | b'_' | b':' | b'-'))
-            })
-    };
-    let distinct: std::collections::BTreeSet<_> = names.iter().collect();
-    (1..=MAX_NAMES).contains(&names.len())
-        && names.iter().all(name_ok)
-        && distinct.len() == names.len()
 }
 fn row(spec: &LaunchSpec) -> LaunchRow {
     let verdict = verdict(spec);

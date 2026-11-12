@@ -2,6 +2,8 @@
 //! A scripted world behind the task-read ports, rendered through `dispatch`.
 mod feed;
 mod history;
+mod pending;
+pub mod pending_cursor;
 #[allow(unused_imports)]
 pub use feed::{Feeds, facts};
 use hf_application::ctl::{
@@ -28,6 +30,7 @@ use hf_domain::{
 use hf_interfaces::ctl::dispatch::{CtlServices, dispatch};
 #[allow(unused_imports)]
 pub use history::{History, Targets, event_row, page_of};
+pub use pending::PendingScript;
 use serde_json::Value;
 use std::time::Instant;
 
@@ -63,6 +66,9 @@ pub struct Fake {
     /// Members added to the status blob, each as `,"key":value`.
     pub status_extra: &'static str,
     pub feed: Feeds,
+    pub pending: PendingScript,
+    /// The `(code, check)` of a launch receipt that does not qualify, served for every id.
+    pub launch_refusal: Option<(&'static str, &'static str)>,
     /// The value of `HARFLOW_RETENTION_DAYS`.
     pub retention: Option<String>,
     /// The state root the services resolve.
@@ -140,6 +146,13 @@ impl TaskSnapshotPort for Fake {
         Ok(self.related.clone())
     }
     fn lookup(&self, id: &TaskId) -> Result<Lookup, StoreFailure> {
+        if let Some((code, check)) = self.launch_refusal {
+            return Ok(Lookup::LaunchRefused {
+                id: id.clone(),
+                code,
+                check,
+            });
+        }
         Ok(Lookup::Found(id.clone()))
     }
     fn summaries(&self, _: &[TaskId]) -> Result<Vec<TaskSummary>, StoreFailure> {
@@ -228,6 +241,9 @@ impl CtlServices for Fake {
     fn now_micros(&self) -> Option<i64> {
         self.clock.then_some(self.now_us)
     }
+    fn pending_limits(&self) -> hf_application::ctl::task_reads::PendingLimits {
+        self.pending.limits
+    }
     fn retention_days(&self) -> Option<String> {
         self.retention.clone()
     }
@@ -263,6 +279,8 @@ pub fn fake(status: &str, exit: Option<i64>, seen: PidObservation) -> Fake {
         root_marker: false,
         status_extra: "",
         feed: Feeds::default(),
+        pending: PendingScript::default(),
+        launch_refusal: None,
         retention: None,
         root: "/s".into(),
     }

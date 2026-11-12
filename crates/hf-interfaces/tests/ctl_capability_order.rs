@@ -53,6 +53,7 @@ fn emitted_lists_keep_the_canonical_order_in_both_availability_states() {
     assert_eq!(
         with_store,
         [
+            "task-pending-launch.v1",
             "interaction-events.v1",
             "ctl.v1",
             "version-info.v1",

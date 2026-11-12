@@ -241,7 +241,7 @@ fn explicit(
                     found.push(id);
                 }
             }
-            Err(ReadError::PendingLaunch { .. }) => {}
+            Err(ReadError::PendingLaunch { .. } | ReadError::LaunchDocument { .. }) => {}
             Err(ReadError::Resolution(Resolution::Unknown { reason: None, .. })) => {}
             Err(error) => return Err(error),
         }

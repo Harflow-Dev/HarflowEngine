@@ -4,7 +4,7 @@ mod task_reads_support;
 
 use hf_application::ctl::{
     state_inspect::RootClass,
-    task_reads::{CursorArg, PageMode, PageRequest, ReadError, list, status, status_batch},
+    task_reads::{CursorArg, PageMode, PageRequest, ReadError, list, prompt, status, status_batch},
 };
 use hf_domain::ctl::caller::{PidObservation, RefusalKind};
 use hf_domain::ctl::inspect::{InspectReason, InspectStatus, StateInspection};
@@ -81,6 +81,49 @@ fn a_pending_launch_is_an_error_for_status_and_dropped_from_explicit_ids() {
     assert_eq!(out.items.len(), 1);
     let batch = status_batch(&reads, &root(), std::slice::from_ref(&raw)).unwrap();
     assert_eq!(batch.errors, vec![(raw.clone(), pending(&raw))]);
+}
+
+fn document(raw: &str) -> ReadError {
+    ReadError::LaunchDocument {
+        id: raw.to_string(),
+        code: "field_shape",
+        check: "field_shape",
+    }
+}
+
+#[test]
+fn an_unqualified_launch_receipt_is_a_document_error_except_in_explicit_page_ids() {
+    let mut world = world();
+    world.launch_refused = vec![task_id(5)];
+    let reads = world.reads(NONE_MARKERS);
+    let raw = task_id(5).as_str().to_string();
+    assert_eq!(
+        status(&reads, &root(), &raw).map(|_| ()),
+        Err(document(&raw))
+    );
+    let batch = status_batch(&reads, &root(), std::slice::from_ref(&raw)).unwrap();
+    assert_eq!(batch.errors, vec![(raw.clone(), document(&raw))]);
+    // `task-list-page --task-ids` drops the id, as it drops a pending launch.
+    let ids = vec![raw.clone(), task_id(1).as_str().to_string()];
+    let out = page(&reads, &root(), &request(PageMode::TaskIds(ids))).unwrap();
+    assert_eq!(out.items.len(), 1);
+}
+
+#[test]
+fn the_direct_only_reads_propagate_the_document_error() {
+    let mut world = world();
+    world.launch_refused = vec![task_id(5)];
+    let reads = world.reads(NONE_MARKERS);
+    let raw = task_id(5).as_str().to_string();
+    let successors = request(PageMode::Successors(raw.clone()));
+    assert_eq!(
+        page(&reads, &root(), &successors).map(|_| ()),
+        Err(document(&raw))
+    );
+    assert_eq!(
+        prompt(&reads, &root(), &raw, 100).map(|_| ()),
+        Err(document(&raw))
+    );
 }
 
 #[test]

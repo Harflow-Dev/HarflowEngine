@@ -3,7 +3,7 @@ use super::{
     cli::{self, Parsed, UsageError},
     read_dispatch, render,
 };
-use hf_application::ctl::task_reads::{ArtifactTargetPort, Reads};
+use hf_application::ctl::task_reads::{ArtifactTargetPort, PendingLimits, Reads};
 use hf_domain::{
     ctl::{
         identity::{CTL_FORMAT, HostIdentity, PRODUCT_VERSION, PROGRAM, VERSION_INFO_FORMAT},
@@ -47,6 +47,10 @@ pub trait CtlServices {
     /// A count of rows after which a statistics read counts its budget as spent.
     fn statistics_expire_after_rows(&self) -> Option<usize> {
         None
+    }
+    /// The bounds of a pending launch read; only a test seam moves them.
+    fn pending_limits(&self) -> PendingLimits {
+        PendingLimits::default()
     }
     /// The value of `HARFLOW_RETENTION_DAYS`, when set.
     fn retention_days(&self) -> Option<String> {

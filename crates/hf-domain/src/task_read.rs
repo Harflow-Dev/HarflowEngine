@@ -212,6 +212,13 @@ pub struct PendingLaunch {
 pub enum Lookup {
     Found(TaskId),
     Pending(PendingLaunch),
+    /// The id names a launch receipt that does not qualify as a launch document, so no read
+    /// can say what the task is.
+    LaunchRefused {
+        id: TaskId,
+        code: &'static str,
+        check: &'static str,
+    },
     Missing,
     InvalidPrefix,
     Incomplete,
