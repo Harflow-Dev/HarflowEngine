@@ -4,8 +4,8 @@
 //! it never writes main or WAL content and never removes `-wal`. A missing `-wal`
 //! is refused before SQLite is opened, because SQLite would create an empty one.
 use crate::{
-    Error, Identity, Result, binding::Binding, connection, read_session::open_read_only, scan, wal,
-    wal_acceptance,
+    Error, Identity, Result, binding::Binding, connection, fence, read_session::open_read_only,
+    scan, wal, wal_acceptance,
 };
 use std::{fs, time::Instant};
 
@@ -25,7 +25,8 @@ pub(crate) struct WalStamp {
     inode: u64,
 }
 
-/// Marker, header, rollback journal, `-wal`, acceptance record, in that order. Returns the marker identity.
+/// Marker, header, rollback journal, `-wal`, acceptance record, fence, in that order.
+/// Returns the marker identity.
 pub(crate) fn precheck(binding: &Binding) -> Result<Identity> {
     binding.check_sidecars(false)?;
     let expected = wal::marker(binding)?;
@@ -33,6 +34,7 @@ pub(crate) fn precheck(binding: &Binding) -> Result<Identity> {
     wal::reject_nonempty_journal(binding)?;
     require_wal(binding)?;
     wal_acceptance::check(binding.root(), &expected.generation)?;
+    fence::check(binding.root(), &expected.generation)?;
     binding.check()?;
     Ok(expected)
 }
@@ -62,6 +64,7 @@ pub(crate) fn in_place(
         return Err(Error::Replaced);
     }
     wal_acceptance::check(binding.root(), &expected.generation)?;
+    fence::check(binding.root(), &expected.generation)?;
     connection::check_deadline(deadline)?;
     Ok((expected, stamp))
 }
@@ -89,7 +92,7 @@ fn require_wal(binding: &Binding) -> Result<()> {
 }
 
 #[cfg(unix)]
-fn wal_stamp(binding: &Binding) -> Result<WalStamp> {
+pub(crate) fn wal_stamp(binding: &Binding) -> Result<WalStamp> {
     use std::os::unix::fs::MetadataExt;
     let metadata = fs::symlink_metadata(binding.root().join("store.sqlite3-wal"))?;
     Ok(WalStamp {
@@ -104,6 +107,6 @@ fn wal_stamp(binding: &Binding) -> Result<WalStamp> {
 pub(crate) struct WalStamp;
 
 #[cfg(not(unix))]
-fn wal_stamp(_: &Binding) -> Result<WalStamp> {
+pub(crate) fn wal_stamp(_: &Binding) -> Result<WalStamp> {
     Ok(WalStamp)
 }

@@ -114,11 +114,92 @@ it before the SQLite open and again at the end of in-place qualification, next t
 entry and at every read exit (`check_files`, with the session's generation). Only the
 maintenance actor writes it (E2-B), in the order `pending`, qualify, `accepted` or `failed`.
 
-Race acknowledged: the storage reader checks the file with `lstat` and then opens it
-without `O_NOFOLLOW`/`O_NONBLOCK` (hf-storage has no libc dependency), as the marker read
-does. A local writer that swaps the record for a FIFO or symlink between the two calls can
-make a read wait or follow the link; the `fstat` after opening still requires a regular
-file. `state-inspect` opens it with `O_NOFOLLOW|O_NONBLOCK` and is not affected.
+Race handling: the storage reader checks the file with `lstat` and then opens it with
+`O_NOFOLLOW|O_NONBLOCK` on macOS and Linux (since E2-A slice A6, shared with the fence and due
+record; the flag values are spelled out because hf-storage has no libc dependency), so a FIFO
+swapped in between the two calls is opened without blocking and refused as `Incompatible` by the
+`fstat` after opening, and a symlink swapped in fails the open with `ELOOP`, which surfaces as
+`Error::Io` (in the read session `ReadUnavailable` naming the file), never followed. Other unix targets open without those flags and keep
+that race; the marker read is unchanged. `state-inspect` opens it with `O_NOFOLLOW|O_NONBLOCK`.
+
+## Verification and fence
+
+Owner decision A2 keeps a cheap identity check on every open and moves the whole-store
+`quick_check` to recover, probe and a per-generation cadence (`crates/hf-storage/src/verify.rs`).
+E2-A ships the storage primitives; the maintenance actor that runs the cadence and clears a fence is
+E2-B.
+
+The due record `store.verify` holds `harflow-verify-1\n<generation>\n<due_unix_s>\n`, at most 128
+bytes, read with the same `lstat`-first, bounded, device/inode-checked reader as the acceptance
+record. `Store::verification_due(now)` is true when the record is absent, malformed (including a
+regular file over 128 bytes, which the next pass replaces) or names another generation, when `now`
+has reached the due time, or when the due time lies more than one period (`VERIFY_PERIOD`, 24
+hours) ahead of `now` (a clock that moved back). A non-regular record (directory, link, FIFO) is
+`Incompatible`. `Store::verify_if_due(now, deadline)` runs one check when it is due.
+
+`Store::verify_in_place(deadline)` refuses an already-past deadline with `DeadlineExceeded`, then
+checks the handle's store under the handle's shared lease and
+without `io.lock`: the read-order prechecks (marker, header, journal, `-wal`, acceptance record,
+fence), a read-only connection with checkpoints suppressed, the SQL identity, then one
+`PRAGMA quick_check(1)` through the bounded scan helper (the watchdog interrupts it at the
+deadline). Before recording a verdict it re-checks the binding, the `-wal` identity and the marker.
+The verdict:
+
+| `quick_check` result | Verdict | Effect |
+| --- | --- | --- |
+| `ok` within the deadline | `Passed` | `store.verify` rewritten with due time `now + 24 h` |
+| any other verdict, `SQLITE_CORRUPT`, `SQLITE_NOTADB`, whenever it arrives (also after the deadline) | `Fenced` | `store.fence` written |
+| `ok` after the deadline, interrupted at the deadline, busy, `SQLITE_IOERR`, or a failure to set the busy timeout before the scan | `Inconclusive` | nothing written; due time unchanged |
+| any other SQLite error | returned as the error | nothing written; due time unchanged |
+
+A failed prerequisite (a refused precheck, an identity mismatch, a replaced binding) is returned as
+its error and records nothing. A passing scan whose due-record write fails (the lock budget runs out,
+or an I/O error) returns that error: nothing is recorded and the store stays due. Corruption raised by the identity query itself is `Incompatible`, not
+a fence: every open refuses such a store anyway. `commit_sequence` is not consulted: it counts
+commits, including no-op commits, and is not a change detector.
+
+Both records are written only under `io.lock`, which is taken after the scan with its own budget
+(`RECORD_BUDGET`, 2 s from the verdict) so that a failure found near the scan deadline is still
+fenced. The lease port does not wait for a held lock (in process it answers `Busy` at once, across
+processes the lock is a non-blocking `F_SETLK`), so a busy `io.lock` is retried every 5 ms until the
+budget runs out. After a corruption verdict, any failure to record the fence (the lock budget
+running out, an I/O error writing, renaming or flushing it, or a read-back mismatch) is
+`Error::FenceUnrecorded` carrying the cause: corruption was found, nothing records it and the due
+time is unchanged, so the next due check scans again. A refusal of an existing fence (below) is not
+wrapped. The lock is held for one small file write, so the verifier never holds a commit for the
+length of a scan; a commit that collides with that write can still get a short `Busy` from its own
+`io.lock` acquisition. Before writing the fence the verifier checks the existing one under the
+lock: absent or this generation's `failed` proceeds, anything else (a foreign generation, malformed
+content, a non-regular file) is returned and left in place. The due-record write likewise refuses
+when a fence is present. Writes go through `<name>.tmp`: a stale temporary file is removed, a new one is
+created exclusively (a planted link is never followed), filled and renamed over the target, so a
+reader sees the old or the new content, never a torn mix. The fence is durable: the temporary file
+is flushed with `sync_all` (which issues `F_FULLFSYNC` on Apple platforms) before the rename and the
+directory is flushed after it (`File::open(dir).sync_all()`, `EINVAL` tolerated as SQLite does;
+unix only, since non-unix roots are refused at binding). The due record is not flushed: losing it
+only repeats a check. Neither file is created at initialization, so seeded roots never contain them.
+
+`store.fence` holds `harflow-fence-1\n<generation>\nfailed\n`, at most 128 bytes, read like the
+acceptance record. All three files are opened with `O_NOFOLLOW|O_NONBLOCK` on macOS and Linux (x86,
+x86_64, arm, aarch64; flag values spelled out because hf-storage has no libc dependency), so a FIFO
+swapped in after `lstat` is refused as `Incompatible` by the `fstat` that follows instead of
+blocking, and a symlink swapped in fails the open with `ELOOP` (`Error::Io`; in the read session
+`ReadUnavailable`) instead of being followed; other unix targets open without those flags and keep
+that race. `failed` for the marker's generation is `Error::Fenced`; a foreign generation, malformed
+or oversized content, a non-regular file, or a regular file replaced by another one after `lstat`
+(device/inode mismatch) is `Incompatible`. The check runs after the acceptance record, in the refusal order marker, header,
+journal, `-wal`, acceptance record, fence: in `qualify::precheck` and again at the end of in-place
+qualification (so `open`, `recover`, `probe` and the verifier refuse), in `Store::write` after
+`io.lock` and before `BEGIN` (no retry; every later commit refuses, including WAL maintenance
+writes), in WAL maintenance under `io.lock` before a PASSIVE checkpoint (a fenced store is skipped,
+not checkpointed), and in the read session at open, at every read entry and at every read exit. A running
+handle's commits therefore refuse from the first commit after the fence lands; reads already inside
+a snapshot finish and are then refused at exit. `state-inspect` reads `store.fence` lease-free,
+bounded and `O_NOFOLLOW`, after the acceptance record, and reports `incompatible` with
+`infrastructure_unavailable` for `failed` in the current generation or an unreadable fence and
+`invalid_marker` for anything else. Clearing the fence (after an explicit verify or recover) and
+the owner runtime's behaviour while fenced belong to E2-B; the clearing path needs a precheck
+variant, because `recover` and `probe` refuse a fenced root today.
 
 ## Read session
 

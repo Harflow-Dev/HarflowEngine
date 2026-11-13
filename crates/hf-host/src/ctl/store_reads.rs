@@ -85,6 +85,10 @@ pub(super) fn failure(error: &Error) -> StoreFailure {
             InfrastructureUnavailable,
             "the store was replaced during the read; retry".to_string(),
         ),
+        ReadRefusal::Fenced => incompatible(
+            InfrastructureUnavailable,
+            "store verification failed; the history cannot be trusted".to_string(),
+        ),
     }
 }
 
@@ -174,5 +178,35 @@ impl TaskStorePort for SnapshotStore {
         // The exit checks (a replaced store, the deadline) outrank a resolution or refusal.
         outcome.map_err(|error| ReadError::Store(failure(&error)))?;
         inner
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Error, failure};
+    use hf_application::ctl::task_reads::StoreFailure;
+    use hf_domain::ctl::inspect::InspectReason;
+
+    fn unavailable(message: &str) -> StoreFailure {
+        StoreFailure::Incompatible {
+            reason: InspectReason::InfrastructureUnavailable,
+            message: message.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_fenced_store_is_incompatible_and_unavailable_with_the_fixed_message() {
+        assert_eq!(
+            failure(&Error::Fenced),
+            unavailable("store verification failed; the history cannot be trusted")
+        );
+    }
+
+    #[test]
+    fn a_replaced_store_is_incompatible_and_unavailable_with_a_retry_message() {
+        assert_eq!(
+            failure(&Error::Replaced),
+            unavailable("the store was replaced during the read; retry")
+        );
     }
 }

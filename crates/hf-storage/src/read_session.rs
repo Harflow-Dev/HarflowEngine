@@ -6,7 +6,7 @@
 //! deadline is soft: SQLite open and WAL recovery cannot be interrupted, so an
 //! overrun answer is refused after the fact as `DeadlineExceeded`.
 use crate::{
-    Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection,
+    Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection, fence,
     read_context::ReadContext, wal, wal_acceptance,
 };
 use hf_application::{
@@ -56,7 +56,7 @@ impl ReadSession {
         let claim = binding
             .acquire(LeaseMode::Shared, lease_deadline)
             .map_err(named("store.lock"))?;
-        // Spec order: marker, header, rollback journal, `-wal`, acceptance record. The `-wal` type is
+        // Spec order: marker, header, rollback journal, `-wal`, acceptance record, fence. The `-wal` type is
         // left out of the sidecar check so that a defect there cannot mask the others.
         binding.check_sidecars(false).map_err(|error| {
             non_regular(&root, &["store.sqlite3-shm", "store.sqlite3-journal"]).unwrap_or(error)
@@ -66,6 +66,7 @@ impl ReadSession {
         wal::reject_nonempty_journal(&binding).map_err(named("store.sqlite3-journal"))?;
         require_wal(&binding)?;
         acceptance(&binding, &expected)?;
+        fenced(&binding, &expected)?;
         let connection = open_read_only(&binding, deadline)?;
         if connection::identity(&connection, deadline)? != expected {
             return Err(Error::Incompatible);
@@ -130,6 +131,7 @@ impl ReadSession {
         }
         require_wal(&self.binding)?;
         acceptance(&self.binding, &self.identity)?;
+        fenced(&self.binding, &self.identity)?;
         connection::timeout(&guard, deadline)?;
         let transaction = guard.transaction()?;
         if connection::identity(&transaction, deadline)? != self.identity {
@@ -194,11 +196,17 @@ fn marker_file_fault(root: &Path) -> Option<Error> {
     None
 }
 /// Binding and sidecar types, with a defective `-wal` reported as a missing one,
-/// then the acceptance record for the session's generation.
+/// then the acceptance record and the fence for the session's generation.
 fn check_files(binding: &Binding, identity: &Identity) -> Result<()> {
     binding.check_sidecars(false)?;
     require_wal(binding)?;
-    acceptance(binding, identity)
+    acceptance(binding, identity)?;
+    fenced(binding, identity)
+}
+
+/// The verification fence, checked right after the acceptance record.
+fn fenced(binding: &Binding, identity: &Identity) -> Result<()> {
+    fence::check(binding.root(), &identity.generation).map_err(named("store.fence"))
 }
 
 /// The lost-WAL acceptance record, checked right after `-wal`.

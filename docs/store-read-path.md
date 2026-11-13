@@ -275,8 +275,12 @@ also keeps its private-copy cap and `io.lock`. It is distinct from public
    (Decision B; format and states in storage-protocol.md): absent or `accepted` for
    the marker's generation proceeds, `pending` or `failed` refuses as the missing
    `-wal` row, and a foreign generation, malformed or oversized content or a
-   non-regular file is an invalid marker. Refusal order: marker, header, journal,
-   `-wal`, acceptance record, then later checks.
+   non-regular file is an invalid marker. Then the verification fence `store.fence`
+   (E2-A slice A6; format in storage-protocol.md "Verification and fence"): absent
+   proceeds, `failed` for the marker's generation refuses (`Error::Fenced`), anything
+   else is an invalid marker. Refusal order: marker, header, journal, `-wal`,
+   acceptance record, fence, then later checks. The acceptance record and the fence
+   are checked again at every read entry and exit.
 3. `SQLITE_OPEN_READ_ONLY`, checkpoint-on-close disabled, identity query against
    the marker, then the existing queries inside one read transaction.
 4. `-shm` may be created or rewritten by a reader. It is derived state, rebuilt
@@ -320,6 +324,7 @@ unreachable except by fixtures.
 | database application id not ours; marker names an older schema; marker or header names a newer schema | `state_incompatible` | `foreign_store`; `unsupported_layout`; `newer_store` (as state-inspect reports them; a malformed marker is `invalid_marker` whatever its version) |
 | nonempty rollback journal | `state_incompatible` | `infrastructure_unavailable` |
 | `Error::Replaced` (identity changed during the read) | `state_incompatible` | `infrastructure_unavailable`; retry is allowed |
+| verification fence `store.fence` in state `failed` for the session's generation (`Error::Fenced`, `ReadRefusal::Fenced`; E2-A slice A6) | `state_incompatible` | `infrastructure_unavailable`; message `store verification failed; the history cannot be trusted`; a foreign generation, malformed or oversized content or a non-regular fence is `invalid_marker` |
 | default: any other SQLite error | `state_incompatible` | `infrastructure_unavailable` |
 
 No code or reason is added; the implementation confirms each reason against the
@@ -338,7 +343,9 @@ every read refuses). The same holds for the acceptance record: a bounded read of
 `store.wal-acceptance` (after the `-wal` row) gives `incompatible` /
 `infrastructure_unavailable` for `pending`, `failed` or an unreadable record, and
 `invalid_marker` for a foreign generation, malformed or oversized content or a
-non-regular file. `facts.entries` lists names, but `entries_truncated` at 256
+non-regular file. The verification fence `store.fence` follows the acceptance record
+(E2-A slice A6): `failed` for the marker's generation or an unreadable fence gives
+`incompatible` / `infrastructure_unavailable`, anything else `invalid_marker`. `facts.entries` lists names, but `entries_truncated` at 256
 cannot prove absence, so when it is truncated the observer checks `-wal` directly.
 `ready` still does not promise that reads succeed: it also cannot see
 main-file damage, and a read-only directory with no `-shm` or a read-only
@@ -386,7 +393,7 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 | Nonempty journal refuses | Preserved |
 | Kill leaves scratch remnants | Improved for the read session (none; the existing path left one in 21 to 28 of 30); a reader that created `-shm` and is killed leaves it, confirmed |
 | Readers do not disturb the single writer | Read session: 0 writer failures in 3 x 4 windows; existing path: 95 to 98 percent |
-| Damage a read does not touch | Not detected by the read session (the E1 path's open-time `quick_check` would have; since E2-A slice A1a `open` does not run it either, only `recover` and `probe` do); verify is specified for E2, not implemented here |
+| Damage a read does not touch | Not detected by the read session (the E1 path's open-time `quick_check` would have; since E2-A slice A1a `open` does not run it either, only `recover` and `probe` do). Since E2-A slice A6 the storage verifier (`Store::verify_in_place`, cadence `verify_if_due`) fences a store whose `quick_check` fails, and the read session then refuses it; nothing runs the cadence until the E2-B maintenance actor |
 | Payload damage | Returned as data (7 of 20 flipped-byte trials) by the read session; `quick_check` does not detect it on either path; an owner decision (open question 3) |
 | Silent history loss on WAL damage | Not prevented; unchanged; owner accepted this only for E1 (D20). Watermark/generation sequence/recovery signal remain E2 work, not an E1-exit acceptance |
 
@@ -541,7 +548,7 @@ Watermark sketch:
 | --- | --- |
 | 64 MiB cap | Removed for writer open, recover and probe by in-place qualification (implemented, E2-A slice A1a); kept only for `RecoveryReadSession` |
 | Qualify before writable access | Decision A1 preserves it; A2 weakens it; not claimed otherwise |
-| `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover |
+| `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover (storage primitives implemented in E2-A slice A6: due record, verifier, fence; the runner and clearing are E2-B) |
 | Lost WAL | Refused by every writer-role opener; acceptance only in maintenance, per Decision B |
 | Silent WAL damage | Unchanged; watermark decision at E2 exit |
 

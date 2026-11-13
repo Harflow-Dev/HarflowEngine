@@ -100,6 +100,8 @@ impl Store {
     ) -> Result<Option<T>> {
         let mut connection = self.admit(deadline)?;
         let _io = self.binding.io(deadline)?;
+        // A fenced store takes no further commit; the refusal is final, not retried.
+        crate::fence::check(self.binding.root(), &self.identity.generation)?;
         connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let Some(value) = action(&transaction)? else {

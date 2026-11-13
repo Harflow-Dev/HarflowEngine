@@ -15,8 +15,21 @@ use std::{
 /// Interval at which a lapsed deadline re-issues the interrupt.
 const REINTERRUPT: Duration = Duration::from_millis(20);
 
-/// Runs `run` on `connection`, interrupting it when `deadline` passes.
+/// Runs `run` on `connection`, interrupting it when `deadline` passes. A value that
+/// arrives after the deadline is refused as `DeadlineExceeded`.
 pub(crate) fn bounded<T>(
+    connection: &Connection,
+    deadline: Instant,
+    run: impl FnOnce(&Connection) -> rusqlite::Result<T>,
+) -> Result<T> {
+    let value = bounded_late(connection, deadline, run)?;
+    connection::check_deadline(deadline)?;
+    Ok(value)
+}
+
+/// As `bounded`, but a value that completed after the deadline is returned: the caller
+/// decides whether a late answer still counts.
+pub(crate) fn bounded_late<T>(
     connection: &Connection,
     deadline: Instant,
     run: impl FnOnce(&Connection) -> rusqlite::Result<T>,
@@ -39,13 +52,7 @@ pub(crate) fn bounded<T>(
         drop(finished);
         result
     });
-    match result {
-        Ok(value) => {
-            connection::check_deadline(deadline)?;
-            Ok(value)
-        }
-        Err(error) => Err(classify(error, deadline)),
-    }
+    result.map_err(|error| classify(error, deadline))
 }
 
 /// `PRAGMA quick_check(1)`: anything but `ok` is `Incompatible`.

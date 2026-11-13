@@ -28,6 +28,8 @@ pub enum ReadRefusal {
     NonemptyJournal,
     /// The identity changed during the read; a retry is allowed.
     Replaced,
+    /// A whole-store check failed and `store.fence` refuses the generation.
+    Fenced,
     /// Any other error.
     Other { message: String },
 }
@@ -54,6 +56,7 @@ impl From<&Error> for ReadRefusal {
             Error::FutureSchema => Self::FutureSchema,
             Error::NeedsCheckpoint => Self::NonemptyJournal,
             Error::Replaced => Self::Replaced,
+            Error::Fenced => Self::Fenced,
             other => Self::Other {
                 message: other.to_string(),
             },

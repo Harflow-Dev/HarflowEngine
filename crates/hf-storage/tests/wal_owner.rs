@@ -151,6 +151,25 @@ fn a_held_io_lock_skips_maintenance_without_a_change() {
 }
 
 #[test]
+fn an_open_owner_handle_skips_maintenance_of_a_fenced_store_without_a_change() {
+    let scratch = Fixture::new();
+    let root = initialized(&scratch);
+    let store = owner(&root);
+    pinned_fill(&store, &root, 9);
+    assert!(wal_len(&root) > PASSIVE_AFTER);
+    let fence = format!("harflow-fence-1\n{}\nfailed\n", store.identity().generation);
+    std::fs::write(root.join("store.fence"), fence).unwrap();
+    let main = bytes(&root, MAIN);
+    let wal = bytes(&root, "store.sqlite3-wal");
+    assert_eq!(
+        store.maintain_wal(deadline()).unwrap(),
+        WalMaintenance::Skipped
+    );
+    assert_eq!(bytes(&root, MAIN), main, "no PASSIVE ran");
+    assert_eq!(bytes(&root, "store.sqlite3-wal"), wal);
+}
+
+#[test]
 fn a_short_live_log_is_idle_even_when_the_wal_file_is_longer() {
     let scratch = Fixture::new();
     let root = initialized(&scratch);

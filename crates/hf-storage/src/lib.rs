@@ -44,6 +44,9 @@ pub use wal_owner::{
     CheckpointPolicy, JOURNAL_SIZE_LIMIT, MAINTENANCE_BUDGET, PASSIVE_AFTER, SyncAllFlush,
     WalMaintenance, WriterOptions,
 };
+mod fence;
+mod small_file;
+mod verify;
 mod writer_open;
 use binding::Binding;
 use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};
@@ -53,6 +56,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Instant,
 };
+pub use verify::{RECORD_BUDGET, VERIFY_PERIOD, Verification};
 pub use writer_open::{probe, probe_with_deadline};
 
 pub const SCHEMA_VERSION: u32 = 7;
@@ -77,6 +81,14 @@ pub enum Error {
     CommitOutcomeUnknown,
     NeedsCheckpoint,
     WalMissing,
+    /// `store.fence` names this generation: a whole-store check failed. Writer open,
+    /// every commit and every read refuse; it is not retried (clearing is E2-B).
+    Fenced,
+    /// The verifier found corruption but could not record `store.fence`: `io.lock` was not
+    /// taken within `RECORD_BUDGET`, or writing, renaming, flushing or reading back the
+    /// fence failed (the boxed error is that cause). Nothing records the failure and the
+    /// due time is unchanged, so the next due check repeats the scan.
+    FenceUnrecorded(Box<Error>),
     /// Raised only by the read session: the database application id is not ours.
     ForeignStore,
     /// Raised only by the read session: the marker names an older schema.
@@ -113,7 +125,16 @@ impl std::fmt::Display for Error {
         write!(f, "{self:?}")
     }
 }
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::FenceUnrecorded(cause) => Some(cause.as_ref()),
+            Self::Io(error) => Some(error),
+            Self::Sqlite(error) => Some(error),
+            _ => None,
+        }
+    }
+}
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::Io(error)

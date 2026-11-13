@@ -1,11 +1,11 @@
 //! Lease-free classification of a state root from observed facts.
 //!
-//! Nothing here opens a database, takes a lease or creates anything. `ready`
-//! means the identity marker and database header agree with this engine and the
-//! `-wal` file is a regular file and the lost-WAL acceptance record, if present, is
-//! `accepted` for the marker's generation; it does not verify database integrity or the
-//! generation stored inside the database. A current store without a regular `-wal`
-//! is `incompatible`, because every read of it is refused.
+//! Nothing here opens a database, takes a lease or creates anything. `ready` means the
+//! identity marker and database header agree with this engine, the `-wal` file is a
+//! regular file, the lost-WAL acceptance record, if present, is `accepted` for the
+//! marker's generation, and no verification fence is present. It does not verify
+//! database integrity or the generation stored inside the database. A current store
+//! without a regular `-wal` is `incompatible`, because every read of it is refused.
 use hf_domain::ctl::{
     inspect::{
         EntryKind, FileState, InspectReason, InspectStatus, JournalDecode, MarkerDecode,
@@ -248,6 +248,7 @@ fn store_identity_verdict(facts: &RootFacts, policy: StorePolicy) -> Option<Verd
     }
     if verdict.status == InspectStatus::Ready
         && let Some(reason) = acceptance_refusal(&facts.wal_acceptance, generation)
+            .or_else(|| fence_refusal(&facts.fence, generation))
     {
         return Some(Verdict::incompatible(reason));
     }
@@ -269,6 +270,22 @@ fn acceptance_refusal(record: &FileState, generation: &str) -> Option<InspectRea
     match text.strip_prefix(&prefix) {
         Some("accepted\n") => None,
         Some("pending\n" | "failed\n") => Some(InspectReason::InfrastructureUnavailable),
+        _ => Some(InspectReason::InvalidMarker),
+    }
+}
+/// The verification fence, after the acceptance record: absent passes; `failed` for
+/// this generation or an unreadable fence refuses as unavailable; anything else is an
+/// invalid marker, as the read session refuses it.
+fn fence_refusal(fence: &FileState, generation: &str) -> Option<InspectReason> {
+    let bytes = match fence {
+        FileState::Absent => return None,
+        FileState::Bytes(bytes) => bytes,
+        FileState::Unreadable => return Some(InspectReason::InfrastructureUnavailable),
+        FileState::NotRegular | FileState::Oversize => return Some(InspectReason::InvalidMarker),
+    };
+    let text = String::from_utf8_lossy(bytes);
+    match text.strip_prefix(&format!("harflow-fence-1\n{generation}\n")) {
+        Some("failed\n") => Some(InspectReason::InfrastructureUnavailable),
         _ => Some(InspectReason::InvalidMarker),
     }
 }

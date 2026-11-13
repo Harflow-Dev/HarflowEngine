@@ -147,6 +147,8 @@ pub struct RootFacts {
     pub wal: Option<EntryKind>,
     /// Bounded read of `store.wal-acceptance`.
     pub wal_acceptance: FileState,
+    /// Bounded read of `store.fence`.
+    pub fence: FileState,
 }
 impl RootFacts {
     pub fn without_files(stat: RootStat) -> Self {
@@ -161,6 +163,7 @@ impl RootFacts {
             journal_pending: FileState::Absent,
             wal: None,
             wal_acceptance: FileState::Absent,
+            fence: FileState::Absent,
         }
     }
 }

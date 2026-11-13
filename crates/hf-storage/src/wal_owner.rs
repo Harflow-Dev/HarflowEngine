@@ -87,10 +87,11 @@ pub(crate) fn wal_len(root: &Path) -> Result<u64> {
     }
 }
 
-/// Lock, connection and SQLite busy results and an expired budget: maintenance skips.
+/// Lock, connection and SQLite busy results, an expired budget and a fenced store:
+/// maintenance skips.
 fn skippable(error: &Error) -> bool {
     match error {
-        Error::Busy | Error::DeadlineExceeded => true,
+        Error::Busy | Error::DeadlineExceeded | Error::Fenced => true,
         Error::Sqlite(rusqlite::Error::SqliteFailure(failure, _)) => matches!(
             failure.code,
             rusqlite::ErrorCode::DatabaseBusy | rusqlite::ErrorCode::DatabaseLocked
@@ -142,8 +143,9 @@ impl Store {
     /// within `deadline` and runs PASSIVE; when that checkpoint completed with the `-wal`
     /// file still over `JOURNAL_SIZE_LIMIT` (a reader had pinned it), one maintenance
     /// commit follows. That commit only advances `commit_sequence`, but it writes a frame,
-    /// which restarts the log, and SQLite cuts the file to the limit at that write. Busy or
-    /// an expired budget is a skip, never an error. `deadline` bounds admission, `io.lock`
+    /// which restarts the log, and SQLite cuts the file to the limit at that write. Busy,
+    /// an expired budget or a fence (checked under `io.lock` before PASSIVE) is a skip,
+    /// never an error. `deadline` bounds admission, `io.lock`
     /// and busy waits, not the PASSIVE copy itself.
     pub fn maintain_wal(&self, deadline: Instant) -> Result<WalMaintenance> {
         if self.options.checkpoint != CheckpointPolicy::Owner {
@@ -175,6 +177,8 @@ impl Store {
             return Ok(None);
         }
         let _io = self.binding.io(deadline)?;
+        // A fenced store is not checkpointed: its WAL stays as the verifier saw it.
+        crate::fence::check(self.binding.root(), &self.identity.generation)?;
         connection::check_deadline(deadline)?;
         let result = checkpoint(&connection, false, deadline)?;
         self.binding.check()?;
