@@ -91,11 +91,12 @@ fn observe(
         until,
         hf_platform::lease::shared(),
     ))?;
-    let store = map(Store::open(
+    let store = map(Store::open_with(
         &start.root,
         Limits::default(),
         until,
         hf_platform::lease::shared(),
+        hf_storage::WriterOptions::suppressed(),
     ))?;
     let stored = map(store.ownership_observe(&start.operation, until))?.ok_or_else(invalid)?;
     if stored.phase != hf_domain::ownership::Phase::SpawnObserved

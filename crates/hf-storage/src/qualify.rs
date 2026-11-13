@@ -61,6 +61,7 @@ pub(crate) fn in_place(
     if wal::marker(binding)? != expected {
         return Err(Error::Replaced);
     }
+    wal_acceptance::check(binding.root(), &expected.generation)?;
     connection::check_deadline(deadline)?;
     Ok((expected, stamp))
 }

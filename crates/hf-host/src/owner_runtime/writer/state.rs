@@ -43,8 +43,14 @@ impl Writer {
         if hold.source_stamp() != &b.participant.source {
             return Err("storage source changed".into());
         }
-        let store = Store::open(root, Limits::default(), until, hf_platform::lease::shared())
-            .map_err(error)?;
+        let store = Store::open_with(
+            root,
+            Limits::default(),
+            until,
+            hf_platform::lease::shared(),
+            hf_storage::WriterOptions::suppressed(),
+        )
+        .map_err(error)?;
         let snapshot = store
             .ownership_observe(&b.request.operation, until)
             .map_err(error)?

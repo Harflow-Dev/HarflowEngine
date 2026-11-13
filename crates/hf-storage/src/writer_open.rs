@@ -4,7 +4,7 @@
 //! `open` verifies marker, header, journal, `-wal` and identity only; the whole-store
 //! `quick_check` belongs to `recover` and `probe` (owner decision A2).
 use crate::{
-    Checkpoint, Error, Identity, Limits, Result, Store,
+    Checkpoint, CheckpointPolicy, Error, Identity, Limits, Result, Store, WriterOptions,
     binding::Binding,
     checkpoint::checkpoint,
     connection::{self, open_source},
@@ -18,11 +18,25 @@ use std::{
 };
 
 impl Store {
+    /// `open_with(.., WriterOptions::suppressed())`: no checkpoint of any kind. A shorthand
+    /// for tests; production callers name their policy through `open_with`.
     pub fn open(
         root: impl AsRef<Path>,
         limits: Limits,
         deadline: Instant,
         leases: Arc<dyn LeasePort>,
+    ) -> Result<Self> {
+        Self::open_with(root, limits, deadline, leases, WriterOptions::suppressed())
+    }
+    /// Opens a writer handle with an explicit checkpoint policy. Under `Owner`, the
+    /// connection gets `journal_size_limit` and one PASSIVE checkpoint runs under
+    /// `io.lock` after qualification; `Store::write` then calls `maintain_wal`.
+    pub fn open_with(
+        root: impl AsRef<Path>,
+        limits: Limits,
+        deadline: Instant,
+        leases: Arc<dyn LeasePort>,
+        options: WriterOptions,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         let binding = Binding::capture(root.as_ref(), true, leases)?;
@@ -32,13 +46,18 @@ impl Store {
         qualify::precheck(&binding)?;
         let _io = binding.io(deadline)?;
         let (identity, wal) = qualify::in_place(&binding, deadline, Scan::Identity)?;
-        let connection = open_source(&binding, &identity, deadline)?;
+        let connection = open_source(&binding, &identity, deadline, options.checkpoint)?;
+        if options.checkpoint == CheckpointPolicy::Owner {
+            Self::passive_at_open(&connection, deadline)?;
+            binding.check()?;
+        }
         qualify::recheck_wal(&binding, wal)?;
         Ok(Self {
             connection: Mutex::new(connection),
             binding,
             identity,
             limits,
+            options,
             _claim: claim,
         })
     }
@@ -56,7 +75,7 @@ impl Store {
         qualify::precheck(&binding)?;
         let _io = binding.io(deadline)?;
         let (identity, wal) = qualify::in_place(&binding, deadline, Scan::QuickCheck)?;
-        let connection = open_source(&binding, &identity, deadline)?;
+        let connection = open_source(&binding, &identity, deadline, CheckpointPolicy::Suppressed)?;
         qualify::recheck_wal(&binding, wal)?;
         let result = checkpoint(&connection, true, deadline)?;
         binding.check()?;

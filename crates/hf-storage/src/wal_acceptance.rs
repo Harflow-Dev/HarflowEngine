@@ -13,20 +13,22 @@ const BOUND: u64 = 128;
 
 /// Refuses a root whose acceptance record is not `accepted` for `generation`.
 /// `pending` and `failed` read as a missing `-wal`; a foreign generation, malformed
-/// or oversized content, or a non-regular file is `Incompatible`. It never creates
+/// or oversized content, a non-regular file, or a file that is not the one `lstat` listed (device/inode
+/// mismatch after open) is `Incompatible`. It never creates
 /// or writes a file.
 pub(crate) fn check(root: &Path, generation: &str) -> Result<()> {
     let path = root.join(NAME);
-    match fs::symlink_metadata(&path) {
+    let listed = match fs::symlink_metadata(&path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(error) => return Err(error.into()),
         Ok(metadata) if !metadata.is_file() || metadata.len() > BOUND => {
             return Err(Error::Incompatible);
         }
-        Ok(_) => {}
-    }
+        Ok(metadata) => metadata,
+    };
     let file = fs::File::open(&path)?;
-    if !file.metadata()?.is_file() {
+    let opened = file.metadata()?;
+    if !opened.is_file() || !same_file(&listed, &opened) {
         return Err(Error::Incompatible);
     }
     let mut bytes = Vec::new();
@@ -47,4 +49,16 @@ pub(crate) fn check(root: &Path, generation: &str) -> Result<()> {
         "pending" | "failed" => Err(Error::WalMissing),
         _ => Err(Error::Incompatible),
     }
+}
+
+/// The opened file must be the one `lstat` listed: a swap between the two calls is refused.
+#[cfg(unix)]
+fn same_file(listed: &fs::Metadata, opened: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    listed.dev() == opened.dev() && listed.ino() == opened.ino()
+}
+
+#[cfg(not(unix))]
+fn same_file(_: &fs::Metadata, _: &fs::Metadata) -> bool {
+    true
 }

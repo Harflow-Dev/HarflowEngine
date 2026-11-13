@@ -50,7 +50,21 @@ impl Stage {
 }
 
 impl Store {
+    /// One commit, then WAL maintenance once its `io.lock` is released. The maintenance
+    /// is best effort under the Owner policy and never changes this write's result.
     pub(crate) fn write<T>(
+        &self,
+        deadline: Instant,
+        publish: Publish,
+        stage: Option<Stage>,
+        action: impl FnOnce(&Transaction<'_>) -> Result<T>,
+    ) -> Result<T> {
+        let value = self.commit(deadline, publish, stage, action)?;
+        self.maintain_after_commit(deadline);
+        Ok(value)
+    }
+    /// The commit itself, without maintenance.
+    pub(crate) fn commit<T>(
         &self,
         deadline: Instant,
         publish: Publish,

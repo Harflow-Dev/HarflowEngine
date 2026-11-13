@@ -70,7 +70,7 @@ impl ReadSession {
         if connection::identity(&connection, deadline)? != expected {
             return Err(Error::Incompatible);
         }
-        check_files(&binding)?;
+        check_files(&binding, &expected)?;
         Ok(Self {
             connection: Mutex::new(connection),
             binding,
@@ -140,7 +140,7 @@ impl ReadSession {
             limits: self.limits,
         };
         let value = action(&context, &transaction)?;
-        check_files(&self.binding)?;
+        check_files(&self.binding, &self.identity)?;
         connection::check_deadline(deadline)?;
         Ok(value)
     }
@@ -193,10 +193,12 @@ fn marker_file_fault(root: &Path) -> Option<Error> {
     }
     None
 }
-/// Binding and sidecar types, with a defective `-wal` reported as a missing one.
-fn check_files(binding: &Binding) -> Result<()> {
+/// Binding and sidecar types, with a defective `-wal` reported as a missing one,
+/// then the acceptance record for the session's generation.
+fn check_files(binding: &Binding, identity: &Identity) -> Result<()> {
     binding.check_sidecars(false)?;
-    require_wal(binding)
+    require_wal(binding)?;
+    acceptance(binding, identity)
 }
 
 /// The lost-WAL acceptance record, checked right after `-wal`.

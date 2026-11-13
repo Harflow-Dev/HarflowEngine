@@ -51,7 +51,13 @@ impl<C: WatchCodecPort, T: WatchControl> WatchSession<C, T> {
         if !exists {
             return Ok(None);
         }
-        let opened = Store::open(&self.root, self.limits, deadline, self.leases.clone());
+        let opened = Store::open_with(
+            &self.root,
+            self.limits,
+            deadline,
+            self.leases.clone(),
+            crate::WriterOptions::suppressed(),
+        );
         self.check(deadline)?;
         opened.map(Some).map_err(root_error)
     }

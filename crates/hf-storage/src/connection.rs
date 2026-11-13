@@ -163,6 +163,7 @@ pub(crate) fn open_source(
     binding: &crate::binding::Binding,
     identity: &Identity,
     deadline: Instant,
+    policy: crate::CheckpointPolicy,
 ) -> Result<Connection> {
     binding.check()?;
     #[cfg(all(test, unix))]
@@ -180,6 +181,21 @@ pub(crate) fn open_source(
     }
     crate::write_tx::require_sequence(&connection)?;
     self::configure(&connection, deadline)?;
+    if policy == crate::CheckpointPolicy::Owner {
+        limit_journal(&connection, deadline)?;
+    }
     binding.check()?;
     Ok(connection)
+}
+
+/// Owner policy: cut `-wal` to `JOURNAL_SIZE_LIMIT` at the next write after a complete checkpoint.
+fn limit_journal(connection: &Connection, deadline: Instant) -> Result<()> {
+    timeout(connection, deadline)?;
+    let limit = i64::try_from(crate::JOURNAL_SIZE_LIMIT).map_err(|_| Error::Incompatible)?;
+    connection.pragma_update(None, "journal_size_limit", limit)?;
+    let value: i64 = connection.pragma_query_value(None, "journal_size_limit", |row| row.get(0))?;
+    if value != limit {
+        return Err(Error::Incompatible);
+    }
+    Ok(())
 }

@@ -23,11 +23,12 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
     if qualify_ledger(Path::new(&prepared.root))? != prepared.ledger {
         return Err(invalid());
     }
-    let store = map(Store::open(
+    let store = map(Store::open_with(
         &prepared.root,
         Limits::default(),
         until,
         hf_platform::lease::shared(),
+        hf_storage::WriterOptions::suppressed(),
     ))?;
     let stored = map(store.ownership_observe(&invitation.operation, until))?.ok_or_else(invalid)?;
     let fresh = self_identity()?;

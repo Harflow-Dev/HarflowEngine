@@ -30,11 +30,12 @@ pub(super) fn run(
         {
             return Err(invalid());
         }
-        let store = map(Store::open(
+        let store = map(Store::open_with(
             &start.root,
             Limits::default(),
             until,
             hf_platform::lease::shared(),
+            hf_storage::WriterOptions::suppressed(),
         ))?;
         if store.identity() != &identity {
             return Err(invalid());

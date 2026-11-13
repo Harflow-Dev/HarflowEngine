@@ -40,7 +40,13 @@ impl Context {
     /// Opens the existing store for one mutating operation and proves `-wal` survived.
     pub fn with_store<T>(&self, action: impl FnOnce(&Store) -> Result<T>) -> Result<T> {
         require_wal(&self.root)?;
-        let store = Store::open(&self.root, Self::limits(), self.deadline(), self.leases())?;
+        let store = Store::open_with(
+            &self.root,
+            Self::limits(),
+            self.deadline(),
+            self.leases(),
+            hf_storage::WriterOptions::suppressed(),
+        )?;
         let outcome = action(&store);
         drop(store);
         finish(outcome, require_wal(&self.root))

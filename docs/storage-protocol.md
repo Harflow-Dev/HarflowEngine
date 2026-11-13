@@ -109,9 +109,10 @@ are refused as `WalMissing` even when an empty `-wal` exists. A foreign generati
 malformed or oversized content, or a non-regular file is `Incompatible`. Open, recover,
 probe, the read session and `state-inspect` check it immediately after `-wal` and
 before any later check; readers never create or write it. Open, recover and probe check
-it before the SQLite open only (the post-open re-check covers `-wal` and the marker); the
-read session checks it at open and at every read. Only the maintenance actor writes it
-(E2-B), in the order `pending`, qualify, `accepted` or `failed`.
+it before the SQLite open and again at the end of in-place qualification, next to the
+`-wal` identity and marker re-reads; the read session checks it at open, at every read
+entry and at every read exit (`check_files`, with the session's generation). Only the
+maintenance actor writes it (E2-B), in the order `pending`, qualify, `accepted` or `failed`.
 
 Race acknowledged: the storage reader checks the file with `lstat` and then opens it
 without `O_NOFOLLOW`/`O_NONBLOCK` (hf-storage has no libc dependency), as the marker read
@@ -150,9 +151,39 @@ with readers and must return frame counts and completeness truthfully: a zero bu
 indicator is not proof that all frames were checkpointed. Exclusive recovery uses
 TRUNCATE only after other lifecycle holders are gone; incomplete/busy results are
 observable, never permission to delete WAL or force reader release. Disabling auto
-checkpoint requires an eventual scheduling/WAL-growth policy; this suffix supplies
-manual primitives, not a production scheduler or
-ratified performance result.
+checkpoint requires a scheduling/WAL-growth policy. The checkpoint owner below implements
+one, but no production handle opts into it yet: every production opener uses `Suppressed`,
+so production WAL growth stays unbounded until the slice that wires `Owner` into the owner
+runtime (E2-D).
+
+### Checkpoint owner
+
+`WriterOptions { checkpoint, flush }` picks the policy per handle: `Store::open_with`
+takes it explicitly and `Store::open` is `WriterOptions::suppressed()`. `Suppressed` is the
+behaviour above (no checkpoint of any kind) and is what the fixture seed, the host fixture
+modes, the owner runtime writer and the watch seam use, so seeded roots keep a nonempty
+`-wal`. `Owner` keeps both suppressions (`wal_autocheckpoint=0`, no checkpoint on close)
+and checkpoints only through explicit PASSIVE: `PRAGMA journal_size_limit` 16 MiB
+(`JOURNAL_SIZE_LIMIT`) is set in `open_source`; one PASSIVE runs at open under `io.lock`
+after qualification (a busy result is ignored); `Store::write` calls `maintain_wal` after
+the commit's `io.lock` is released, before the write returns, and any maintenance result,
+including an error, leaves the committed result unchanged. `maintain_wal` reads the live
+log size with `PRAGMA wal_checkpoint(NOOP)`, which copies nothing and takes no checkpoint
+lock, though its WAL-index header read can run WAL-index recovery under locks; a busy or
+unknown result is a skip. It returns at once while the log is at most 8 MiB
+(`PASSIVE_AFTER`); the `-wal` file length is not used, because after a log restart the
+file keeps its length while the log refills from the start. Past the threshold it re-takes
+`io.lock` and runs PASSIVE. Its budget is the earlier of the write's deadline and 100 ms
+(`MAINTENANCE_BUDGET`); the budget bounds admission, `io.lock` and busy waits, not the
+PASSIVE copy itself. `Busy` or an expired budget is a skip, retried after the next commit.
+Callers outside `Store::write` may call `Store::maintain_wal(deadline)` directly. When the
+PASSIVE completed and `-wal` is still over 16 MiB (a reader had pinned it), one
+maintenance commit follows: it only advances `commit_sequence`, but it writes a frame, so
+SQLite restarts the log and cuts the file to the limit at that write. The result reports
+whether that commit landed (`shrink_commit_landed`), not the resulting file length.
+TRUNCATE stays in `recover` only and RESTART is never used, so `-wal` always survives.
+`FlushPort` (`hf-application::durability`) is carried in the options for the watermark
+flush (A7); the default is `sync_all`.
 
 SQLite references: [WAL behavior](https://www.sqlite.org/wal.html),
 [checkpoint modes](https://www.sqlite.org/c3ref/wal_checkpoint_v2.html), and

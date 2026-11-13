@@ -11,11 +11,12 @@ impl<'a> Commands<'a> {
         Self { root, until }
     }
     fn open(&self) -> io::Result<Store> {
-        map(Store::open(
+        map(Store::open_with(
             self.root,
             Limits::default(),
             self.until,
             hf_platform::lease::shared(),
+            hf_storage::WriterOptions::suppressed(),
         ))
     }
     pub(super) fn prepare(&self, plan: &ParentPlan) -> io::Result<PrepareResult> {

@@ -28,6 +28,8 @@ pub mod recovery;
 
 pub mod lease;
 
+pub mod durability;
+
 pub mod owner;
 
 #[cfg(test)]

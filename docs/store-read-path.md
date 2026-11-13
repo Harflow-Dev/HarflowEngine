@@ -464,10 +464,21 @@ The writer role owns checkpointing. Specified policy: `journal_size_limit` 16 Mi
 and a PASSIVE checkpoint after a commit once the WAL passes 8 MiB. Measured: a
 passive checkpoint does not shrink the file; with the limit it shrinks at the next
 write after a complete checkpoint. RESTART is not part of the design (no
-experiment ran it). A commit-independent open-time checkpoint step and a shrink
-path for a WAL pinned by readers are E2 items, as are open-time checkpoint cost
-and `io.lock` `Busy` behaviour among several per-task owners: the safety evidence
-here is single-writer. Starvation by overlapping readers: reads are short
+experiment ran it). The open-time checkpoint step and the shrink
+path for a WAL pinned by readers are implemented (A2, `wal_owner.rs`, policy `Owner`;
+`Suppressed` keeps today's behaviour for seeds, fixture modes and the watch seam). No production
+handle opts into `Owner` yet; E2-D wires it into the owner runtime.
+The post-commit trigger is the live log size (`PRAGMA wal_checkpoint(NOOP)`), not the
+file length. Measured on macOS arm64 (release build, load about 5): the first Owner open
+with 1, 4 and 7 MiB of unbackfilled WAL took 6-7, 13-22 and 24-32 ms against 2, 3 and 4 ms
+for a Suppressed open, and never removed or emptied `-wal`. Four writer processes, 500
+commits each through `Store::write` with Owner handles, retrying on `Busy` from the
+non-blocking `io.lock`, with no `CommitOutcomeUnknown`, `-wal` bounded at about 8.5 MiB:
+20 KB values gave p50 0.5 ms and p99 2-4 ms; 200 KB values gave p50 0.6 ms and p99
+7-28 ms over two runs (max 73 ms), because a commit that crosses 8 MiB pays the PASSIVE
+before returning and holds `io.lock` against the others. A reader pinning its snapshot
+grew `-wal` to 27 MiB; after release, one commit's maintenance checkpointed completely
+and the maintenance commit (a `commit_sequence` bump) cut the file to 16 MiB, which survived close. Starvation by overlapping readers: reads are short
 deadline-bounded transactions; under four saturating readers 1,078 of 1,083 passive
 checkpoints completed; a pinned mark grows the WAL, reads continue, and WAL size
 shows in the health signal.

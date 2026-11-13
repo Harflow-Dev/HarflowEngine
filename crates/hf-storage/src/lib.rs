@@ -37,6 +37,11 @@ mod task_query_tests;
 mod tests;
 mod wal;
 mod wal_acceptance;
+mod wal_owner;
+pub use wal_owner::{
+    CheckpointPolicy, JOURNAL_SIZE_LIMIT, MAINTENANCE_BUDGET, PASSIVE_AFTER, SyncAllFlush,
+    WalMaintenance, WriterOptions,
+};
 mod writer_open;
 use binding::Binding;
 use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};
@@ -141,6 +146,7 @@ pub struct Store {
     binding: Binding,
     identity: Identity,
     limits: Limits,
+    options: WriterOptions,
     _claim: Box<dyn LeaseGuard>,
 }
 impl Store {
@@ -183,7 +189,7 @@ impl Store {
         drop(connection);
         drop(io);
         drop(claim);
-        Self::open(root, limits, deadline, leases)
+        Self::open_with(root, limits, deadline, leases, WriterOptions::suppressed())
     }
     pub fn identity(&self) -> &Identity {
         &self.identity
