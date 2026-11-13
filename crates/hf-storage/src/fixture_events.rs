@@ -1,6 +1,9 @@
 //! Event-log fixture writers: one physical line at a time, with the Python port's
 //! concatenation rules for an unterminated tail.
-use crate::{Error, Result, Store, event_fixture, event_read};
+use crate::{
+    Error, Result, Store, event_fixture, event_read,
+    event_writer::{self, EventAppend},
+};
 use hf_application::event_read::{EventRecord, RecordClass};
 use hf_domain::{
     event_read::{CaptureState, LogFacts},
@@ -43,7 +46,20 @@ impl Store {
             let previous = event_read::stream_optional(tx, id)?;
             let fixture = build(id, line, previous.as_ref(), facts);
             event_fixture::validate(self, &fixture, deadline)?;
-            self.write_in(tx, &fixture, previous.is_some(), deadline)
+            match line {
+                FixtureLine::Event { seq, kind, body }
+                    if previous.as_ref().is_none_or(|s| s.partial_tail == 0) =>
+                {
+                    let event = EventAppend {
+                        seq: *seq,
+                        kind: kind.clone(),
+                        raw_len: body.len() as u64,
+                        body: body.clone(),
+                    };
+                    append_event(tx, &fixture, &event, previous.as_ref(), deadline)
+                }
+                _ => self.write_in(tx, &fixture, previous.is_some(), deadline),
+            }
         })
     }
     /// Keeps the first `keep` physical lines, an unterminated final line included, and
@@ -97,6 +113,45 @@ impl Store {
             Ok(())
         })
     }
+}
+/// A terminated event after a complete line goes through the production append. The fixture
+/// keeps its own stream semantics in front of it: the facts are refreshed from the task on
+/// every append (so a stored EOF seq is cleared, as the fixture always did), and appending to
+/// an unavailable stream rotates its generation. The append then keeps both.
+fn append_event(
+    tx: &Transaction<'_>,
+    fixture: &event_fixture::EventFixture,
+    event: &EventAppend,
+    previous: Option<&event_read::Stream>,
+    deadline: Instant,
+) -> Result<()> {
+    if let Some(previous) = previous {
+        let generation: String = if previous.facts.available {
+            previous.generation.clone()
+        } else {
+            tx.query_row("SELECT lower(hex(randomblob(16)))", [], |r| r.get(0))?
+        };
+        event_fixture::write_stream(
+            tx,
+            &fixture.task,
+            &fixture.facts,
+            previous.complete_end,
+            0,
+            &generation,
+        )?;
+    }
+    event_writer::append_in(
+        tx,
+        &fixture.task,
+        std::slice::from_ref(event),
+        &fixture.facts,
+        deadline,
+    )
+    .map_err(|error| match error {
+        Error::TaskMissing => Error::FixtureMissing,
+        other => other,
+    })?;
+    Ok(())
 }
 fn nth_end(tx: &Transaction<'_>, id: &TaskId, keep: i64) -> Result<i64> {
     Ok(tx.query_row(

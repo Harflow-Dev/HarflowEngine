@@ -64,7 +64,14 @@ impl Store {
                 [fixture.task.as_str()],
             )?;
         }
-        write_stream(tx, fixture, end, &generation)?;
+        write_stream(
+            tx,
+            &fixture.task,
+            &fixture.facts,
+            end,
+            fixture.partial_tail,
+            &generation,
+        )?;
         for record in &fixture.records {
             connection::timeout(tx, deadline)?;
             tx.execute(
@@ -142,14 +149,22 @@ pub(crate) fn require_schema(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
-fn write_stream(db: &Connection, fixture: &EventFixture, end: u64, generation: &str) -> Result<()> {
-    let capture = match fixture.facts.capture {
+/// Creates the task's stream row, or replaces every column of an existing one.
+pub(crate) fn write_stream(
+    db: &Connection,
+    task: &TaskId,
+    facts: &LogFacts,
+    end: u64,
+    tail: u64,
+    generation: &str,
+) -> Result<()> {
+    let capture = match facts.capture {
         CaptureState::Live => 0,
         CaptureState::LostWithOwner => 1,
         CaptureState::ObservedTerminal => 2,
         CaptureState::Unknown => 3,
     };
-    db.execute("INSERT INTO event_streams VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10) ON CONFLICT(task) DO UPDATE SET generation=excluded.generation,complete_end=excluded.complete_end,partial_tail=excluded.partial_tail,available=excluded.available,capture=excluded.capture,drained=excluded.drained,eof_seq=excluded.eof_seq,grace=excluded.grace,task_status=excluded.task_status", rusqlite::params![fixture.task.as_str(), generation,end as i64,fixture.partial_tail as i64,fixture.facts.available,capture,fixture.facts.output_drained,fixture.facts.eof_finished_seq.map(|s|s as i64),fixture.facts.within_grace,fixture.facts.task_status])?;
+    db.execute("INSERT INTO event_streams VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10) ON CONFLICT(task) DO UPDATE SET generation=excluded.generation,complete_end=excluded.complete_end,partial_tail=excluded.partial_tail,available=excluded.available,capture=excluded.capture,drained=excluded.drained,eof_seq=excluded.eof_seq,grace=excluded.grace,task_status=excluded.task_status", rusqlite::params![task.as_str(), generation,end as i64,tail as i64,facts.available,capture,facts.output_drained,facts.eof_finished_seq.map(|s|s as i64),facts.within_grace,facts.task_status])?;
     Ok(())
 }
 pub(crate) fn class_number(class: RecordClass) -> i64 {

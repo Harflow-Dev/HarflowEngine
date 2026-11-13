@@ -9,7 +9,9 @@ mod event_fixture;
 mod event_read;
 mod event_render;
 mod event_scan;
+mod event_writer;
 pub use event_fixture::EventFixture;
+pub use event_writer::{EVENT_BODY_LIMIT, EVENT_KIND_LIMIT, EVENT_LINE_LIMIT, EventAppend};
 mod checkpoint;
 mod connection;
 pub use checkpoint::Checkpoint;
@@ -93,6 +95,10 @@ pub enum Error {
     TaskExists,
     /// The task writer: no valid task with this id exists.
     TaskMissing,
+    /// The event writer: an event's seq is not above the last valid record's.
+    EventOutOfOrder,
+    /// The event writer: the stream stores an EOF seq, so its task finished and appends are refused.
+    EventStreamClosed,
     /// Fixture writers only: the task already exists.
     FixtureConflict,
     /// Fixture writers only: the task or its log does not exist, or an append

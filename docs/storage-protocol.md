@@ -305,6 +305,76 @@ bytes); routing a task that does not exist yet to `create_task` (`republish_head
 with `TaskMissing`); and keeping `task_facts` current, since `republish_header` does not update
 the facts row (status, exit code, finish time, drained flag).
 
+## Event writer
+
+`Store::append_events` (`crates/hf-storage/src/event_writer.rs`; `append_event` for one line)
+appends terminated event lines to a valid task's log in one commit, in order, starting at the
+stream's `complete_end`. Each `EventAppend` carries the raw line length without its newline
+(`raw_len`), the `seq` and `kind`, and the stored `body`: the projection the interface layer's
+`prepare_line` produces, which the reads serve. A record spans `raw_len + 1` bytes. A line over
+1,000,000 bytes is stored as an `Oversized` record with no seq, kind or body (the caller's values
+are neither checked nor stored), as the reference skips such lines unparsed. The body is not tied
+to `raw_len`: a projection can be shorter or longer than its raw line. The writer stores only
+`Valid` and `Oversized` records, the engine's own events; it cannot ingest a foreign log with
+blank or malformed lines.
+
+The commit publishes nothing to the task list: the dataset generation and watch revision stay,
+and so does the stream generation, so event cursors survive an append. When the task has no
+stream yet, the append creates one with a fresh generation and the caller's `facts_if_new`
+(availability, capture state, drained flag, EOF seq, grace, task status); an existing stream keeps
+its facts, which belong to the capture and terminal writers, and only its `complete_end` moves.
+`facts_if_new` is checked only when it is used. An empty batch writes and commits nothing.
+
+The append is checked against the stream's end only: the last record (one indexed lookup) must
+end at `complete_end`, the stream must have no partial tail, and each valid event's seq must be
+above the seq of the last valid record and of the batch's earlier events. The last valid record is
+found backwards along `event_starts`: one lookup when the log ends in a valid event, otherwise a
+walk back over the trailing oversized or malformed records, at worst the whole task's records
+when none is valid. The log is not recounted and the store's fixture `Limits` do not cap
+it.
+
+| Bound | Value | Source |
+| --- | --- | --- |
+| Stored event body | 16,384 bytes, UTF-8 | reference `EVENT_MAX_BYTES`, after projection |
+| Raw event line | 1,000,000 bytes without the newline (span 1,000,001); longer is `Oversized` | reference `MAX_LINE_BYTES` |
+| Kind | 128 bytes | shared with the fixture writer and `prepare_line` |
+| Seq | at most `i64::MAX`, strictly increasing over valid records | Rust bound |
+| New stream facts | task status 256 bytes, EOF seq at most `i64::MAX` | shared with the fixture writer |
+
+Refusals, all with nothing committed (the transaction rolls back): `TaskMissing` for a missing or damaged task;
+`EventStreamClosed` for an existing stream whose row stores an EOF seq (its task finished; the
+stored column is read, not the value the reads derive from the last record); `LimitExceeded` for
+a bound above or a span past `i64::MAX`; `InvalidEventQuery` for an empty line, a body that is not
+UTF-8, or new-stream facts naming an EOF seq when the batch does not end on the `task_finished`
+event with that seq; `EventOutOfOrder` for a seq that does not increase; `Incompatible` for a
+stream with a partial tail or whose last record does not end at `complete_end`. The event bounds
+are checked before the transaction opens and the task, stream and EOF checks before any row is
+inserted; a span past `i64::MAX` and `EventOutOfOrder` are found while the batch is inserted. The
+stream re-read at the end of the append stays as a defensive check (`EventReadUnavailable`).
+
+The fixture `append_event_record_fixture` routes a `FixtureLine::Event` after a complete line
+(no partial tail) through the same append. The fixture's per-line validation and per-line
+`Limits` check run first, so an over-long body or kind, a seq beyond `i64::MAX` or a non-UTF-8
+body is refused with `InvalidEventQuery` there rather than the writer's `LimitExceeded`. The
+fixture's stream behaviour is applied before the append: the stream facts are refreshed from the
+task's facts on every append (which clears a stored EOF seq, so a fixture append to a finished
+stream is still accepted), and appending to an unavailable stream rotates its generation.
+
+The rows stored for every accepted append are identical to the earlier fixture-only path, and the
+seed parity comparison is unchanged. What such an append no longer does, compared with that path:
+
+- no cumulative `Limits` row or byte cap over the whole log: appends past the 128-row default
+  succeed;
+- no full re-validation of the existing records: damage in the middle of the log is no longer
+  `Incompatible`; only the last record's end and the final stream re-read are checked;
+- a duplicate or regressing seq is refused with `EventOutOfOrder`;
+- an event with an empty body (`raw_len` 0) is refused with `InvalidEventQuery`;
+- with no prior stream, orphan records of the task are refused as `Incompatible` instead of being
+  deleted.
+
+Malformed and partial lines, an event joining a partial tail, truncation and removal stay
+fixture-only damage writers.
+
 ## Tables read by the public ctl commands
 
 `harflow-ctl` reads only through the `ReadSession` (see the [read-path design](store-read-path.md)),
