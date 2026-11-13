@@ -1,5 +1,5 @@
 //! Prompt blob and artifact manifest fixture writers.
-use crate::{Error, Result, Store, fixture_task};
+use crate::{Error, Result, Store, task_writer};
 use hf_domain::task_read::TaskId;
 use rusqlite::OptionalExtension;
 use std::time::Instant;
@@ -71,7 +71,7 @@ impl Store {
             return Err(Error::LimitExceeded);
         }
         self.fixture_write(deadline, |tx| {
-            if fixture_task::task_valid(tx, id)? != Some(true) {
+            if task_writer::task_valid(tx, id)? != Some(true) {
                 return Err(Error::FixtureMissing);
             }
             tx.execute("DELETE FROM artifact_items WHERE task=?1", [id.as_str()])?;

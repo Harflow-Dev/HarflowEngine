@@ -1,31 +1,18 @@
-//! Per-task fixture writers: the typed facts, the served blobs, the prompt record and the
-//! optional caller-scan process row are written together in one transaction.
-use crate::{Error, Result, Store, write_tx::Publish};
-use hf_domain::{process::ProcessIdentity, task_read::TaskId};
-use rusqlite::{OptionalExtension, Transaction};
+//! Per-task fixture writers. Adding a task is a thin wrapper over the production insert
+//! (`task_writer`); damaging one stays fixture-only.
+use crate::{
+    Error, Result, Store,
+    task_writer::{NewTask, PromptRow, TaskFacts, TaskProcess},
+    write_tx::Publish,
+};
+use hf_domain::task_read::TaskId;
+use rusqlite::OptionalExtension;
 use std::time::Instant;
-const BLOB_LIMIT: usize = 2048;
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FixtureFacts {
-    pub id: TaskId,
-    pub backend: String,
-    pub repo_path: String,
-    pub session_id: String,
-    pub status: String,
-    pub exit_code: Option<i64>,
-    pub started_at: String,
-    pub started_at_us: i64,
-    pub finished_at: Option<String>,
-    pub finished_at_us: Option<i64>,
-    pub output_drained: bool,
-    pub title: Option<String>,
-    pub model: Option<String>,
-    pub continuation_of: Option<TaskId>,
-    /// The stored text, verbatim; it need not be a task identity.
-    pub chain_root: Option<String>,
-}
+pub type FixtureFacts = TaskFacts;
+pub type FixtureProcess = TaskProcess;
 /// `inline_text` is set exactly when `inline`; otherwise a preview, a source name and,
-/// optionally, a claimed digest and the stored full text.
+/// optionally, a claimed digest and the stored full text. Unlike `create_task`, the row is
+/// stored as given, so fixtures can seed damaged and over-long prompts.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixturePrompt {
     pub inline_text: Option<String>,
@@ -33,12 +20,6 @@ pub struct FixturePrompt {
     pub claimed_sha256: Option<String>,
     pub source_name: Option<String>,
     pub blob: Option<Vec<u8>>,
-}
-/// `start` is `None` when the identity cannot be decided.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FixtureProcess {
-    pub pid: u32,
-    pub start: Option<ProcessIdentity>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixtureTask {
@@ -49,16 +30,30 @@ pub struct FixtureTask {
     pub process: Option<FixtureProcess>,
 }
 impl Store {
-    /// Inserts one valid task. An existing id is refused; nothing is replaced.
+    /// Inserts one valid task through the production insert, with the prompt row as given
+    /// and the store's `Limits` as an extra bound. An existing id is refused; nothing is
+    /// replaced.
     pub fn add_task_fixture(&self, task: &FixtureTask, deadline: Instant) -> Result<()> {
-        validate(task)?;
         self.check_bounds(1, payload_bytes(task))?;
-        self.write(deadline, Publish::GenerationAndRevision, None, |tx| {
-            if exists(tx, &task.facts.id)? {
-                return Err(Error::FixtureConflict);
-            }
-            insert(tx, task)
-        })
+        let p = &task.prompt;
+        let new = NewTask {
+            facts: &task.facts,
+            header: &task.header,
+            status: &task.status,
+            prompt: PromptRow {
+                inline_text: p.inline_text.as_deref(),
+                preview: p.preview.as_deref(),
+                claimed_sha256: p.claimed_sha256.as_deref(),
+                source_name: p.source_name.as_deref(),
+                blob: p.blob.as_deref(),
+            },
+            process: task.process.as_ref(),
+        };
+        self.insert_task(&new, deadline)
+            .map_err(|error| match error {
+                Error::TaskExists => Error::FixtureConflict,
+                other => other,
+            })
     }
     /// The chain root stored for `id`: the outer `None` means the task is missing or damaged,
     /// the inner one that it stores none. Used to resolve a continuation's default chain root.
@@ -95,23 +90,6 @@ impl Store {
         })
     }
 }
-fn validate(task: &FixtureTask) -> Result<()> {
-    let facts = &task.facts;
-    if task.header.len() > BLOB_LIMIT
-        || task.status.len() > BLOB_LIMIT
-        || facts.status.len() > 256
-        || facts.session_id.len() > 1024
-        || facts.session_id.chars().take(257).count() > 256
-        || facts.finished_at.is_some() != facts.finished_at_us.is_some()
-        || task
-            .process
-            .as_ref()
-            .is_some_and(|p| p.pid <= 1 || p.pid > i32::MAX as u32)
-    {
-        return Err(Error::LimitExceeded);
-    }
-    Ok(())
-}
 fn payload_bytes(task: &FixtureTask) -> usize {
     let p = &task.prompt;
     p.inline_text.as_ref().map_or(0, String::len)
@@ -119,90 +97,4 @@ fn payload_bytes(task: &FixtureTask) -> usize {
         + p.blob.as_ref().map_or(0, Vec::len)
         + task.header.len()
         + task.status.len()
-}
-/// `None` when no row exists, otherwise whether the record is a valid task.
-pub(crate) fn task_valid(tx: &Transaction<'_>, id: &TaskId) -> Result<Option<bool>> {
-    Ok(tx
-        .query_row(
-            "SELECT valid FROM task_facts WHERE id=?1",
-            [id.as_str()],
-            |r| r.get::<_, bool>(0),
-        )
-        .optional()?)
-}
-fn exists(tx: &Transaction<'_>, id: &TaskId) -> Result<bool> {
-    Ok(task_valid(tx, id)?.is_some())
-}
-fn insert(tx: &Transaction<'_>, task: &FixtureTask) -> Result<()> {
-    let f = &task.facts;
-    tx.execute(
-        "INSERT INTO task_facts VALUES(?1,1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)",
-        rusqlite::params![
-            f.id.as_str(),
-            f.backend,
-            f.repo_path,
-            f.session_id,
-            f.status,
-            f.exit_code,
-            f.started_at,
-            f.started_at_us,
-            f.finished_at,
-            f.finished_at_us,
-            f.output_drained,
-            f.title,
-            f.model,
-            f.continuation_of.as_ref().map(TaskId::as_str),
-            f.chain_root
-        ],
-    )?;
-    tx.execute(
-        "INSERT INTO task_headers VALUES(?1,?2,?3,?4,?5,?6,?7,0,?8,?9)",
-        rusqlite::params![
-            f.id.as_str(),
-            f.started_at_us,
-            f.session_id,
-            f.status == "running",
-            f.status,
-            f.exit_code.is_some(),
-            f.output_drained,
-            task.header,
-            task.status
-        ],
-    )?;
-    insert_prompt(tx, f.id.as_str(), &task.prompt)?;
-    if let Some(process) = &task.process {
-        insert_process(tx, f.id.as_str(), process)?;
-    }
-    Ok(())
-}
-fn insert_prompt(tx: &Transaction<'_>, id: &str, prompt: &FixturePrompt) -> Result<()> {
-    let inline = prompt.inline_text.is_some();
-    tx.execute(
-        "INSERT INTO task_prompts VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",
-        rusqlite::params![
-            id,
-            if inline { "inline" } else { "sidecar" },
-            prompt.inline_text,
-            prompt.preview,
-            prompt.claimed_sha256,
-            prompt.source_name,
-            !inline,
-            prompt.blob
-        ],
-    )?;
-    Ok(())
-}
-fn insert_process(tx: &Transaction<'_>, id: &str, process: &FixtureProcess) -> Result<()> {
-    let start = process.start.as_ref();
-    tx.execute(
-        "INSERT INTO task_processes VALUES(?1,?2,?3,?4,?5,NULL)",
-        rusqlite::params![
-            id,
-            process.pid,
-            start.and_then(|s| i64::try_from(s.start_seconds()).ok()),
-            start.map(|s| s.start_microseconds() as i64),
-            start.map(|s| s.boot_uuid().to_owned())
-        ],
-    )?;
-    Ok(())
 }

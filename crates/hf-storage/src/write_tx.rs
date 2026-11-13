@@ -63,6 +63,21 @@ impl Store {
         self.maintain_after_commit(deadline);
         Ok(value)
     }
+    /// As `write`, but an action returning `None` rolls back: nothing is published, the
+    /// sequence does not advance and no maintenance runs.
+    pub(crate) fn write_unless<T>(
+        &self,
+        deadline: Instant,
+        publish: Publish,
+        stage: Option<Stage>,
+        action: impl FnOnce(&Transaction<'_>) -> Result<Option<T>>,
+    ) -> Result<Option<T>> {
+        let value = self.commit_unless(deadline, publish, stage, action)?;
+        if value.is_some() {
+            self.maintain_after_commit(deadline);
+        }
+        Ok(value)
+    }
     /// The commit itself, without maintenance.
     pub(crate) fn commit<T>(
         &self,
@@ -71,11 +86,25 @@ impl Store {
         stage: Option<Stage>,
         action: impl FnOnce(&Transaction<'_>) -> Result<T>,
     ) -> Result<T> {
+        // The wrapped action always returns `Some`, so `commit_unless` returns `None` only
+        // for an action that asked to roll back, which this one never does.
+        self.commit_unless(deadline, publish, stage, |tx| action(tx).map(Some))?
+            .ok_or(Error::Incompatible)
+    }
+    fn commit_unless<T>(
+        &self,
+        deadline: Instant,
+        publish: Publish,
+        stage: Option<Stage>,
+        action: impl FnOnce(&Transaction<'_>) -> Result<Option<T>>,
+    ) -> Result<Option<T>> {
         let mut connection = self.admit(deadline)?;
         let _io = self.binding.io(deadline)?;
         connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let value = action(&transaction)?;
+        let Some(value) = action(&transaction)? else {
+            return Ok(None);
+        };
         publish.apply(&transaction)?;
         advance_sequence(&transaction)?;
         self.binding.check()?;
@@ -89,7 +118,7 @@ impl Store {
         self.binding
             .check()
             .map_err(|_| Error::CommitOutcomeUnknown)?;
-        Ok(value)
+        Ok(Some(value))
     }
     /// Alias for writers that publish nothing and fire no stage hook.
     pub(crate) fn fixture_write<T>(

@@ -89,6 +89,10 @@ pub enum Error {
     EventReadUnavailable,
     InvalidEventQuery,
     ExpiredEventCursor,
+    /// The task writer: a task with this id already exists, valid or damaged.
+    TaskExists,
+    /// The task writer: no valid task with this id exists.
+    TaskMissing,
     /// Fixture writers only: the task already exists.
     FixtureConflict,
     /// Fixture writers only: the task or its log does not exist, or an append
@@ -117,6 +121,8 @@ pub struct Identity {
     pub generation: String,
     pub schema_version: u32,
 }
+/// The default per-read byte budget of `Limits`.
+pub const DEFAULT_MAX_BYTES: usize = 1_048_576;
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     pub max_rows: usize,
@@ -126,7 +132,7 @@ impl Default for Limits {
     fn default() -> Self {
         Self {
             max_rows: 128,
-            max_bytes: 1_048_576,
+            max_bytes: DEFAULT_MAX_BYTES,
         }
     }
 }
@@ -260,6 +266,13 @@ mod fixture_task;
 pub use fixture_events::FixtureLine;
 pub use fixture_extras::{FixtureArtifact, FixturePlan};
 pub use fixture_task::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask};
+mod task_republish;
+mod task_writer;
+pub use task_republish::Republished;
+pub use task_writer::{
+    FACT_TEXT_LIMIT, PROMPT_BLOB_LIMIT, PROMPT_PREVIEW_CHARS, REPO_PATH_LIMIT, TITLE_LIMIT,
+    TaskCreate, TaskFacts, TaskProcess,
+};
 
 /// Whether `root` holds a readable store marker for this schema. Reads one file and
 /// opens nothing else; a missing, unreadable or foreign marker is `false`.

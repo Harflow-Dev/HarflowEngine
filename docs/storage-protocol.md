@@ -266,6 +266,45 @@ action (table presence, ownership or capture schema) run inside the action, in t
 transaction. Initialization writes the first schema in its own exclusive transaction and is the only
 commit outside `Store::write`.
 
+## Task writer
+
+`Store::create_task` (`crates/hf-storage/src/task_writer.rs`) stores a new task in one commit:
+the `task_facts` row, the `task_headers` row with the served header and status blobs, the
+`task_prompts` row and an optional `task_processes` row; the commit rotates the dataset generation
+and bumps the watch revision. An existing id, valid or damaged, is refused (`TaskExists`) with
+nothing written. `Store::republish_header` replaces a valid task's served blobs and observation
+columns in one commit with the same publication; when the stored recorded status is terminal
+(`completed`, `failed`, `timed_out`, `cancelled`) and the new one is not, it returns
+`KeptTerminal` and rolls back, so nothing is published and `commit_sequence` does not advance. The
+fixture `add_task_fixture` goes through the same insert, with its prompt row stored as given.
+
+| Bound | Value | Source |
+| --- | --- | --- |
+| Header blob, status blob | 2048 bytes each | header: reference `bound_header`; status: Rust bound |
+| Inline prompt | at most 2000 characters (Unicode scalar values) | reference `PROMPT_PREVIEW_CHARS` |
+| Sidecar prompt | above 2000 characters: preview of the first 2000 characters, cut on a character boundary; `source_name` `{id}.prompt.{sha256}.txt`; `claimed_sha256` and the blob set | reference prompt sidecar |
+| Prompt text | at most 4 MiB (`PROMPT_VERIFY_BYTES`), so every stored sidecar is verifiable on read | Rust bound; the reference has none |
+| `backend`, `model`, `started_at`, `finished_at`, `chain_root` | 2048 bytes each | Rust bound |
+| `repo_path` | 4096 bytes | Rust bound (Linux `PATH_MAX`) |
+| `title` | 65,536 bytes; with a 2000-character preview (at most 8000 bytes) and a source name it stays within the default 1 MiB read budget of the prompt read (checked at compile time) | Rust bound |
+| `session_id`, `status` | 1024 bytes and 256 characters; 256 bytes | shared with the fixture writer |
+| Process | `pid` 2..=`i32::MAX`; an identity's `pid` equals the row's; start seconds fit a SQLite integer | Rust bound |
+| `republish_header` | header and status blobs 2048 bytes each, `recorded_status` 256 bytes, checked before the task is looked up | Rust bound |
+
+All bounds refuse with `LimitExceeded` before any write. The fixture wrapper applies the blob,
+session, status, pid and start bounds but not the fact text or identity-pid bounds, so fixtures
+can seed over-long facts to exercise the read bounds.
+
+The header JSON compaction that keeps a header within 2048 bytes belongs to the interface layer;
+the writer takes the header bytes as given and refuses a larger one (`LimitExceeded`).
+
+E2-D callers of the writer own what the reference store does around a record write and the
+writer does not: carrying `interruption`, `total_cost_usd` and `observed_model` forward from the
+existing record when the new one observed none (cumulative merge into the header and status
+bytes); routing a task that does not exist yet to `create_task` (`republish_header` refuses it
+with `TaskMissing`); and keeping `task_facts` current, since `republish_header` does not update
+the facts row (status, exit code, finish time, drained flag).
+
 ## Tables read by the public ctl commands
 
 `harflow-ctl` reads only through the `ReadSession` (see the [read-path design](store-read-path.md)),
