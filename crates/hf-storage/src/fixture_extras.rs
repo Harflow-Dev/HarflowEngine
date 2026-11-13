@@ -1,5 +1,9 @@
 //! Prompt blob and artifact manifest fixture writers.
-use crate::{Error, Result, Store, task_writer};
+use crate::{
+    Error, Result, Store,
+    artifact_writer::{self, ItemRow},
+    task_writer,
+};
 use hf_domain::task_read::TaskId;
 use rusqlite::OptionalExtension;
 use std::time::Instant;
@@ -17,6 +21,9 @@ pub struct FixtureArtifact {
     pub mtime_ns: u64,
     /// Required for `observed_backend_plan`, absent for every other method.
     pub plan: Option<FixturePlan>,
+    /// The item's bytes in the reference manifest document (the interface layer's codec);
+    /// stored as given, at most `i64::MAX`.
+    pub encoded_len: u64,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixturePlan {
@@ -55,6 +62,7 @@ impl Store {
         })
     }
     /// Replaces the whole manifest of a valid task; a new revision binds artifact cursors.
+    /// Items go through the production insert without its duplicate, cap or size checks.
     pub fn replace_artifacts_fixture(
         &self,
         id: &TaskId,
@@ -67,7 +75,10 @@ impl Store {
             .map(|i| i.path.len() + i.note.len() + 128 + plan_bytes(i))
             .sum();
         self.check_bounds(items.len(), bytes)?;
-        if items.iter().any(|i| i.size > i64::MAX as u64) {
+        if items
+            .iter()
+            .any(|i| i.size > i64::MAX as u64 || i.encoded_len > i64::MAX as u64)
+        {
             return Err(Error::LimitExceeded);
         }
         self.fixture_write(deadline, |tx| {
@@ -75,46 +86,32 @@ impl Store {
                 return Err(Error::FixtureMissing);
             }
             tx.execute("DELETE FROM artifact_items WHERE task=?1", [id.as_str()])?;
-            tx.execute(
-                "INSERT INTO artifact_manifests VALUES(?1,?2,lower(hex(randomblob(16)))) ON CONFLICT(task) DO UPDATE SET header_valid=excluded.header_valid,revision=excluded.revision",
-                rusqlite::params![id.as_str(), header_valid],
-            )?;
+            artifact_writer::upsert_manifest(tx, id, header_valid)?;
             for (ordinal, item) in items.iter().enumerate() {
-                insert_item(tx, id, ordinal, item)?;
+                let ordinal = i64::try_from(ordinal).map_err(|_| Error::LimitExceeded)?;
+                artifact_writer::insert_item(tx, id, ordinal, &row(item)?)?;
             }
             Ok(())
         })
     }
 }
-fn insert_item(
-    tx: &rusqlite::Transaction<'_>,
-    id: &TaskId,
-    ordinal: usize,
-    item: &FixtureArtifact,
-) -> Result<()> {
+fn row(item: &FixtureArtifact) -> Result<ItemRow<'_>> {
     let directory = item.plan.as_ref().and_then(|p| p.directory.as_ref());
-    tx.execute(
-        "INSERT INTO artifact_items VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",
-        rusqlite::params![
-            id.as_str(),
-            ordinal as i64,
-            item.artifact_id,
-            item.path,
-            item.kind,
-            item.note,
-            item.registered_at,
-            item.provenance_method,
-            item.device.to_string(),
-            item.inode.to_string(),
-            item.size as i64,
-            item.mtime_ns.to_string(),
-            item.plan.as_ref().map(|p| p.tool_use_id.as_str()),
-            directory.map(|d| d.0.as_str()),
-            directory.map(|d| d.1.to_string()),
-            directory.map(|d| d.2.to_string()),
-        ],
-    )?;
-    Ok(())
+    Ok(ItemRow {
+        artifact_id: &item.artifact_id,
+        path: &item.path,
+        kind: &item.kind,
+        note: &item.note,
+        registered_at: &item.registered_at,
+        method: &item.provenance_method,
+        device: item.device.to_string(),
+        inode: item.inode.to_string(),
+        size: i64::try_from(item.size).map_err(|_| Error::LimitExceeded)?,
+        mtime_ns: item.mtime_ns.to_string(),
+        tool_use_id: item.plan.as_ref().map(|p| p.tool_use_id.as_str()),
+        directory: directory.map(|d| (d.0.as_str(), d.1, d.2)),
+        encoded_len: i64::try_from(item.encoded_len).map_err(|_| Error::LimitExceeded)?,
+    })
 }
 fn plan_bytes(item: &FixtureArtifact) -> usize {
     item.plan.as_ref().map_or(0, |p| {

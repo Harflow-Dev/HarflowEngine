@@ -17,6 +17,7 @@ fn artifact(id: &str, path: &str) -> FixtureArtifact {
         registered_at: "2026-01-10T10:04:00+00:00".into(),
         provenance_method: "verified_process_lineage".into(),
         plan: None,
+        encoded_len: 0,
         device: 1,
         inode: 2,
         size: 3,
@@ -246,7 +247,7 @@ fn insert(w: &World, method: &str, tool: &str, directory: [&str; 3]) -> bool {
     ))
     .unwrap();
     raw.execute(
-        "INSERT INTO artifact_items VALUES('m',(SELECT count(*) FROM artifact_items),'id','/p','k','n','t',?1,'1','2',3,'4',?2,?3,?4,?5)",
+        "INSERT INTO artifact_items VALUES('m',(SELECT count(*) FROM artifact_items),'id','/p','k','n','t',?1,'1','2',3,'4',?2,?3,?4,?5,0)",
         rusqlite::params![
             method,
             (tool != "-").then_some(tool),

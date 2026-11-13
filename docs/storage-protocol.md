@@ -237,8 +237,11 @@ attribution text, or a `fault`; no row is not stopped). `task_facts.chain_root` 
 text and is qualified when read: absent, a task identity, or invalid text kept verbatim.
 `artifact_items` also carries the evidence of an `observed_backend_plan` reference (`tool_use_id`,
 and `plan_directory` with the decimal-text `plan_device` and `plan_inode`): `tool_use_id` is
-present exactly for that method, and the directory columns are all present or all absent. Schema7
-has not been released, so these columns did not bump the version. For the same reason the
+present exactly for that method, and the directory columns are all present or all absent. Each
+item also stores `encoded_len`, its bytes in the reference manifest document (see
+[Artifact writer](#artifact-writer)). Schema7 has not been released, so these columns did not bump
+the version; a local root initialized before `encoded_len` existed still reads, but artifact writes
+to it fail inside the transaction and roll back. For the same reason the
 `commit_sequence` table (singleton row, `value` integer, seeded with 0 when the root is
 initialized) was added to schema7 without a version bump; a root initialized before it refuses a
 writer open and recovery as incompatible, before any mutation. The value counts committed write
@@ -374,6 +377,65 @@ seed parity comparison is unchanged. What such an append no longer does, compare
 
 Malformed and partial lines, an event joining a partial tail, truncation and removal stay
 fixture-only damage writers.
+
+## Artifact writer
+
+`Store::register_artifact` (`crates/hf-storage/src/artifact_writer.rs`) appends one metadata-only
+reference to a valid task's manifest in one commit. The commit rotates the manifest revision (which
+binds artifact cursors) and publishes nothing else: the dataset generation and the watch revision
+stay, as for the reference manifest write. A task without a manifest gets one with a valid header.
+The new item takes the next ordinal.
+
+The bound is the reference's serialized size: `json.dumps(manifest, ensure_ascii=False)` with the
+default separators, at most 1,048,576 bytes. The store does not encode JSON. The interface layer's
+codec (`hf-interfaces` `artifact_codec`) computes the envelope length (this task's manifest with an
+empty `items` list, with the engine's product identity) and the new item's length; the caller passes
+both as `ManifestLengths`. Each item stores its length in `artifact_items.encoded_len`, and the
+transaction sums the stored lengths in SQL, so the check is
+
+    envelope + Σ stored encoded_len + new item + 2 × (stored item count)
+
+against 1,048,576 (two bytes, `", "`, between consecutive items). Admission on a `Store` may
+refuse a second concurrent writer with `Busy`; admitted writes serialize on the immediate
+transaction, so the sum covers every committed item.
+
+`Registrant` selects the reference's liveness and duplicate rules:
+
+| Registrant | Task | Duplicate | Reference |
+| --- | --- | --- | --- |
+| `Caller` (a verified task process) | valid, with a header row, recorded status not terminal | same path, kind, note and observation (device, inode, size, mtime) | `artifacts.register` |
+| `Engine` (engine output, observed backend plans) | valid, any status | same path and observation | `record_engine_output`, `record_backend_plan` |
+
+A duplicate returns `Registered::Existing` with the first equal stored item, and nothing is written,
+published or committed (`commit_sequence` does not advance). Otherwise the result is
+`Registered::Added`.
+
+| Bound | Value | Source |
+| --- | --- | --- |
+| Items per manifest | 100 | reference cap |
+| Serialized manifest | 1,048,576 bytes, measured as above | reference `MAX_BYTES` |
+| `path`, `note` | 4096 bytes each | reference `_text`; the reads refuse longer |
+| `artifact_id`, `kind`, `registered_at`, method together | 1024 bytes | the reads refuse longer |
+| `tool_use_id`; plan directory | 1..=256 bytes; 1..=4096 bytes | schema checks |
+| Observation size; `encoded_len` | at most `i64::MAX` | SQLite integer |
+
+Refusals before the transaction, with `LimitExceeded`: the text bounds above, plan evidence that does
+not match the method, a size or item length
+beyond `i64::MAX`, or an envelope and item that alone exceed the manifest bound. Inside the
+transaction, in this order and with nothing committed: `TaskMissing` for a missing or damaged task
+(for `Caller` also a task without a header row); `TaskFinished` for a `Caller` registration whose
+task's recorded status (the header's observation column, else the facts status) is `completed`,
+`failed`, `timed_out` or `cancelled`; `Incompatible` for a stored manifest whose header is invalid;
+then the duplicate lookup; then `LimitExceeded` for a manifest already holding 100 items or a
+serialized size over the bound. A `plan` must be present exactly for `observed_backend_plan`; any
+other combination is refused before the transaction with `LimitExceeded` (the writer has no
+separate shape error; the schema check stays as a backstop). Kind and method values, the
+lengths' correctness and the target's metadata are the caller's.
+
+The fixture `replace_artifacts_fixture` replaces a manifest in one commit through the same manifest
+upsert and item insert, without the duplicate, cap or size checks (fixtures seed over-cap and
+damaged manifests to exercise the reads), and stores each `FixtureArtifact::encoded_len` as given;
+the seed tool computes it with the same codec.
 
 ## Tables read by the public ctl commands
 

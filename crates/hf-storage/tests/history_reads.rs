@@ -22,6 +22,7 @@ fn artifact(n: usize) -> FixtureArtifact {
         registered_at: "2026-01-10T10:04:00+00:00".into(),
         provenance_method: "verified_process_lineage".into(),
         plan: None,
+        encoded_len: 0,
         device: 1,
         inode: n as u64,
         size: 3,

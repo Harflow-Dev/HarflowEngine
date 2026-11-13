@@ -37,3 +37,5 @@ pub mod claude_live_credential;
 pub mod ctl;
 
 pub mod fixture_port;
+
+pub mod artifact_codec;

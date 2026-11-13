@@ -4,7 +4,10 @@ use crate::{
     root::Context,
 };
 use hf_domain::task_read::{AuthorizedScope, TaskId, TaskQuery};
-use hf_interfaces::fixture_port::{ArtifactSpec, Response, Target, header_repo_path};
+use hf_interfaces::{
+    artifact_codec::{ManifestItem, item_len},
+    fixture_port::{ArtifactSpec, Response, Target, header_repo_path},
+};
 use hf_storage::{FixtureArtifact, FixturePlan, ReadSession, Store};
 use std::{
     io::Write,
@@ -40,6 +43,7 @@ pub fn write_artifacts(
             Target::Present => stat_present(&path)?,
             Target::Absent(o) => (o.device, o.inode, o.size, o.mtime_ns),
         };
+        let encoded_len = encoded_len(id, item, &path, (device, inode, size, mtime_ns))?;
         rows.push(FixtureArtifact {
             artifact_id: item.artifact_id.clone(),
             path: path.clone(),
@@ -55,11 +59,41 @@ pub fn write_artifacts(
                 tool_use_id: plan.tool_use_id.clone(),
                 directory: plan.directory.clone(),
             }),
+            encoded_len,
         });
         paths.push(path);
     }
     store.replace_artifacts_fixture(id, header_valid, &rows, deadline())?;
     Ok(Response::Paths(paths))
+}
+/// The item's bytes in the reference manifest, by the interface layer's codec.
+fn encoded_len(
+    id: &TaskId,
+    item: &ArtifactSpec,
+    path: &str,
+    (device, inode, size, mtime_ns): (u64, u64, u64, u64),
+) -> Result<u64> {
+    let plan = item.plan.as_ref();
+    let length = item_len(&ManifestItem {
+        task_id: id.as_str(),
+        artifact_id: &item.artifact_id,
+        path,
+        kind: &item.kind,
+        note: &item.note,
+        registered_at: &item.registered_at,
+        method: &item.provenance_method,
+        device,
+        inode,
+        size,
+        mtime_ns: i128::from(mtime_ns),
+        tool_use_id: plan.map(|p| p.tool_use_id.as_str()),
+        plan_directory: plan
+            .and_then(|p| p.directory.as_ref())
+            .map(|d| (d.0.as_str(), d.1, d.2)),
+        workflow: None,
+    })
+    .ok_or_else(|| Fail::new("mtime out of range"))?;
+    u64::try_from(length).map_err(|_| Fail::new("length out of range"))
 }
 /// Creates the target with fixed bytes and returns its real stat.
 #[cfg(unix)]

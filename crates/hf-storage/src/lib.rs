@@ -99,6 +99,9 @@ pub enum Error {
     EventOutOfOrder,
     /// The event writer: the stream stores an EOF seq, so its task finished and appends are refused.
     EventStreamClosed,
+    /// The artifact writer: the task's recorded status is terminal, so a caller can no longer
+    /// register a reference.
+    TaskFinished,
     /// Fixture writers only: the task already exists.
     FixtureConflict,
     /// Fixture writers only: the task or its log does not exist, or an append
@@ -272,8 +275,13 @@ mod fixture_task;
 pub use fixture_events::FixtureLine;
 pub use fixture_extras::{FixtureArtifact, FixturePlan};
 pub use fixture_task::{FixtureFacts, FixtureProcess, FixturePrompt, FixtureTask};
+mod artifact_writer;
 mod task_republish;
 mod task_writer;
+pub use artifact_writer::{
+    ARTIFACT_ITEMS_LIMIT, ARTIFACT_LABELS_LIMIT, ARTIFACT_TEXT_LIMIT, MANIFEST_BYTES_LIMIT,
+    ManifestLengths, Registered, Registrant,
+};
 pub use task_republish::Republished;
 pub use task_writer::{
     FACT_TEXT_LIMIT, PROMPT_BLOB_LIMIT, PROMPT_PREVIEW_CHARS, REPO_PATH_LIMIT, TITLE_LIMIT,

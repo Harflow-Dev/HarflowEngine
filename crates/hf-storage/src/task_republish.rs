@@ -58,12 +58,12 @@ impl Store {
     }
 }
 
-fn is_terminal(status: Option<&str>) -> bool {
+pub(crate) fn is_terminal(status: Option<&str>) -> bool {
     status.is_some_and(|status| TERMINAL_STATUSES.contains(&status))
 }
 /// The recorded status of a valid task with a header row: the header's observation column,
 /// else the facts row's status.
-fn recorded_status(tx: &Transaction<'_>, id: &TaskId) -> Result<Option<String>> {
+pub(crate) fn recorded_status(tx: &Transaction<'_>, id: &TaskId) -> Result<Option<String>> {
     let found: Option<(Option<String>, Option<String>)> = tx
         .query_row(
             "SELECT h.recorded_status, f.status FROM task_facts f JOIN task_headers h ON h.id=f.id WHERE f.id=?1 AND f.valid=1",

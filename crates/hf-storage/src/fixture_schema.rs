@@ -53,6 +53,7 @@ CREATE TABLE artifact_items(
   device TEXT NOT NULL, inode TEXT NOT NULL, size INTEGER NOT NULL CHECK(size>=0),
   mtime_ns TEXT NOT NULL,
   tool_use_id TEXT, plan_directory TEXT, plan_device TEXT, plan_inode TEXT,
+  encoded_len INTEGER NOT NULL CHECK(typeof(encoded_len)='integer' AND encoded_len>=0),
   PRIMARY KEY(task,ordinal),
   CHECK((provenance_method='observed_backend_plan')=(tool_use_id IS NOT NULL)),
   CHECK(tool_use_id IS NULL OR length(CAST(tool_use_id AS BLOB)) BETWEEN 1 AND 256),

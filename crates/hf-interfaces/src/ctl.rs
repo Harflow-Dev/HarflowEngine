@@ -1,5 +1,5 @@
 //! Public ctl transport mapping: argv parsing, JSON documents and exit codes.
-mod bound;
+pub(crate) mod bound;
 mod brief;
 mod brief_outcome;
 pub mod cli;
