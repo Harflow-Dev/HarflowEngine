@@ -82,6 +82,15 @@ fn initialize_creates_the_singleton_row_at_zero_and_refuses_a_second_row() {
         .unwrap();
     assert_eq!(rows, (1, 0, "integer".to_owned()));
     drop(db);
+    let mark = std::fs::read(root.join(hf_application::watermark::NAME)).unwrap();
+    let at_zero = hf_application::watermark::Decoded::Valid {
+        best: hf_application::watermark::Slot::A,
+        seq: 0,
+    };
+    assert_eq!(
+        hf_application::watermark::decode(&mark, &store.identity().generation),
+        at_zero
+    );
     let raw = rusqlite::Connection::open(root.join("store.sqlite3")).unwrap();
     assert!(
         raw.execute("INSERT INTO commit_sequence VALUES(2,0)", [])

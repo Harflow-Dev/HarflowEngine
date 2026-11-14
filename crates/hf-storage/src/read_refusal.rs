@@ -30,6 +30,8 @@ pub enum ReadRefusal {
     Replaced,
     /// A whole-store check failed and `store.fence` refuses the generation.
     Fenced,
+    /// `store.watermark` records commits the database does not hold.
+    CommitLost,
     /// Any other error.
     Other { message: String },
 }
@@ -57,6 +59,11 @@ impl From<&Error> for ReadRefusal {
             Error::NeedsCheckpoint => Self::NonemptyJournal,
             Error::Replaced => Self::Replaced,
             Error::Fenced => Self::Fenced,
+            Error::CommitLost => Self::CommitLost,
+            // Writer-only; listed so that a new variant is a deliberate choice here.
+            Error::WatermarkUnrecorded => Self::Other {
+                message: error.to_string(),
+            },
             other => Self::Other {
                 message: other.to_string(),
             },

@@ -3,6 +3,8 @@
 use hf_application::{ReadinessPort, read_readiness};
 use hf_domain::Readiness;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod durability;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod fixture;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod owner_runtime;

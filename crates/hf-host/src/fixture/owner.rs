@@ -28,7 +28,7 @@ pub(super) fn run(channel: PrivateIo, until: Instant) -> io::Result<()> {
         Limits::default(),
         until,
         hf_platform::lease::shared(),
-        hf_storage::WriterOptions::suppressed(),
+        crate::durability::suppressed(),
     ))?;
     let stored = map(store.ownership_observe(&invitation.operation, until))?.ok_or_else(invalid)?;
     let fresh = self_identity()?;

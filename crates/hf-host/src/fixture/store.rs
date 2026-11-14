@@ -16,16 +16,17 @@ impl<'a> Commands<'a> {
             Limits::default(),
             self.until,
             hf_platform::lease::shared(),
-            hf_storage::WriterOptions::suppressed(),
+            crate::durability::suppressed(),
         ))
     }
     pub(super) fn prepare(&self, plan: &ParentPlan) -> io::Result<PrepareResult> {
         let store = if plan.initialize {
-            map(Store::initialize_fixture(
+            map(Store::initialize_fixture_with(
                 self.root,
                 Limits::default(),
                 self.until,
                 hf_platform::lease::shared(),
+                crate::durability::suppressed(),
             ))?
         } else {
             self.open()?
@@ -37,11 +38,12 @@ impl<'a> Commands<'a> {
         map(store.ownership_prepare(&request, self.until))
     }
     pub(super) fn initialize(&self) -> io::Result<Id> {
-        let store = map(Store::initialize_fixture(
+        let store = map(Store::initialize_fixture_with(
             self.root,
             Limits::default(),
             self.until,
             hf_platform::lease::shared(),
+            crate::durability::suppressed(),
         ))?;
         map(Id::new(store.identity().generation.clone()))
     }

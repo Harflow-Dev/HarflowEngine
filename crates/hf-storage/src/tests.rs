@@ -53,6 +53,7 @@ mod task_read_snapshot_tests;
 mod task_watch_atomicity_tests;
 mod task_watch_tests;
 mod wal_owner_tests;
+mod watermark_tests;
 
 struct StageChild(Child);
 impl Drop for StageChild {

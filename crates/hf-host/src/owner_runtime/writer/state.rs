@@ -48,7 +48,7 @@ impl Writer {
             Limits::default(),
             until,
             hf_platform::lease::shared(),
-            hf_storage::WriterOptions::suppressed(),
+            crate::durability::suppressed(),
         )
         .map_err(error)?;
         let snapshot = store

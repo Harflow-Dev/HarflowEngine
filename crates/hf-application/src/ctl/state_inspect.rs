@@ -3,9 +3,12 @@
 //! Nothing here opens a database, takes a lease or creates anything. `ready` means the
 //! identity marker and database header agree with this engine, the `-wal` file is a
 //! regular file, the lost-WAL acceptance record, if present, is `accepted` for the
-//! marker's generation, and no verification fence is present. It does not verify
-//! database integrity or the generation stored inside the database. A current store
-//! without a regular `-wal` is `incompatible`, because every read of it is refused.
+//! marker's generation, no verification fence is present, and `store.watermark` holds a
+//! valid slot for that generation. It does not verify database integrity, the
+//! generation stored inside the database, or the database sequence against the
+//! watermark, so a store that lost acknowledged commits still reads `ready` here (the
+//! read session refuses it). A current store without a regular `-wal` is
+//! `incompatible`, because every read of it is refused.
 use hf_domain::ctl::{
     inspect::{
         EntryKind, FileState, InspectReason, InspectStatus, JournalDecode, MarkerDecode,
@@ -13,6 +16,7 @@ use hf_domain::ctl::{
     },
     state_root::StateRoot,
 };
+mod records;
 const LOCK_NAME: &str = ".harflow-store.lock";
 const PENDING_NAME: &str = ".harflow-store.json.pending";
 const LEGACY_EMPTY: [&str; 4] = [
@@ -247,48 +251,15 @@ fn store_identity_verdict(facts: &RootFacts, policy: StorePolicy) -> Option<Verd
         ));
     }
     if verdict.status == InspectStatus::Ready
-        && let Some(reason) = acceptance_refusal(&facts.wal_acceptance, generation)
-            .or_else(|| fence_refusal(&facts.fence, generation))
+        && let Some(reason) = records::acceptance_refusal(&facts.wal_acceptance, generation)
+            .or_else(|| records::fence_refusal(&facts.fence, generation))
+            .or_else(|| records::watermark_refusal(&facts.watermark, generation))
     {
         return Some(Verdict::incompatible(reason));
     }
     Some(verdict)
 }
 
-/// The lost-WAL acceptance record, after `-wal`: absent or `accepted` for this
-/// generation passes; `pending`, `failed` and an unreadable record read as a missing
-/// `-wal`; anything else is an invalid marker, as the read session refuses it.
-fn acceptance_refusal(record: &FileState, generation: &str) -> Option<InspectReason> {
-    let bytes = match record {
-        FileState::Absent => return None,
-        FileState::Bytes(bytes) => bytes,
-        FileState::Unreadable => return Some(InspectReason::InfrastructureUnavailable),
-        FileState::NotRegular | FileState::Oversize => return Some(InspectReason::InvalidMarker),
-    };
-    let text = String::from_utf8_lossy(bytes);
-    let prefix = format!("harflow-wal-acceptance-1\n{generation}\n");
-    match text.strip_prefix(&prefix) {
-        Some("accepted\n") => None,
-        Some("pending\n" | "failed\n") => Some(InspectReason::InfrastructureUnavailable),
-        _ => Some(InspectReason::InvalidMarker),
-    }
-}
-/// The verification fence, after the acceptance record: absent passes; `failed` for
-/// this generation or an unreadable fence refuses as unavailable; anything else is an
-/// invalid marker, as the read session refuses it.
-fn fence_refusal(fence: &FileState, generation: &str) -> Option<InspectReason> {
-    let bytes = match fence {
-        FileState::Absent => return None,
-        FileState::Bytes(bytes) => bytes,
-        FileState::Unreadable => return Some(InspectReason::InfrastructureUnavailable),
-        FileState::NotRegular | FileState::Oversize => return Some(InspectReason::InvalidMarker),
-    };
-    let text = String::from_utf8_lossy(bytes);
-    match text.strip_prefix(&format!("harflow-fence-1\n{generation}\n")) {
-        Some("failed\n") => Some(InspectReason::InfrastructureUnavailable),
-        _ => Some(InspectReason::InvalidMarker),
-    }
-}
 /// Parses `harflow-storage-2\n<schema>\n<32 lowercase hex>\n` exactly.
 fn parse_identity(bytes: &[u8]) -> Option<(u32, &str)> {
     let text = std::str::from_utf8(bytes).ok()?;

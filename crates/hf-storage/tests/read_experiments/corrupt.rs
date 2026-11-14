@@ -177,7 +177,7 @@ fn trial(
     (probe(&store.join("store.sqlite3")), store)
 }
 
-fn emit(kind: &str, detail: &str, p: &Probe, truth: &Probe, old: &str) {
+fn emit(kind: &str, detail: &str, p: &Probe, truth: &Probe, old: &str, session: &str) {
     let mut file = out("corruption.jsonl");
     let diff = p
         .hashes
@@ -196,8 +196,20 @@ fn emit(kind: &str, detail: &str, p: &Probe, truth: &Probe, old: &str) {
             ("tasks_with_different_page", diff.to_string()),
             ("quick_check", p.quick.clone()),
             ("old_path", old.into()),
+            ("read_session", session.into()),
         ],
     );
+}
+
+/// What the production read session answers on the damaged root: a refusal by name,
+/// or the event count of one task. Since A7a a dropped acknowledged commit is refused
+/// as `CommitLost` here, while the raw SQLite probe above still reads it silently.
+fn session_path(store: &Path) -> String {
+    let leases = super::common::lease::lease_port();
+    match hf_storage::ReadSession::open(store, super::data::limits(), ops::deadline(), leases) {
+        Err(error) => format!("refused: {}", ops::error_name(&error)),
+        Ok(_) => "open ok".to_string(),
+    }
 }
 
 fn old_path(store: &Path) -> String {
@@ -254,12 +266,13 @@ pub fn main_file() {
                     flip(&db, (page - 1) * PAGE + at);
                 }
             });
-            let old = if n < 4 {
-                old_path(&store)
+            let (old, session) = if n < 4 {
+                (old_path(&store), session_path(&store))
             } else {
-                String::new()
+                (String::new(), String::new())
             };
-            emit(kind, &format!("page={page} offset={at}"), &p, &truth, &old);
+            let detail = format!("page={page} offset={at}");
+            emit(kind, &detail, &p, &truth, &old, &session);
         }
     }
     for (kind, apply) in [
@@ -285,7 +298,14 @@ pub fn main_file() {
                     .unwrap(),
             }
         });
-        emit(kind, "", &p, &truth, &old_path(&store));
+        emit(
+            kind,
+            "",
+            &p,
+            &truth,
+            &old_path(&store),
+            &session_path(&store),
+        );
     }
 }
 
@@ -383,6 +403,7 @@ pub fn wal_file() {
             &p,
             &truth,
             &old_path(&store),
+            &session_path(&store),
         );
     }
 }

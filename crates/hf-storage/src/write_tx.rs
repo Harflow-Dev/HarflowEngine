@@ -1,9 +1,13 @@
-//! The single commit path of every store write: admission, `io.lock`, an immediate
-//! transaction, the caller's action, the dataset publication it asks for, the
-//! `commit_sequence` increment, and the closing checks.
-use crate::{Error, Result, Store, connection};
+//! The single commit path of every store write: admission, `io.lock`, the fence and
+//! watermark checks, an immediate transaction, the caller's action, the dataset
+//! publication it asks for, the `commit_sequence` increment, the closing checks, and the
+//! watermark publication of the new sequence.
+use crate::{
+    Error, Result, Store, connection,
+    watermark::{self, Watermark},
+};
 use rusqlite::{Connection, Transaction, TransactionBehavior};
-use std::time::Instant;
+use std::{sync::atomic::Ordering, time::Instant};
 
 pub(crate) const SEQUENCE_SCHEMA: &str = "CREATE TABLE commit_sequence(singleton INTEGER PRIMARY KEY CHECK(singleton=1),value INTEGER NOT NULL); INSERT INTO commit_sequence VALUES(1,0);";
 
@@ -99,16 +103,23 @@ impl Store {
         action: impl FnOnce(&Transaction<'_>) -> Result<Option<T>>,
     ) -> Result<Option<T>> {
         let mut connection = self.admit(deadline)?;
+        // A handle whose watermark write or flush failed takes no further write: a flush
+        // retried after a failure can report success without the data being durable.
+        if self.poisoned.load(Ordering::Acquire) {
+            return Err(Error::WatermarkUnrecorded);
+        }
         let _io = self.binding.io(deadline)?;
         // A fenced store takes no further commit; the refusal is final, not retried.
         crate::fence::check(self.binding.root(), &self.identity.generation)?;
+        let mark = self.open_watermark()?;
         connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        watermark::not_ahead(mark.seq(), &transaction)?;
         let Some(value) = action(&transaction)? else {
             return Ok(None);
         };
         publish.apply(&transaction)?;
-        advance_sequence(&transaction)?;
+        let sequence = advance_sequence(&transaction)?;
         self.binding.check()?;
         connection::timeout(&transaction, deadline)?;
         fire(stage, false);
@@ -117,10 +128,36 @@ impl Store {
             .commit()
             .map_err(|_| Error::CommitOutcomeUnknown)?;
         fire(stage, true);
+        // The database is now one ahead of the file; reads and a reopen stay valid.
         self.binding
             .check()
             .map_err(|_| Error::CommitOutcomeUnknown)?;
+        self.record_watermark(&mark, sequence)?;
         Ok(Some(value))
+    }
+    /// Opens and decodes the watermark under `io.lock`, then flushes it as it stands
+    /// before anything overwrites a slot. A failed flush poisons the handle.
+    fn open_watermark(&self) -> Result<Watermark> {
+        let mark = Watermark::open(self.binding.root(), &self.identity.generation)?;
+        if mark.settle(self.options.flush.as_ref()).is_err() {
+            self.poisoned.store(true, Ordering::Release);
+            return Err(Error::WatermarkUnrecorded);
+        }
+        Ok(mark)
+    }
+    /// Publishes `sequence` after its commit. A failed write or flush leaves the commit
+    /// visible without an established durable acknowledgement: `CommitOutcomeUnknown`,
+    /// and the handle is poisoned.
+    fn record_watermark(&self, mark: &Watermark, sequence: u64) -> Result<()> {
+        let generation = &self.identity.generation;
+        if mark
+            .record(generation, sequence, self.options.flush.as_ref())
+            .is_err()
+        {
+            self.poisoned.store(true, Ordering::Release);
+            return Err(Error::CommitOutcomeUnknown);
+        }
+        Ok(())
     }
     /// Alias for writers that publish nothing and fire no stage hook.
     pub(crate) fn fixture_write<T>(
@@ -155,15 +192,19 @@ fn rotate_generation(transaction: &Transaction<'_>) -> Result<()> {
     Ok(())
 }
 
-fn advance_sequence(transaction: &Transaction<'_>) -> Result<()> {
-    let changed = transaction.execute(
-        "UPDATE commit_sequence SET value=value+1 WHERE singleton=1",
-        [],
-    )?;
-    if changed != 1 {
-        return Err(Error::Incompatible);
-    }
-    Ok(())
+/// Increments the sequence and returns the new value, the number of this commit.
+fn advance_sequence(transaction: &Transaction<'_>) -> Result<u64> {
+    let value: i64 = transaction
+        .query_row(
+            "UPDATE commit_sequence SET value=value+1 WHERE singleton=1 RETURNING value",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|error| match error {
+            rusqlite::Error::QueryReturnedNoRows => Error::Incompatible,
+            other => other.into(),
+        })?;
+    u64::try_from(value).map_err(|_| Error::Incompatible)
 }
 
 /// A store without the sequence row (an older local schema 7 root) is not a writable store.

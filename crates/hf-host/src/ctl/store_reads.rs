@@ -89,6 +89,10 @@ pub(super) fn failure(error: &Error) -> StoreFailure {
             InfrastructureUnavailable,
             "store verification failed; the history cannot be trusted".to_string(),
         ),
+        ReadRefusal::CommitLost => incompatible(
+            InfrastructureUnavailable,
+            "acknowledged commits are missing; the history cannot be trusted".to_string(),
+        ),
     }
 }
 
@@ -199,6 +203,14 @@ mod tests {
         assert_eq!(
             failure(&Error::Fenced),
             unavailable("store verification failed; the history cannot be trusted")
+        );
+    }
+
+    #[test]
+    fn a_lost_commit_is_incompatible_and_unavailable_with_the_fixed_message() {
+        assert_eq!(
+            failure(&Error::CommitLost),
+            unavailable("acknowledged commits are missing; the history cannot be trusted")
         );
     }
 

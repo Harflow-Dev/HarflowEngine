@@ -11,7 +11,7 @@ use crate::{
     Error, Result, Store, connection, fence,
     qualify::{self, WalStamp},
     read_session::open_read_only,
-    scan, small_file, wal,
+    scan, small_file, wal, watermark,
 };
 use rusqlite::{Connection, ErrorCode};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -71,8 +71,9 @@ impl Store {
     }
     fn verify_at(&self, now: SystemTime, deadline: Instant) -> Result<Verification> {
         connection::check_deadline(deadline)?;
-        // Marker, header, journal, `-wal`, acceptance record and fence, as at open.
-        if qualify::precheck(&self.binding)? != self.identity {
+        // Marker, header, journal, `-wal`, acceptance record, fence and watermark, as at open.
+        let (identity, mark) = qualify::precheck(&self.binding)?;
+        if identity != self.identity {
             return Err(Error::Replaced);
         }
         let stamp = qualify::wal_stamp(&self.binding)?;
@@ -83,6 +84,9 @@ impl Store {
             {
                 return Err(Error::Incompatible);
             }
+            // A database below the watermark lost acknowledged commits: refused, not
+            // scanned, and neither the due record nor the fence is written.
+            watermark::not_ahead(mark, &connection).map_err(scan::corruption)?;
             check(&connection, deadline)?
         };
         self.confirm_unchanged(stamp)?;

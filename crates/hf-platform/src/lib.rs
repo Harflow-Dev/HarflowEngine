@@ -10,6 +10,8 @@ pub mod recovery;
 
 pub mod lease;
 
+pub mod durability;
+
 pub mod qualification;
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

@@ -96,7 +96,7 @@ fn observe(
         Limits::default(),
         until,
         hf_platform::lease::shared(),
-        hf_storage::WriterOptions::suppressed(),
+        crate::durability::suppressed(),
     ))?;
     let stored = map(store.ownership_observe(&start.operation, until))?.ok_or_else(invalid)?;
     if stored.phase != hf_domain::ownership::Phase::SpawnObserved

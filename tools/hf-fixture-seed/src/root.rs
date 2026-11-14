@@ -45,12 +45,18 @@ impl Context {
             Self::limits(),
             self.deadline(),
             self.leases(),
-            hf_storage::WriterOptions::suppressed(),
+            writer_options(),
         )?;
         let outcome = action(&store);
         drop(store);
         finish(outcome, require_wal(&self.root))
     }
+}
+/// Seeded roots never checkpoint, and their watermark is flushed with plain `fsync`
+/// (`FsyncOnly`): seeds are test data, not acknowledged history.
+fn writer_options() -> hf_storage::WriterOptions {
+    use hf_platform::durability::{Durability, port};
+    hf_storage::WriterOptions::suppressed().with_flush(port(Durability::FsyncOnly))
 }
 /// The outcome of the operation, unless it succeeded and `-wal` is gone.
 pub fn finish<T>(outcome: Result<T>, wal: Result<()>) -> Result<T> {
@@ -69,11 +75,12 @@ pub fn require_wal(root: &Path) -> Result<()> {
 }
 /// Creates the root and an empty, fully covered task dataset.
 pub fn initialize(context: &Context) -> Result<Store> {
-    let store = Store::initialize_fixture(
+    let store = Store::initialize_fixture_with(
         &context.root,
         Context::limits(),
         context.deadline(),
         context.leases(),
+        writer_options(),
     )?;
     let all = Coverage {
         discovery_complete: true,

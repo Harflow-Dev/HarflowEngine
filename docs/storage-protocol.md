@@ -46,11 +46,13 @@ provider effects, resource reservations or unknown mutation outcomes.
 Open, recover and probe qualify the existing store in place; there is no copy, no
 scratch directory and no size cap. Before SQLite is opened they check, in this order,
 the marker, the database header, that the rollback journal is empty, and that `-wal`
-exists and is a regular file (`lstat`), then the lost-WAL acceptance record (below).
+exists and is a regular file (`lstat`), then the lost-WAL acceptance record, the fence and
+the commit watermark (below).
 A missing `-wal` is refused (`WalMissing`) and none is created, because SQLite would
 create an empty one and report an empty history.
 They then open the source with `SQLITE_OPEN_READ_ONLY` and checkpoints suppressed,
-compare the logical application/schema/generation with the marker, and re-check the
+compare the logical application/schema/generation with the marker and the database
+sequence with the watermark, and re-check the
 `-wal` type and identity and the marker after the open. Qualification failure never
 authorizes source recovery. No custom WAL parser, immutable live-WAL shortcut, sidecar
 deletion or original-file reset is used.
@@ -140,7 +142,8 @@ hours) ahead of `now` (a clock that moved back). A non-regular record (directory
 `Store::verify_in_place(deadline)` refuses an already-past deadline with `DeadlineExceeded`, then
 checks the handle's store under the handle's shared lease and
 without `io.lock`: the read-order prechecks (marker, header, journal, `-wal`, acceptance record,
-fence), a read-only connection with checkpoints suppressed, the SQL identity, then one
+fence, watermark), a read-only connection with checkpoints suppressed, the SQL identity, the
+watermark comparison (`CommitLost` when the database is below it), then one
 `PRAGMA quick_check(1)` through the bounded scan helper (the watchdog interrupts it at the
 deadline). Before recording a verdict it re-checks the binding, the `-wal` identity and the marker.
 The verdict:
@@ -201,17 +204,120 @@ bounded and `O_NOFOLLOW`, after the acceptance record, and reports `incompatible
 the owner runtime's behaviour while fenced belong to E2-B; the clearing path needs a precheck
 variant, because `recover` and `probe` refuse a fenced root today.
 
+## Commit watermark
+
+`store.watermark` in the state root records the highest `commit_sequence` value whose commit was
+acknowledged (`crates/hf-storage/src/watermark.rs`; codec in `crates/hf-application/src/watermark.rs`,
+shared with `state-inspect`). A database whose sequence is below it has lost acknowledged commits,
+for example after a restored or truncated `-wal`; SQLite alone reports such a store as healthy.
+
+Format: exactly 8192 bytes, two 4 KiB blocks, slot A at offset 0 and slot B at offset 4096. Each
+block starts with a 64-byte payload, little-endian: `[0..8)` magic `HFWMARK1`, `[8..40)` the
+generation as 32 lowercase hex characters, `[40..48)` the sequence as u64, `[48..60)` zero,
+`[60..64)` CRC-32 (IEEE, as zlib) of `[0..60)`; bytes `[64..4096)` of the block are zero. A block is
+valid when magic, CRC, padding and filler all hold; an invalid block is a torn or unfinished write
+and is ignored. A valid block naming another generation, a length other than 8192 or a non-regular
+file is `Incompatible`; no valid block, a missing file or an unreadable one is
+`ReadUnavailable("store.watermark")`. The best valid block holds the highest sequence; on equal
+sequences slot A is the best.
+
+Initialization (`Store::initialize_fixture_with`) commits the schema at sequence 0, then creates
+the file with `create_new`, both slots at sequence 0, flushes it through the options' `FlushPort`
+and syncs the directory, then publishes the marker and syncs the directory again. Every marked
+root therefore has a watermark; a crash before the marker leaves an unmarked root. Nothing
+recreates the file afterwards.
+
+Writer protocol, inside the commit path under `io.lock`, after the fence check:
+
+1. Open the file read-write without following a link and without creating it (`lstat`, then the
+   open, then a device/inode match), check the length and decode both blocks with positioned reads.
+   A missing, malformed or foreign file fails here, before `BEGIN`.
+2. Flush the file as it stands (the pre-flush). A writer that died between its slot write and its
+   flush can leave a best slot that is only in the page cache; flushing before the next overwrite
+   makes it durable first (owner decision 2026-11-14, flush before overwrite, on every commit).
+3. `BEGIN IMMEDIATE`, then compare: a decoded sequence above the database's `commit_sequence` is
+   `Error::CommitLost`, before the action runs.
+4. Action, publication, sequence increment (`UPDATE ... RETURNING` gives the new value n), binding
+   check, commit, binding check.
+5. Write n into the slot that does not hold the best entry (when both are valid, the lower one;
+   on a tie, slot B), then flush again. The whole 4 KiB target block is written (payload and zero
+   filler) in one positioned write, so damaged filler in that block is repaired. The best entry is never overwritten before a newer one has
+   been written and flushed, so a torn write can only damage the target block.
+
+Failures: steps 1 and 3 return their own error and commit nothing. A failed pre-flush poisons the
+handle and returns `Error::WatermarkUnrecorded` with nothing committed. A lost binding after the
+commit returns `CommitOutcomeUnknown` before the slot write and does not poison: the database is
+one ahead of the file, which reads and reopen accept. A failed slot write or post-flush returns
+`CommitOutcomeUnknown` (the commit is visible but its durable acknowledgement is not established)
+and poisons the handle. A poisoned handle refuses every later write with `WatermarkUnrecorded`,
+checked right after admission, because a flush retried after a failure can report success without
+the data being durable; reads and PASSIVE checkpoints on it continue, and reopening the store is
+legal because the database is ahead of the file. WAL maintenance does not treat
+`WatermarkUnrecorded` or `CommitLost` as a skip; the maintenance shrink commit goes through the
+commit path and writes the watermark itself (a failure there is discarded by the best-effort
+maintenance call and surfaces on the next write). PASSIVE checkpoints do not change the sequence
+and write nothing. Test-only stage hooks `watermark_before_write` and `watermark_before_flush` fire
+before the slot write and before the post-flush, whatever the commit's stage label.
+
+`FlushPort::flush(&File)` flushes the descriptor the writer holds, never a path. Production
+handles get their port from `hf_platform::durability`: `FullFlush` is an explicit
+`fcntl(F_FULLFSYNC)` on macOS and `sync_all` elsewhere; `FsyncOnly` is a plain `fsync(2)` on
+macOS (std's `sync_all` and `sync_data` both issue `F_FULLFSYNC` there) and `sync_all` elsewhere.
+Neither falls back to the other. `DEFAULT_DURABILITY` is `FsyncOnly` until the A7b measurement;
+the host's writer handles use it and the fixture seed uses `FsyncOnly`. hf-storage's own default,
+`SyncAllFlush`, is `sync_all`.
+
+Readers hold no `io.lock`. They read each block with its own positioned read; when neither is valid
+they retry the pair up to three more times, 1 ms apart (a reader can see one block before a commit
+and the other torn by the next), then report `ReadUnavailable("store.watermark")`. The file is read
+before the database snapshot is taken and compared after the identity read: a database sequence
+below the watermark is `CommitLost`, a sequence at or above it is accepted (a concurrent commit
+legitimately moves the database ahead of the file). The check runs after the fence, in the refusal
+order marker, header, journal, `-wal`, acceptance record, fence, watermark (file faults before
+`CommitLost`): in `qualify::precheck` with the comparison on the qualification snapshot (so `open`,
+`recover` and `probe` refuse; `open` compares under `io.lock`, and the A0 tamper case of a missing
+`commit_sequence` table stays `Incompatible`), in the verifier on its read-only connection after
+the identity check (a `CommitLost` store is refused before the scan, and neither the due record
+nor the fence is written), and in the read session at open and at every read entry. End-of-qualification and read-exit re-checks test presence only, never the
+sequence. Not covered: a store handle's own reads (`Store::task_read`, `Store::event_read`,
+`read_batch`) are checked at writer open only, and `RecoveryReadSession` (the capped private copy,
+`recovery.rs`) checks neither the fence nor the watermark. `state-inspect` reads the file lease-free and bounded (8192 bytes,
+with the same retry) after the fence: absent, unreadable or no valid block is
+`infrastructure_unavailable`; non-regular, oversize, a wrong length or a foreign generation is
+`invalid_marker`. It opens no database, so it cannot see a lost commit: such a root reads `ready`
+there and is refused by the read session. Empty and lock-only roots stay `ready`.
+
+Residuals, documented rather than closed in E2-A:
+
+- Media corruption of the newest block lowers the detection threshold to the older entry, which
+  can be more than one commit back after interrupted publications, instead of refusing.
+- Write ordering (W1): SQLite `synchronous=FULL` issues plain `fsync` for WAL frames on macOS. The
+  acknowledged-implies-durable argument assumes that `F_FULLFSYNC` on the watermark descriptor
+  flushes the whole device cache, including WAL frames already handed over (APFS on internal NVMe).
+  Under `FsyncOnly` neither barrier is a device-cache flush. A power loss can then persist slot n
+  without WAL frame n: a false `CommitLost` for an unacknowledged commit, which fails closed.
+  Flushing the `-wal` descriptor before the slot write (W2) is measured at A7b.
+- A process kill between commit and slot write leaves the database one ahead of the file; the next
+  commit catches the file up. That state is legal and readable.
+
+E2-B entry conditions: rewriting the watermark down to the database sequence when a rollback is
+accepted; recreating the file when it is missing or both blocks are invalid; and a precheck variant
+so that `recover` and `probe` can run on a `CommitLost` root (today both refuse, as for the fence
+and the acceptance record); and `RecoveryReadSession` checks the fence and the watermark before the
+owner runtime uses recovery observation.
+
 ## Read session
 
 A read session (`ReadSession`) answers reads from the real store without a copy.
 It takes `store.lock` shared (acquisition capped at 2s) and never `io.lock`, and
 it writes no main or WAL content. Before SQLite is opened it checks the marker,
 the database header, that the rollback journal is empty, and that `-wal` exists
-and is a regular file (`lstat`), and the lost-WAL acceptance record; a missing `-wal`
+and is a regular file (`lstat`), the lost-WAL acceptance record, the fence and the commit
+watermark (above); a missing `-wal`
 is refused because opening would create an empty one and report an empty history. A `-wal` deleted between that
 check and the open is not detected. It then opens with `SQLITE_OPEN_READ_ONLY` and
-checkpoint-on-close disabled, compares the database identity with the marker, and
-runs the existing queries in one read transaction. It runs no `quick_check` and has
+checkpoint-on-close disabled, compares the database identity with the marker and the
+database sequence with the watermark, and runs the existing queries in one read transaction. It runs no `quick_check` and has
 no size limit of its own. The deadline is soft: SQLite open and WAL recovery cannot
 be interrupted, so a read that overruns is refused after the fact as busy; the
 caller supplies 5s for a read. Any SQLite error is a refusal, and `ReadRefusal`
@@ -263,8 +369,10 @@ maintenance commit follows: it only advances `commit_sequence`, but it writes a 
 SQLite restarts the log and cuts the file to the limit at that write. The result reports
 whether that commit landed (`shrink_commit_landed`), not the resulting file length.
 TRUNCATE stays in `recover` only and RESTART is never used, so `-wal` always survives.
-`FlushPort` (`hf-application::durability`) is carried in the options for the watermark
-flush (A7); the default is `sync_all`.
+`flush`, a `FlushPort` (`hf-application::durability`), makes the commit watermark durable
+(see [Commit watermark](#commit-watermark)); `suppressed()` and `owner()` default it to
+`SyncAllFlush` (a no-op in hf-storage's own unit-test build) and `with_flush` replaces it. Production handles pass the platform port for
+`DEFAULT_DURABILITY`.
 
 SQLite references: [WAL behavior](https://www.sqlite.org/wal.html),
 [checkpoint modes](https://www.sqlite.org/c3ref/wal_checkpoint_v2.html), and
@@ -336,10 +444,13 @@ reads use `ReadSession`, including `recovery-activity`. The internal operation-s
 ## Commit path
 
 Every write after initialization goes through one function, `Store::write`
-(`crates/hf-storage/src/write_tx.rs`), in this order: admission, the shared `io.lock`, a
-`BEGIN IMMEDIATE` transaction, the caller's action, the publication the caller asked for, the
-`commit_sequence` increment, the binding check, the commit and a binding check after it. A commit
-failure is `CommitOutcomeUnknown`, and so is a failed post-commit binding check. The publication is
+(`crates/hf-storage/src/write_tx.rs`), in this order: admission, the poison check, `io.lock`
+(exclusive; the lease port never waits, so a held lock is `Busy` at once), the fence check, the
+watermark open, decode and pre-flush, a `BEGIN IMMEDIATE` transaction, the watermark comparison,
+the caller's action, the publication the caller asked for, the `commit_sequence` increment, the
+binding check, the commit, a binding check after it, and the watermark slot write and flush (see
+[Commit watermark](#commit-watermark)). A commit failure is `CommitOutcomeUnknown`, and so is a
+failed post-commit binding check or watermark publication. The publication is
 one of four variants: dataset generation rotation with a watch revision bump, a revision bump only,
 a dataset (paging) generation rotation only, or nothing. `commit_sequence.value` therefore
 increases by exactly one per committed write and never on a rollback, a pre-commit failure or a

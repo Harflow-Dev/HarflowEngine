@@ -47,13 +47,14 @@ pub use wal_owner::{
 mod fence;
 mod small_file;
 mod verify;
+mod watermark;
 mod writer_open;
 use binding::Binding;
 use hf_application::lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort};
 use rusqlite::Connection;
 use std::{
     path::Path,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, atomic::AtomicBool},
     time::Instant,
 };
 pub use verify::{RECORD_BUDGET, VERIFY_PERIOD, Verification};
@@ -89,6 +90,13 @@ pub enum Error {
     /// fence failed (the boxed error is that cause). Nothing records the failure and the
     /// due time is unchanged, so the next due check repeats the scan.
     FenceUnrecorded(Box<Error>),
+    /// `store.watermark` records a commit the database does not hold: acknowledged commits
+    /// were lost (for example a restored or truncated `-wal`). Writer open, recover,
+    /// probe, every commit and every read refuse; accepting the loss is E2-B.
+    CommitLost,
+    /// A watermark write or flush failed on this handle, so it takes no further write.
+    /// Reads and checkpoints on it continue; reopening the store is legal.
+    WatermarkUnrecorded,
     /// Raised only by the read session: the database application id is not ours.
     ForeignStore,
     /// Raised only by the read session: the marker names an older schema.
@@ -183,14 +191,30 @@ pub struct Store {
     identity: Identity,
     limits: Limits,
     options: WriterOptions,
+    /// Set when a watermark write or flush failed; every later write refuses.
+    poisoned: AtomicBool,
     _claim: Box<dyn LeaseGuard>,
 }
 impl Store {
+    /// `initialize_fixture_with(.., WriterOptions::suppressed())`.
     pub fn initialize_fixture(
         root: impl AsRef<Path>,
         limits: Limits,
         deadline: Instant,
         leases: Arc<dyn LeasePort>,
+    ) -> Result<Self> {
+        Self::initialize_fixture_with(root, limits, deadline, leases, WriterOptions::suppressed())
+    }
+    /// Creates the root, the database at sequence 0, `store.watermark` at sequence 0
+    /// (flushed through `options.flush`, then the directory), and last the marker
+    /// (flushed, then the directory). A crash before the marker leaves an unmarked root.
+    /// The returned handle is opened with `options`.
+    pub fn initialize_fixture_with(
+        root: impl AsRef<Path>,
+        limits: Limits,
+        deadline: Instant,
+        leases: Arc<dyn LeasePort>,
+        options: WriterOptions,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         let root = root.as_ref();
@@ -221,11 +245,14 @@ impl Store {
         connection::initialize(&mut connection, deadline)?;
         let identity = connection::identity(&connection, deadline)?;
         connection::check_deadline(deadline)?;
+        watermark::create(root, &identity.generation, options.flush.as_ref())?;
+        small_file::sync_dir(root)?;
         wal::publish(root, &identity)?;
+        small_file::sync_dir(root)?;
         drop(connection);
         drop(io);
         drop(claim);
-        Self::open_with(root, limits, deadline, leases, WriterOptions::suppressed())
+        Self::open_with(root, limits, deadline, leases, options)
     }
     pub fn identity(&self) -> &Identity {
         &self.identity

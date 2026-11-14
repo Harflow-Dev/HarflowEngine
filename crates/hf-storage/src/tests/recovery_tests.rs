@@ -28,6 +28,7 @@ pub(super) fn source_hashes(root: &std::path::Path) -> Vec<(String, Option<Vec<u
         "io.lock",
         "store.sqlite3-wal",
         "store.sqlite3-shm",
+        "store.watermark",
     ]
     .iter()
     .map(|name| ((*name).to_string(), file_hash(root, name)))

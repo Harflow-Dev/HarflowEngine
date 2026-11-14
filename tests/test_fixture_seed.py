@@ -329,6 +329,15 @@ class DigestTests(SeedCase):
             stream.write(b"0")
         self.assertNotEqual(self.digest(), before)
 
+    def test_digest_reacts_to_the_commit_watermark(self):
+        self.initialized(task(A))
+        before = self.digest()
+        path = os.path.join(self.state, "store.watermark")
+        with open(path, "r+b") as stream:
+            stream.seek(5000)
+            stream.write(b"\x01")
+        self.assertNotEqual(self.digest(), before)
+
     def test_digest_of_a_foreign_root_reacts_to_content_names_kinds_and_links(self):
         os.mkdir(self.state)
         def write(name, data):

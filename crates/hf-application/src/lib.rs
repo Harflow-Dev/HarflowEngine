@@ -30,6 +30,8 @@ pub mod lease;
 
 pub mod durability;
 
+pub mod watermark;
+
 pub mod owner;
 
 #[cfg(test)]

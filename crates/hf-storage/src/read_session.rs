@@ -7,7 +7,7 @@
 //! overrun answer is refused after the fact as `DeadlineExceeded`.
 use crate::{
     Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection, fence,
-    read_context::ReadContext, wal, wal_acceptance,
+    read_context::ReadContext, wal, wal_acceptance, watermark,
 };
 use hf_application::{
     event_read::EventReadResult,
@@ -56,8 +56,9 @@ impl ReadSession {
         let claim = binding
             .acquire(LeaseMode::Shared, lease_deadline)
             .map_err(named("store.lock"))?;
-        // Spec order: marker, header, rollback journal, `-wal`, acceptance record, fence. The `-wal` type is
-        // left out of the sidecar check so that a defect there cannot mask the others.
+        // Spec order: marker, header, rollback journal, `-wal`, acceptance record, fence,
+        // watermark. The `-wal` type is left out of the sidecar check so that a defect
+        // there cannot mask the others.
         binding.check_sidecars(false).map_err(|error| {
             non_regular(&root, &["store.sqlite3-shm", "store.sqlite3-journal"]).unwrap_or(error)
         })?;
@@ -67,10 +68,13 @@ impl ReadSession {
         require_wal(&binding)?;
         acceptance(&binding, &expected)?;
         fenced(&binding, &expected)?;
+        // Read before the connection exists, so before every snapshot it takes.
+        let mark = watermarked(&binding, &expected)?;
         let connection = open_read_only(&binding, deadline)?;
         if connection::identity(&connection, deadline)? != expected {
             return Err(Error::Incompatible);
         }
+        watermark::not_ahead(mark, &connection)?;
         check_files(&binding, &expected)?;
         Ok(Self {
             connection: Mutex::new(connection),
@@ -132,11 +136,15 @@ impl ReadSession {
         require_wal(&self.binding)?;
         acceptance(&self.binding, &self.identity)?;
         fenced(&self.binding, &self.identity)?;
+        // The deferred transaction takes its snapshot at its first statement, the identity
+        // read below, so the watermark is read before the snapshot.
+        let mark = watermarked(&self.binding, &self.identity)?;
         connection::timeout(&guard, deadline)?;
         let transaction = guard.transaction()?;
         if connection::identity(&transaction, deadline)? != self.identity {
             return Err(Error::Replaced);
         }
+        watermark::not_ahead(mark, &transaction)?;
         let context = ReadContext {
             identity: &self.identity,
             limits: self.limits,
@@ -196,12 +204,20 @@ fn marker_file_fault(root: &Path) -> Option<Error> {
     None
 }
 /// Binding and sidecar types, with a defective `-wal` reported as a missing one,
-/// then the acceptance record and the fence for the session's generation.
+/// then the acceptance record, the fence for the session's generation, and the
+/// watermark's presence. The watermark sequence is not compared here: a commit that
+/// landed during the read legitimately leaves the file ahead of this snapshot.
 fn check_files(binding: &Binding, identity: &Identity) -> Result<()> {
     binding.check_sidecars(false)?;
     require_wal(binding)?;
     acceptance(binding, identity)?;
-    fenced(binding, identity)
+    fenced(binding, identity)?;
+    watermark::present(binding.root()).map_err(named("store.watermark"))
+}
+
+/// The commit watermark, checked right after the fence.
+fn watermarked(binding: &Binding, identity: &Identity) -> Result<u64> {
+    watermark::read(binding.root(), &identity.generation).map_err(named("store.watermark"))
 }
 
 /// The verification fence, checked right after the acceptance record.

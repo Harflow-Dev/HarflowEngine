@@ -35,7 +35,7 @@ pub(super) fn run(
             Limits::default(),
             until,
             hf_platform::lease::shared(),
-            hf_storage::WriterOptions::suppressed(),
+            crate::durability::suppressed(),
         ))?;
         if store.identity() != &identity {
             return Err(invalid());

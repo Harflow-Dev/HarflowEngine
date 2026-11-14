@@ -58,6 +58,7 @@ impl Store {
             identity,
             limits,
             options,
+            poisoned: std::sync::atomic::AtomicBool::new(false),
             _claim: claim,
         })
     }

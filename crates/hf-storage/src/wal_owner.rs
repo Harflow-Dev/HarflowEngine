@@ -32,18 +32,43 @@ pub enum CheckpointPolicy {
 }
 
 /// Chosen by the caller of `Store::open_with`; `Store::open` is `WriterOptions::suppressed()`.
+/// `flush` makes the commit watermark durable: it runs twice per commit, before the slot
+/// write and after it.
 #[derive(Debug, Clone)]
 pub struct WriterOptions {
     pub checkpoint: CheckpointPolicy,
     pub flush: Arc<dyn FlushPort>,
 }
 
-/// Default flush: open the file and `sync_all`.
+/// Default flush of this crate: `sync_all` on the open file. On Apple platforms std
+/// issues `F_FULLFSYNC` for it; elsewhere it is `fsync`. Production callers inject the
+/// platform port for their chosen durability instead (`hf_platform::durability`).
 #[derive(Debug, Clone, Copy)]
 pub struct SyncAllFlush;
 impl FlushPort for SyncAllFlush {
-    fn flush(&self, path: &Path) -> std::io::Result<()> {
-        File::open(path)?.sync_all()
+    fn flush(&self, file: &File) -> std::io::Result<()> {
+        file.sync_all()
+    }
+}
+
+/// The flush `suppressed()` and `owner()` start with: `SyncAllFlush`, except in this
+/// crate's own unit tests, which do not flush (real flushes belong to dedicated
+/// durability tests).
+#[cfg(not(test))]
+fn default_flush() -> Arc<dyn FlushPort> {
+    Arc::new(SyncAllFlush)
+}
+#[cfg(test)]
+fn default_flush() -> Arc<dyn FlushPort> {
+    Arc::new(UnitTestFlush)
+}
+#[cfg(test)]
+#[derive(Debug)]
+struct UnitTestFlush;
+#[cfg(test)]
+impl FlushPort for UnitTestFlush {
+    fn flush(&self, _: &File) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
@@ -51,14 +76,18 @@ impl WriterOptions {
     pub fn suppressed() -> Self {
         Self {
             checkpoint: CheckpointPolicy::Suppressed,
-            flush: Arc::new(SyncAllFlush),
+            flush: default_flush(),
         }
     }
     pub fn owner() -> Self {
         Self {
             checkpoint: CheckpointPolicy::Owner,
-            flush: Arc::new(SyncAllFlush),
+            flush: default_flush(),
         }
+    }
+    /// The same policy with `flush` as the watermark flush.
+    pub fn with_flush(self, flush: Arc<dyn FlushPort>) -> Self {
+        Self { flush, ..self }
     }
 }
 

@@ -1,5 +1,6 @@
 //! Small engine-owned files in the state root: the lost-WAL acceptance record, the
-//! verification fence and the verification due record.
+//! verification fence and the verification due record, and the listed open used by the
+//! commit watermark.
 //!
 //! Reads are `lstat`-first, bounded, and require the opened file to be the one listed.
 //! Replacement writes a fresh temporary file and renames it over the target, so a reader
@@ -68,11 +69,38 @@ pub(crate) fn read_bounded(root: &Path, name: &str, bound: u64) -> Result<Conten
 /// can be followed or block there (residual risk, as for the marker read).
 #[cfg(unix)]
 fn open_no_follow(path: &Path) -> std::io::Result<fs::File> {
+    open_no_follow_with(path, false)
+}
+
+/// As `open_no_follow`, read-write when `write` is set. Never creates the file.
+#[cfg(unix)]
+fn open_no_follow_with(path: &Path, write: bool) -> std::io::Result<fs::File> {
     use std::os::unix::fs::OpenOptionsExt;
     OpenOptions::new()
         .read(true)
+        .write(write)
         .custom_flags(NO_FOLLOW_NONBLOCK)
         .open(path)
+}
+
+/// Opens `name` without creating it, read-write when `write` is set, and returns it with
+/// its length, or `None` when it is absent. The same refusals as `read`: a non-regular
+/// file, or one that is not the file `lstat` listed, is `Incompatible`; a symlink swapped
+/// in after `lstat` is `Io` (`ELOOP`).
+pub(crate) fn open_listed(root: &Path, name: &str, write: bool) -> Result<Option<(fs::File, u64)>> {
+    let path = root.join(name);
+    let listed = match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+        Ok(metadata) if !metadata.is_file() => return Err(Error::Incompatible),
+        Ok(metadata) => metadata,
+    };
+    let file = open_no_follow_with(&path, write)?;
+    let opened = file.metadata()?;
+    if !opened.is_file() || !same_file(&listed, &opened) {
+        return Err(Error::Incompatible);
+    }
+    Ok(Some((file, opened.len())))
 }
 
 #[cfg(target_os = "macos")]
@@ -99,6 +127,11 @@ const NO_FOLLOW_NONBLOCK: i32 = 0;
 #[cfg(not(unix))]
 fn open_no_follow(path: &Path) -> std::io::Result<fs::File> {
     fs::File::open(path)
+}
+
+#[cfg(not(unix))]
+fn open_no_follow_with(path: &Path, write: bool) -> std::io::Result<fs::File> {
+    OpenOptions::new().read(true).write(write).open(path)
 }
 
 /// Strips `<header>\n<generation>\n` and the final newline, leaving the state word.

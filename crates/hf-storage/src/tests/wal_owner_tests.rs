@@ -173,3 +173,36 @@ fn a_non_skippable_maintenance_failure_never_fails_the_committed_write() {
     let records = reopened.read_batch(&["probe".into()], deadline()).unwrap();
     assert_eq!(records[0].value, b"landed");
 }
+
+/// A handle whose watermark write or flush failed refuses every later write, while its
+/// reads, PASSIVE checkpoints and maintenance calls continue.
+#[test]
+fn a_poisoned_handle_refuses_writes_and_still_reads_and_checkpoints() {
+    let (_scratch, store) = reopened("poisoned", WriterOptions::owner());
+    let put = |key: &str| {
+        let mutation = crate::Mutation::Put {
+            key: key.into(),
+            value: b"v".to_vec(),
+        };
+        store.apply_batch(&[mutation], deadline())
+    };
+    put("before").unwrap();
+    store
+        .poisoned
+        .store(true, std::sync::atomic::Ordering::Release);
+    for _ in 0..2 {
+        assert!(matches!(
+            put("after"),
+            Err(crate::Error::WatermarkUnrecorded)
+        ));
+    }
+    assert!(store.checkpoint_passive(deadline()).unwrap().complete);
+    assert_eq!(
+        store.maintain_wal(deadline()).unwrap(),
+        WalMaintenance::Idle
+    );
+    let keys = ["before".to_string(), "after".to_string()];
+    let records = store.read_batch(&keys, deadline()).unwrap();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].key, "before");
+}

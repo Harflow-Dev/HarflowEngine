@@ -41,9 +41,11 @@ Two parts, kept separate throughout:
   decisions that this document does not settle.
 - **Owner decision D20 (2026-11-07), accepted for E1 only.** Silent rollback of
   history on WAL damage is accepted for E1, which has no public writer. This is not
-  a guarantee that damaged fixtures cannot meet it. The commit watermark (below) is
-  a named E2 decision and is carried there with the generation write sequence and
-  the recovery signal.
+  a guarantee that damaged fixtures cannot meet it. The commit watermark (below) was
+  a named E2 decision; E2-A slice A7a implements it (`store.watermark`, see
+  [storage-protocol.md](storage-protocol.md#commit-watermark)), so a store that lost
+  acknowledged commits is now refused. Loss of unacknowledged commits and payload
+  damage stay undetected.
 
 ## Decision
 
@@ -208,7 +210,11 @@ error, `quick_check` is `ok`, and the successful history is silently shorter:
 29,900 after last-frame damage, truncation mid-frame or a zeroed last-frame
 header (1 page differs), `Ok(0)` records for a task's events on the existing
 path, and `TaskReadUnavailable` after header damage or truncation to the header.
-A kept `-shm` made no difference. Identical to the existing path.
+A kept `-shm` made no difference. Identical to the existing path. These results
+describe raw SQLite and stay true for it. Since E2-A slice A7a the read session also
+compares the database sequence with `store.watermark`: every case that drops an
+acknowledged commit is refused there as `CommitLost`; payload flips inside surviving
+frames are still returned as data.
 
 ### Killed readers (rerun; remnants captured at the reap)
 
@@ -325,6 +331,8 @@ unreachable except by fixtures.
 | nonempty rollback journal | `state_incompatible` | `infrastructure_unavailable` |
 | `Error::Replaced` (identity changed during the read) | `state_incompatible` | `infrastructure_unavailable`; retry is allowed |
 | verification fence `store.fence` in state `failed` for the session's generation (`Error::Fenced`, `ReadRefusal::Fenced`; E2-A slice A6) | `state_incompatible` | `infrastructure_unavailable`; message `store verification failed; the history cannot be trusted`; a foreign generation, malformed or oversized content or a non-regular fence is `invalid_marker` |
+| commit watermark `store.watermark` ahead of the database sequence (`Error::CommitLost`, `ReadRefusal::CommitLost`; E2-A slice A7a) | `state_incompatible` | `infrastructure_unavailable`; message `acknowledged commits are missing; the history cannot be trusted` |
+| `store.watermark` missing, unreadable or with no valid slot (`ReadUnavailable("store.watermark")`) | `state_incompatible` | `infrastructure_unavailable`; message `store.watermark cannot be read`; a non-regular file, a length other than 8192 bytes or a foreign generation is `invalid_marker` |
 | default: any other SQLite error | `state_incompatible` | `infrastructure_unavailable` |
 
 No code or reason is added; the implementation confirms each reason against the
@@ -345,7 +353,14 @@ every read refuses). The same holds for the acceptance record: a bounded read of
 `invalid_marker` for a foreign generation, malformed or oversized content or a
 non-regular file. The verification fence `store.fence` follows the acceptance record
 (E2-A slice A6): `failed` for the marker's generation or an unreadable fence gives
-`incompatible` / `infrastructure_unavailable`, anything else `invalid_marker`. `facts.entries` lists names, but `entries_truncated` at 256
+`incompatible` / `infrastructure_unavailable`, anything else `invalid_marker`. The
+commit watermark `store.watermark` follows the fence (E2-A slice A7a): absent,
+unreadable or with no valid slot (after up to three re-reads 1 ms apart) gives
+`incompatible` / `infrastructure_unavailable`; non-regular, oversize, a length other
+than 8192 bytes or a foreign generation gives `invalid_marker`. The inspector opens
+no database, so it cannot see lost commits: such a root reads `ready` here and the
+read session refuses it with the `CommitLost` message; a missing watermark reads as
+`State root cannot be read` through the ctl read gate. `facts.entries` lists names, but `entries_truncated` at 256
 cannot prove absence, so when it is truncated the observer checks `-wal` directly.
 `ready` still does not promise that reads succeed: it also cannot see
 main-file damage, and a read-only directory with no `-shm` or a read-only
@@ -522,6 +537,13 @@ The watermark/generation sequence/recovery signal remain named E2 carryover.
 Unmeasured: with a live owner whose wal-index is trusted, damaged frames behind a
 valid index may return wrong rows rather than rolling back.
 
+Implemented in E2-A slice A7a as specified in
+[storage-protocol.md](storage-protocol.md#commit-watermark): two slots in separate
+4 KiB blocks, the non-best slot overwritten after a pre-flush, both flushed through
+the writer's `FlushPort`; readers, writer open, recover and probe refuse a database
+below the file as `CommitLost`. The durability default stays `FsyncOnly` until the
+A7b measurement of `F_FULLFSYNC`. The sketch below is the original design input.
+
 Watermark sketch:
 
 - Evidence: a small file bound to the store generation holding the last
@@ -550,7 +572,7 @@ Watermark sketch:
 | Qualify before writable access | Decision A1 preserves it; A2 weakens it; not claimed otherwise |
 | `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover (storage primitives implemented in E2-A slice A6: due record, verifier, fence; the runner and clearing are E2-B) |
 | Lost WAL | Refused by every writer-role opener; acceptance only in maintenance, per Decision B |
-| Silent WAL damage | Unchanged; watermark decision at E2 exit |
+| Silent WAL damage | Loss of acknowledged commits refused through `store.watermark` (E2-A slice A7a) by reads, writer open, recover, probe and every commit; `state-inspect` cannot see it. Reads through a store handle (`Store::task_read`, `Store::event_read`, `read_batch`) are checked at writer open only, and `RecoveryReadSession` checks neither the fence nor the watermark (E2-B: it checks both before the owner runtime uses recovery observation). Unacknowledged commits and payload damage stay undetected; accepting a rollback is E2-B |
 
 # Budget verdict (read session)
 
@@ -570,9 +592,10 @@ unflagged repetitions relied on.
 
 1. Decision A (owner): A1 or A2 for owner admission, and what A2's weaker rule
    costs the owner.
-2. Unchanged silent WAL rollback is owner-accepted only for E1 (D20). Decide the
-   watermark/generation sequence/recovery signal at E2 and settle Decision B's
-   acceptance ordering.
+2. Silent WAL rollback was owner-accepted only for E1 (D20). The watermark is
+   implemented (E2-A slice A7a); still open: the `F_FULLFSYNC` default and W1/W2
+   write ordering (A7b), the rollback acceptance and recreation path (E2-B), and
+   Decision B's acceptance ordering.
 3. Payload damage: single flipped bytes are returned as data (7 of 20 trials) and
    no SQLite mechanism available here (no page checksums in the bundled build)
    detects it on either path. Accept as unchanged, or require a checksum

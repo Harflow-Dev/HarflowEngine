@@ -203,9 +203,32 @@ def database(path, version, application_id=APPLICATION_ID, generation="b" * 32):
         pass
 
 
+WATERMARK_LEN = 8192
+WATERMARK_BLOCK = 4096
+
+
+def watermark_payload(generation, seq):
+    """One 64-byte watermark slot payload: magic, generation, seq, zero pad, CRC-32."""
+    import struct
+    import zlib
+
+    body = b"HFWMARK1" + generation.encode("ascii") + struct.pack("<Q", seq) + bytes(12)
+    return body + struct.pack("<I", zlib.crc32(body) & 0xFFFFFFFF)
+
+
+def watermark_bytes(generation, a=0, b=0):
+    """A whole store.watermark: slot A at 0 and slot B at 4096; None leaves a slot zeroed."""
+    data = bytearray(WATERMARK_LEN)
+    for offset, seq in ((0, a), (WATERMARK_BLOCK, b)):
+        if seq is not None:
+            data[offset:offset + 64] = watermark_payload(generation, seq)
+    return bytes(data)
+
+
 def rust_root(root, identity_version=None, header_version=None, application_id=APPLICATION_ID,
-              generation="a" * 32):
-    """A Rust-shaped root: store.identity plus a SQLite header."""
+              generation="a" * 32, watermark=True):
+    """A Rust-shaped root: store.identity, a SQLite header and, unless `watermark` is
+    False, a seq-0 store.watermark for the marker's generation."""
     current = storage_constants()
     identity_version = current if identity_version is None else identity_version
     header_version = current if header_version is None else header_version
@@ -213,6 +236,9 @@ def rust_root(root, identity_version=None, header_version=None, application_id=A
     with open(os.path.join(root, "store.identity"), "w", encoding="utf-8", newline="") as handle:
         handle.write(identity_text(identity_version, generation))
     database(os.path.join(root, "store.sqlite3"), header_version, application_id, generation)
+    if watermark:
+        with open(os.path.join(root, "store.watermark"), "xb") as handle:
+            handle.write(watermark_bytes(generation))
 
 
 def journal(root, phase="planned", operation="0123456789abcdef0123456789abcdef", **overrides):

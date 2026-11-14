@@ -6,7 +6,7 @@
 //! cannot redirect a read and a swapped FIFO cannot block it. Other targets (Linux is
 //! W02, Windows WIN02) re-open by path after a link-aware stat; on Unix they compare
 //! file identity after opening, which narrows but does not close a replacement race.
-use hf_application::ctl::state_inspect::StateObserverPort;
+use hf_application::{ctl::state_inspect::StateObserverPort, watermark};
 use hf_domain::ctl::{
     inspect::{FileState, RootFacts, RootStat},
     state_root::StateRoot,
@@ -24,6 +24,7 @@ const MARKER_BOUND: u64 = 16_384;
 const IDENTITY_BOUND: u64 = 128;
 const JOURNAL_BOUND: u64 = 16 * 1024 * 1024;
 const HEADER_BYTES: u64 = 100;
+const WATERMARK_BOUND: u64 = watermark::FILE_LEN as u64;
 const ENTRY_LIMIT: usize = 256;
 /// Device and inode of the checked root, where the platform has them.
 type FileId = Option<(u64, u64)>;
@@ -55,8 +56,26 @@ impl StateObserverPort for FsStateObserver {
         facts.wal = handle.kind("store.sqlite3-wal");
         facts.wal_acceptance = handle.read("store.wal-acceptance", IDENTITY_BOUND, true);
         facts.fence = handle.read("store.fence", IDENTITY_BOUND, true);
+        facts.watermark = read_watermark(&handle);
         facts
     }
+}
+/// A whole-length watermark with no valid block is read again, up to three more times
+/// 1 ms apart: the read can see one block before a commit and the other torn by the next.
+fn read_watermark(handle: &RootHandle) -> FileState {
+    let mut state = handle.read(watermark::NAME, WATERMARK_BOUND, true);
+    for _ in 0..3 {
+        match &state {
+            FileState::Bytes(bytes)
+                if bytes.len() == watermark::FILE_LEN && !watermark::any_valid(bytes) =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+                state = handle.read(watermark::NAME, WATERMARK_BOUND, true);
+            }
+            _ => break,
+        }
+    }
+    state
 }
 #[cfg(unix)]
 fn file_id(metadata: &fs::Metadata) -> FileId {
