@@ -541,8 +541,9 @@ Implemented in E2-A slice A7a as specified in
 [storage-protocol.md](storage-protocol.md#commit-watermark): two slots in separate
 4 KiB blocks, the non-best slot overwritten after a pre-flush, both flushed through
 the writer's `FlushPort`; readers, writer open, recover and probe refuse a database
-below the file as `CommitLost`. The durability default stays `FsyncOnly` until the
-A7b measurement of `F_FULLFSYNC`. The sketch below is the original design input.
+below the file as `CommitLost`. Since A7b the durability default is `FullFlush`
+(explicit `F_FULLFSYNC`, no fallback) with W1 write ordering. The sketch below is the
+original design input.
 
 Watermark sketch:
 
@@ -563,6 +564,8 @@ Watermark sketch:
 - Cost: one extra durable small write per acknowledged commit against write p99
   below 20 ms. A commit is about 0.09 ms here with plain fsync, but macOS `fsync`
   is not a full flush; the `F_FULLFSYNC` cost is unmeasured and decides it.
+  (A7b measured it: write p99 about 14 ms through a fresh writer child with
+  FullFlush and two barriers per commit.)
 
 ## E2 ledger notes
 
@@ -593,9 +596,9 @@ unflagged repetitions relied on.
 1. Decision A (owner): A1 or A2 for owner admission, and what A2's weaker rule
    costs the owner.
 2. Silent WAL rollback was owner-accepted only for E1 (D20). The watermark is
-   implemented (E2-A slice A7a); still open: the `F_FULLFSYNC` default and W1/W2
-   write ordering (A7b), the rollback acceptance and recreation path (E2-B), and
-   Decision B's acceptance ordering.
+   implemented (E2-A slice A7a) and the `F_FULLFSYNC` default with W1 ordering
+   decided (A7b); still open: the rollback acceptance and recreation path (E2-B),
+   and Decision B's acceptance ordering.
 3. Payload damage: single flipped bytes are returned as data (7 of 20 trials) and
    no SQLite mechanism available here (no page checksums in the bundled build)
    detects it on either path. Accept as unchanged, or require a checksum
@@ -612,7 +615,7 @@ lease adapter across processes (the recover tests were in-process), or productio
 queries on a read-only handle. Those queries are now implemented and the release-binary
 budget runs are recorded in the [E1 receipt](migration-receipts/E1.md). Other unmeasured items:
 a live owner with a write transaction; damaged frames behind
-a trusted wal-index; `F_FULLFSYNC` cost; open-time checkpoint cost and multi-owner
+a trusted wal-index; open-time checkpoint cost and multi-owner
 `io.lock` behaviour; RESTART checkpoint behaviour; the stress dataset, workflows
 and runs; power loss; other platforms. Payload corruption and the large-integer
 issue remain open. Part 2 is an E2 specification, not implemented behavior or

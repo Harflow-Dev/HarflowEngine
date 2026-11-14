@@ -263,9 +263,39 @@ before the slot write and before the post-flush, whatever the commit's stage lab
 handles get their port from `hf_platform::durability`: `FullFlush` is an explicit
 `fcntl(F_FULLFSYNC)` on macOS and `sync_all` elsewhere; `FsyncOnly` is a plain `fsync(2)` on
 macOS (std's `sync_all` and `sync_data` both issue `F_FULLFSYNC` there) and `sync_all` elsewhere.
-Neither falls back to the other. `DEFAULT_DURABILITY` is `FsyncOnly` until the A7b measurement;
-the host's writer handles use it and the fixture seed uses `FsyncOnly`. hf-storage's own default,
-`SyncAllFlush`, is `sync_all`.
+Neither falls back to the other: at the port, a `FullFlush` the file system or device refuses
+(`ENOTSUP`, `ENODEV` or any other error) returns that `io::Error` unchanged and is never retried as
+`fsync`. The store then fails closed, by where the flush runs:
+
+- New root: `Store::initialize*` creates the file through `watermark::create`, whose flush error
+  surfaces as `Io`. The marker is not published, so the root never becomes an openable store.
+  `store.sqlite3*` and a partial `store.watermark` remain, so the root must be cleared before
+  initialization is retried: a retry on the same path is refused as `InvalidRoot` because the
+  directory exists (and `watermark::create` itself would refuse the existing file, `create_new`,
+  as `Io`).
+- Existing root, pre-flush (`settle`, before any slot write): the handle is poisoned and the write
+  returns `WatermarkUnrecorded`; nothing is committed. On a volume without `F_FULLFSYNC` this is
+  where every write stops.
+- Post-write flush (the pre-flush succeeded): the commit is visible, the write returns
+  `CommitOutcomeUnknown` and the handle is poisoned.
+
+`DEFAULT_DURABILITY` is `FullFlush` (since A7b). Only the host's writer handles take it
+(`hf-host/src/durability.rs`). The fixture seed uses `FsyncOnly`, because seeded roots are test
+data, not acknowledged history. Handles opened inside hf-storage with `WriterOptions::suppressed()`
+or `owner()` unchanged (for example the read-only watch session in `task_watch.rs`) and
+`Store::open` keep hf-storage's own default, `SyncAllFlush` (`sync_all`).
+
+Measured at A7b (Apple M3 Pro, internal APFS): `create_task` through a fresh writer child with
+`FullFlush` and `Suppressed` has write p99 about 14 ms (under 20 ms). That figure was taken with
+the store reset every 50 rounds (`HF_WL_RESET=50`): under `Suppressed`, `-wal` otherwise grows
+without bound (about 82 KB per `create_task`) and a fresh writer's open time grows with it, so the
+budget holds only once E2-D's WAL maintenance bounds `-wal`. One writer sustains about
+136 commits/s. Under four concurrent tasks the commit-lag p99 is 161 to 506 ms, driven by the
+non-waiting `io.lock` with 5 ms `Busy` polling. E2-D entry conditions: a waiting or queued
+`io.lock` hand-off replaces the polling, the capture-publication commit is coalesced into the
+event append commit, and commit-lag p99 is below 100 ms for the r06/r07 four-task burst and the
+4 x 42 lines/s sustained profile under `FullFlush`; idle-loop WAL maintenance bounds `-wal`
+growth before the owner runtime uses the store.
 
 Readers hold no `io.lock`. They read each block with its own positioned read; when neither is valid
 they retry the pair up to three more times, 1 ms apart (a reader can see one block before a commit
@@ -291,12 +321,15 @@ Residuals, documented rather than closed in E2-A:
 
 - Media corruption of the newest block lowers the detection threshold to the older entry, which
   can be more than one commit back after interrupted publications, instead of refusing.
-- Write ordering (W1): SQLite `synchronous=FULL` issues plain `fsync` for WAL frames on macOS. The
-  acknowledged-implies-durable argument assumes that `F_FULLFSYNC` on the watermark descriptor
-  flushes the whole device cache, including WAL frames already handed over (APFS on internal NVMe).
-  Under `FsyncOnly` neither barrier is a device-cache flush. A power loss can then persist slot n
-  without WAL frame n: a false `CommitLost` for an unacknowledged commit, which fails closed.
-  Flushing the `-wal` descriptor before the slot write (W2) is measured at A7b.
+- Write ordering (W1, shipped): SQLite `synchronous=FULL` issues plain `fsync` for WAL frames on
+  macOS, and the writer does not full-flush `-wal` itself. The acknowledged-implies-durable argument
+  assumes that `F_FULLFSYNC` on the watermark descriptor flushes the whole device cache, including
+  WAL frames already handed over (APFS on internal NVMe). If a device persisted the slot write
+  without the earlier WAL frames, a power loss could leave slot n without WAL frame n: a false
+  `CommitLost` for an unacknowledged commit, which fails closed and needs E2-B rollback acceptance
+  to clear. Under `FsyncOnly` (fixture seed) neither barrier is a device-cache flush, so the same
+  holds more broadly. Flushing the `-wal` descriptor before the slot write (W2) was measured at A7b
+  (about +3 ms p50 and +5 ms p99 per commit, p99 at the 20 ms budget line) and not adopted.
 - A process kill between commit and slot write leaves the database one ahead of the file; the next
   commit catches the file up. That state is legal and readable.
 

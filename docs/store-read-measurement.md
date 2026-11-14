@@ -439,3 +439,43 @@ new run directory `<UTC timestamp>-<label>` under a parent outside the repositor
 directory is created exclusively, so a run never overwrites or truncates earlier evidence,
 and each run's `batches.jsonl` names only its own raw files. A run labelled `smoke` is a
 harness check and not evidence.
+
+## Write-path measurement runbook (E2-A slice A7b)
+
+The commit-watermark write measurements live in `crates/hf-host/tests/write_latency.rs` (+
+`write_latency/`). Every test is `#[ignore]` and compiled only on macOS arm64. Results and the
+owner decisions are recorded with the A7b slice; this section only says how to rerun them.
+
+Dataset. Generate the `ci` dataset with the read generator above; the write tests clone its
+`ci-ckpt` root (checkpointed, empty `-wal`) with `cp -cR` for every series and remove each clone
+when the run ends, also on failure:
+
+    cargo test --release -p hf-storage --test read_measure --no-run
+    HF_MEASURE_DIR=<data> HF_MEASURE_OUT=<out> HF_MEASURE_DATASET=ci \
+      <target>/release/deps/read_measure-<hash> --ignored --exact --test-threads=1 generate
+
+Run. Build with `cargo test --release -p hf-host --test write_latency --no-run`, then:
+
+    env HF_MEASURE_DIR=<data> HF_MEASURE_OUT=<out> HF_MEASURE_LABEL=<label> [HF_WL_...] \
+      <target>/release/deps/write_latency-<hash> --ignored --exact --nocapture --test-threads 1 <test>
+
+| test | what it measures | settings |
+| --- | --- | --- |
+| `latency` | gate: one fresh writer child per operation, interleaved series | `HF_WL_SERIES` (`shape/mode/policy`, comma separated; shape `create` or `create_append`, mode `fsync`, `full` or `default`, policy `suppressed` or `owner`); `HF_WL_RESET` (default 50, the gate definition: re-clone every root after each 50 rounds to bound `-wal`; 0 lets it grow); `HF_MEASURE_WARM` (50), `HF_MEASURE_N` (500) |
+| `in_process` | per-commit cost on one long-lived Suppressed handle per mode | `HF_MEASURE_WARM`, `HF_MEASURE_N` |
+| `contention` | four writer processes, 200 KB appends | `HF_WL_MODE` (`full`), `HF_WL_POLICIES` (`owner,suppressed`), `HF_WL_COMMITS` (100) |
+| `throughput` | four tasks on one root replaying burst profiles, then 4 x 42 lines/s sustained | `HF_WL_MODES` (`full,fsync`), `HF_WL_PROFILES` (default: the checked-in r06 and r07), `HF_WL_REPEAT` (3), `HF_WL_SUSTAINED_S` (60), `HF_WL_CAPTURE` (1; 0 drops the capture-publication commit) |
+| `max_rate` | one writer, one 1 KiB line per commit, 30 s | `HF_WL_MODES` |
+| `full_flush_check` | `F_FULLFSYNC` on a regular file, `/dev/null` and a pipe | none |
+
+The gate is `create/full/suppressed` (or `create/default/suppressed`, which follows
+`DEFAULT_DURABILITY`) with the 1-minute load average at most 4.0 at start and end; `batches.jsonl`
+records it. Raw output is one JSON line per sample in `HF_MEASURE_OUT`.
+
+Profiles. `write_latency/profiles/r06.txt` and `r07.txt` hold one `t_ms len` pair per stdout line
+of the scrubbed E2 recordings `r06_tool_use` and `r07_permission_denied` (time from spawn and
+line length; no content). They are produced from each recording's `timeline.jsonl` by:
+
+    python3 -I -c 'import json,sys
+    for l in open(sys.argv[1]):
+        r=json.loads(l); print(r["t_ms"], len(r["line"].encode()))' <recording>/timeline.jsonl

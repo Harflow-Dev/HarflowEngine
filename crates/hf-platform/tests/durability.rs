@@ -36,8 +36,8 @@ impl Drop for Scratch {
 const MODES: [Durability; 2] = [Durability::FullFlush, Durability::FsyncOnly];
 
 #[test]
-fn the_default_is_fsync_only_until_the_measured_switch() {
-    assert_eq!(DEFAULT_DURABILITY, Durability::FsyncOnly);
+fn the_default_is_the_full_flush() {
+    assert_eq!(DEFAULT_DURABILITY, Durability::FullFlush);
 }
 
 #[test]
@@ -75,13 +75,15 @@ fn a_descriptor_that_cannot_be_flushed_is_an_error_in_both_modes() {
     }
 }
 
-/// `/dev/null` accepts `fsync(2)` but not `F_FULLFSYNC`: the full flush reports that
-/// error instead of falling back to the plain one.
+/// `/dev/null` accepts `fsync(2)` but not `F_FULLFSYNC`: the full flush, and the default
+/// port, report that error instead of falling back to the plain one.
 #[cfg(target_os = "macos")]
 #[test]
 fn a_full_flush_the_device_refuses_does_not_fall_back_to_fsync() {
     let null = OpenOptions::new().write(true).open("/dev/null").unwrap();
     FsyncOnly.flush(&null).unwrap();
     let refused = FullFlush.flush(&null).unwrap_err();
+    assert!(refused.raw_os_error().is_some(), "{refused:?}");
+    let refused = port(DEFAULT_DURABILITY).flush(&null).unwrap_err();
     assert!(refused.raw_os_error().is_some(), "{refused:?}");
 }

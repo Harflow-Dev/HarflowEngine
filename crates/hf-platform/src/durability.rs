@@ -5,6 +5,9 @@
 //! device without that barrier: on macOS a plain `fsync(2)`, because std's `sync_all`
 //! and `sync_data` both issue `F_FULLFSYNC` there; elsewhere `sync_all`, which is
 //! `fsync`. Neither falls back to the other on failure: an error is returned as is.
+//! In particular a `FullFlush` that the file system or device refuses (`ENOTSUP`,
+//! `ENODEV` or any other error) is never retried as a plain `fsync`; the caller sees
+//! the error and fails closed.
 use hf_application::durability::FlushPort;
 use std::{fs::File, sync::Arc};
 
@@ -15,8 +18,8 @@ pub enum Durability {
     FsyncOnly,
 }
 
-/// The mode production writers use.
-pub const DEFAULT_DURABILITY: Durability = Durability::FsyncOnly;
+/// The mode production writers use: an explicit device-cache flush (measured at A7b).
+pub const DEFAULT_DURABILITY: Durability = Durability::FullFlush;
 
 /// The flush port for `mode`.
 pub fn port(mode: Durability) -> Arc<dyn FlushPort> {
@@ -26,7 +29,8 @@ pub fn port(mode: Durability) -> Arc<dyn FlushPort> {
     }
 }
 
-/// `F_FULLFSYNC` on macOS, `sync_all` elsewhere.
+/// `F_FULLFSYNC` on macOS, `sync_all` elsewhere. Every error, including an
+/// unsupported file system, is returned unchanged, with no fallback to `fsync`.
 #[derive(Clone, Copy, Debug)]
 pub struct FullFlush;
 

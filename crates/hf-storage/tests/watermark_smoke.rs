@@ -166,3 +166,25 @@ fn a_failed_post_flush_is_an_unknown_outcome_and_reopen_reads_the_commit() {
     let reopened = Store::open(&root, default_limits(), deadline(), lease_port()).unwrap();
     put(&reopened, "three").unwrap();
 }
+
+#[test]
+fn a_refused_flush_at_initialize_is_io_and_leaves_no_openable_store() {
+    let fixture = Fixture::new();
+    let root = fixture.path().join("state");
+    let port = Arc::new(Counting::default());
+    port.fail_after(0);
+    let options = WriterOptions::suppressed().with_flush(port);
+    let created =
+        Store::initialize_fixture_with(&root, default_limits(), deadline(), lease_port(), options);
+    assert!(matches!(created, Err(Error::Io(_))), "{:?}", created.err());
+    let open = Store::open(&root, default_limits(), deadline(), lease_port());
+    assert!(open.is_err(), "a root whose watermark flush failed opened");
+    let options = WriterOptions::suppressed().with_flush(Arc::new(Counting::default()));
+    let retried =
+        Store::initialize_fixture_with(&root, default_limits(), deadline(), lease_port(), options);
+    assert!(
+        matches!(retried, Err(Error::InvalidRoot)),
+        "{:?}",
+        retried.err()
+    );
+}
