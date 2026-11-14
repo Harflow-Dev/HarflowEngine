@@ -152,8 +152,11 @@ impl Binding {
             .acquire(&self.root.join("store.lock"), mode, false, deadline)
             .map_err(crate::lease_error)
     }
+    /// The lease, then the recovery gate (a recovery that started after the lease-free
+    /// gate read), then sidecars, marker and header.
     pub(crate) fn claim(&self, mode: LeaseMode, deadline: Instant) -> Result<Box<dyn LeaseGuard>> {
         let guard = self.acquire(mode, deadline)?;
+        crate::recovery_gate::check(&self.root)?;
         self.check_sidecars(false)?;
         crate::wal::marker(self)?;
         crate::connection::qualify_header(&self.database())?;

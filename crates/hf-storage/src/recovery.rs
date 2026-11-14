@@ -33,7 +33,7 @@ impl RecoveryReadSession {
         if !self.root.try_exists()? {
             return Ok(None);
         }
-        let binding = Binding::capture(&self.root, true, self.leases.clone())?;
+        let binding = crate::recovery_gate::open_existing(&self.root, self.leases.clone())?;
         let _claim = binding.claim(LeaseMode::Shared, deadline)?;
         let _io = binding.io(deadline)?;
         crate::recovery_copy::with_qualified_copy(
@@ -103,6 +103,7 @@ fn map(error: Error) -> RecoveryError {
         Error::DeadlineExceeded => RecoveryError::DeadlineExceeded,
         Error::Replaced | Error::StaleOwnership => RecoveryError::Stale,
         Error::OwnershipConflict => RecoveryError::Refused,
+        Error::RecoveryInterrupted => RecoveryError::Unavailable,
         Error::InvalidOwnership
         | Error::LimitExceeded
         | Error::InvalidRoot

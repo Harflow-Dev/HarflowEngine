@@ -45,6 +45,8 @@ pub use wal_owner::{
     WalMaintenance, WriterOptions,
 };
 mod fence;
+mod recovery_gate;
+pub use recovery_gate::write_recovery_record;
 mod small_file;
 mod verify;
 mod watermark;
@@ -91,9 +93,13 @@ pub enum Error {
     /// due time is unchanged, so the next due check repeats the scan.
     FenceUnrecorded(Box<Error>),
     /// `store.watermark` records a commit the database does not hold: acknowledged commits
-    /// were lost (for example a restored or truncated `-wal`). Writer open, recover,
-    /// probe, every commit and every read refuse; accepting the loss is E2-B.
+    /// were lost (for example a restored or truncated `-wal`), or `store.fence` records
+    /// that loss as `commit_lost`. Writer open, recover, probe, every commit and every read
+    /// refuse; writer open, recover, commit and the verifier also record the fence.
     CommitLost,
+    /// `store.recovery` names a `pending` state recovery: every store opener refuses
+    /// until that recovery commits (`hf_domain::ctl::state_recovery`).
+    RecoveryInterrupted,
     /// A watermark write or flush failed on this handle, so it takes no further write.
     /// Reads and checkpoints on it continue; reopening the store is legal.
     WatermarkUnrecorded,

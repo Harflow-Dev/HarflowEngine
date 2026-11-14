@@ -117,7 +117,7 @@ pub(crate) fn wal_len(root: &Path) -> Result<u64> {
 }
 
 /// Lock, connection and SQLite busy results, an expired budget and a fenced store:
-/// maintenance skips.
+/// maintenance skips. A `CommitLost` found by the maintenance commit is reported.
 fn skippable(error: &Error) -> bool {
     match error {
         Error::Busy | Error::DeadlineExceeded | Error::Fenced => true,
@@ -173,8 +173,8 @@ impl Store {
     /// file still over `JOURNAL_SIZE_LIMIT` (a reader had pinned it), one maintenance
     /// commit follows. That commit only advances `commit_sequence`, but it writes a frame,
     /// which restarts the log, and SQLite cuts the file to the limit at that write. Busy,
-    /// an expired budget or a fence (checked under `io.lock` before PASSIVE) is a skip,
-    /// never an error. `deadline` bounds admission, `io.lock`
+    /// an expired budget or a fence of either state (checked under `io.lock` before
+    /// PASSIVE) is a skip, never an error. `deadline` bounds admission, `io.lock`
     /// and busy waits, not the PASSIVE copy itself.
     pub fn maintain_wal(&self, deadline: Instant) -> Result<WalMaintenance> {
         if self.options.checkpoint != CheckpointPolicy::Owner {
@@ -206,8 +206,12 @@ impl Store {
             return Ok(None);
         }
         let _io = self.binding.io(deadline)?;
-        // A fenced store is not checkpointed: its WAL stays as the verifier saw it.
-        crate::fence::check(self.binding.root(), &self.identity.generation)?;
+        // A fenced store of either state is not checkpointed: its WAL stays as it was
+        // seen. A `commit_lost` fence is reported as `Fenced` so that it is a skip too.
+        match crate::fence::check(self.binding.root(), &self.identity.generation) {
+            Err(Error::CommitLost) => return Err(Error::Fenced),
+            other => other?,
+        }
         connection::check_deadline(deadline)?;
         let result = checkpoint(&connection, false, deadline)?;
         self.binding.check()?;

@@ -18,7 +18,7 @@ impl RootHold {
         leases: Arc<dyn LeasePort>,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true, leases)?;
+        let binding = crate::recovery_gate::open_existing(root.as_ref(), leases)?;
         let claim = binding.claim(LeaseMode::Shared, deadline)?;
         let identity = wal::marker(&binding)?;
         let generation = Id::new(identity.generation.clone()).map_err(|_| Error::Incompatible)?;

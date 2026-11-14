@@ -46,7 +46,8 @@ fn standard(reason: InspectReason) -> StoreFailure {
 /// otherwise swallow them.
 pub(super) fn failure(error: &Error) -> StoreFailure {
     use InspectReason::{
-        ForeignStore, InfrastructureUnavailable, InvalidMarker, NewerStore, UnsupportedLayout,
+        ForeignStore, InfrastructureUnavailable, InvalidMarker, NewerStore, RecoveryInterrupted,
+        UnsupportedLayout,
     };
     match error {
         Error::DeadlineExceeded | Error::Busy => return StoreFailure::Busy,
@@ -93,6 +94,7 @@ pub(super) fn failure(error: &Error) -> StoreFailure {
             InfrastructureUnavailable,
             "acknowledged commits are missing; the history cannot be trusted".to_string(),
         ),
+        ReadRefusal::RecoveryInterrupted => standard(RecoveryInterrupted),
     }
 }
 
@@ -211,6 +213,19 @@ mod tests {
         assert_eq!(
             failure(&Error::CommitLost),
             unavailable("acknowledged commits are missing; the history cannot be trusted")
+        );
+    }
+
+    #[test]
+    fn an_interrupted_state_recovery_is_incompatible_and_recovery_interrupted() {
+        assert_eq!(
+            failure(&Error::RecoveryInterrupted),
+            StoreFailure::Incompatible {
+                reason: InspectReason::RecoveryInterrupted,
+                message: "Unsupported state root: explicit state recovery is interrupted; \
+                          inspect state or select a fresh state root"
+                    .to_string(),
+            }
         );
     }
 

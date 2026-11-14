@@ -151,6 +151,8 @@ pub struct RootFacts {
     pub fence: FileState,
     /// Bounded read of `store.watermark`.
     pub watermark: FileState,
+    /// Bounded read of `store.recovery` (`super::state_recovery`).
+    pub recovery_record: FileState,
 }
 impl RootFacts {
     pub fn without_files(stat: RootStat) -> Self {
@@ -167,6 +169,7 @@ impl RootFacts {
             wal_acceptance: FileState::Absent,
             fence: FileState::Absent,
             watermark: FileState::Absent,
+            recovery_record: FileState::Absent,
         }
     }
 }

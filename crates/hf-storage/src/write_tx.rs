@@ -1,7 +1,8 @@
 //! The single commit path of every store write: admission, `io.lock`, the fence and
-//! watermark checks, an immediate transaction, the caller's action, the dataset
-//! publication it asks for, the `commit_sequence` increment, the closing checks, and the
-//! watermark publication of the new sequence.
+//! watermark checks (a database below the watermark is fenced `commit_lost`), an
+//! immediate transaction, the caller's action, the dataset publication it asks for, the
+//! `commit_sequence` increment, the closing checks, and the watermark publication of the
+//! new sequence.
 use crate::{
     Error, Result, Store, connection,
     watermark::{self, Watermark},
@@ -114,7 +115,16 @@ impl Store {
         let mark = self.open_watermark()?;
         connection::timeout(&connection, deadline)?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        watermark::not_ahead(mark.seq(), &transaction)?;
+        if let Err(error) = watermark::not_ahead(mark.seq(), &transaction) {
+            // Rolled back before the fence is recorded under the same `io.lock`.
+            drop(transaction);
+            let generation = &self.identity.generation;
+            return Err(crate::fence::on_commit_lost(
+                &self.binding,
+                generation,
+                error,
+            ));
+        }
         let Some(value) = action(&transaction)? else {
             return Ok(None);
         };

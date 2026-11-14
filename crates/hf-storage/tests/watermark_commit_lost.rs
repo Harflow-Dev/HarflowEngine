@@ -224,5 +224,10 @@ fn verification_through_an_open_handle_refuses_a_database_below_the_watermark() 
     let now = store.verify_in_place(later(30));
     assert!(matches!(now, Err(Error::CommitLost)), "{now:?}");
     assert!(!root.join(VERIFY).exists(), "no due record");
-    assert!(!root.join(FENCE).exists(), "no fence");
+    // E2-B: the verifier records the loss as the `commit_lost` fence.
+    assert_eq!(
+        fs::read(root.join(FENCE)).unwrap(),
+        fence_bytes(&generation(root), "commit_lost"),
+        "commit_lost fence"
+    );
 }

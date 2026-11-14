@@ -37,25 +37,57 @@ pub(crate) fn read(root: &Path, name: &str, bound: u64) -> Result<Option<Vec<u8>
 /// non-regular file (directory, link, FIFO, device) or a regular file replaced after
 /// `lstat` stays `Incompatible`; a symlink swapped in after `lstat` is `Io` (`ELOOP`).
 pub(crate) fn read_bounded(root: &Path, name: &str, bound: u64) -> Result<Content> {
+    match read_listed(root, name, bound)? {
+        Listed::Content(content) => Ok(content),
+        Listed::Replaced => Err(Error::Incompatible),
+        Listed::Removed(error) => Err(error.into()),
+    }
+}
+
+/// What `read_listed` found.
+#[derive(Debug)]
+pub(crate) enum Listed {
+    Content(Content),
+    /// The name led to another file than the one `lstat` listed when it was opened: it
+    /// was replaced in between. A fresh read can see the new file.
+    Replaced,
+    /// The listed file was gone when it was opened (`ENOENT`), with that error.
+    Removed(std::io::Error),
+}
+
+/// As `read_bounded`, but a file replaced or removed between `lstat` and the open is
+/// reported as `Listed::Replaced` or `Listed::Removed` instead of an error. A file that
+/// `lstat` itself lists as non-regular stays `Incompatible`.
+pub(crate) fn read_listed(root: &Path, name: &str, bound: u64) -> Result<Listed> {
     let path = root.join(name);
     let listed = match fs::symlink_metadata(&path) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Content::Absent),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Listed::Content(Content::Absent));
+        }
         Err(error) => return Err(error.into()),
         Ok(metadata) if !metadata.is_file() => return Err(Error::Incompatible),
-        Ok(metadata) if metadata.len() > bound => return Ok(Content::Oversized),
+        Ok(metadata) if metadata.len() > bound => return Ok(Listed::Content(Content::Oversized)),
         Ok(metadata) => metadata,
     };
-    let file = open_no_follow(&path)?;
+    let file = match open_no_follow(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Listed::Removed(error));
+        }
+        other => other?,
+    };
     let opened = file.metadata()?;
-    if !opened.is_file() || !same_file(&listed, &opened) {
+    if !same_file(&listed, &opened) {
+        return Ok(Listed::Replaced);
+    }
+    if !opened.is_file() {
         return Err(Error::Incompatible);
     }
     let mut bytes = Vec::new();
     file.take(bound + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > bound {
-        return Ok(Content::Oversized);
+        return Ok(Listed::Content(Content::Oversized));
     }
-    Ok(Content::Bytes(bytes))
+    Ok(Listed::Content(Content::Bytes(bytes)))
 }
 
 /// Opens for reading without following a final symlink (the open fails with `ELOOP`) and

@@ -8,12 +8,16 @@
 //! generation stored inside the database, or the database sequence against the
 //! watermark, so a store that lost acknowledged commits still reads `ready` here (the
 //! read session refuses it). A current store without a regular `-wal` is
-//! `incompatible`, because every read of it is refused.
+//! `incompatible`, because every read of it is refused. A `pending` state-recovery record
+//! (`store.recovery`) without an unfinished journal of its operation is
+//! `incompatible`/`recovery_interrupted`, and a malformed one an invalid marker; a
+//! `commit_lost` fence reads as unavailable, like a `failed` one.
 use hf_domain::ctl::{
     inspect::{
         EntryKind, FileState, InspectReason, InspectStatus, JournalDecode, MarkerDecode,
         ObservedField, RootFacts, RootStat, StateInspection,
     },
+    state_recovery::StoreRecovery,
     state_root::StateRoot,
 };
 mod records;
@@ -135,8 +139,19 @@ fn classify(
         FileState::NotRegular | FileState::Oversize => Some(MarkerDecode::Invalid),
         FileState::Absent | FileState::Unreadable => None,
     };
-    if let Some(verdict) = journal_verdict(facts, codec, root, marker.as_ref()) {
+    let recovery = records::recovery_record(&facts.recovery_record);
+    let record = recovery.as_ref().ok().and_then(Option::as_ref);
+    if let Some(verdict) = journal_verdict(facts, codec, root, marker.as_ref(), record) {
         return verdict;
+    }
+    // A pending record with no journal of its operation: the recovery never established
+    // its intent, and every store opener refuses the root.
+    match recovery {
+        Err(reason) => return Verdict::incompatible(reason),
+        Ok(Some(record)) if record.is_pending() => {
+            return Verdict::incompatible(InspectReason::RecoveryInterrupted);
+        }
+        Ok(_) => {}
     }
     if facts.python_marker == FileState::Unreadable {
         return Verdict::incompatible(InspectReason::InfrastructureUnavailable);
@@ -171,13 +186,17 @@ fn has_non_regular_infrastructure(facts: &RootFacts) -> bool {
 /// Mirrors the reference engine. Unreadable or unparseable bytes and an oversize file
 /// say nothing about a recovery (`infrastructure_unavailable`); a non-regular file is an
 /// invalid marker; a document that is not a journal for this root, and a journal never
-/// committed by the marker, are `recovery_interrupted`. Only a well-formed unfinished
-/// journal reports status `interrupted`.
+/// committed, are `recovery_interrupted`. Only a well-formed unfinished journal reports
+/// status `interrupted`. A journal is committed when the reference marker names its
+/// operation or, on a Rust root, when `store.recovery` is `committed` for its operation,
+/// in any journal phase. A `pending` record of another operation is
+/// `incompatible`/`recovery_interrupted` whatever the journal's phase.
 fn journal_verdict(
     facts: &RootFacts,
     codec: &dyn StateCodecPort,
     root: &StateRoot,
     marker: Option<&MarkerDecode>,
+    record: Option<&StoreRecovery>,
 ) -> Option<Verdict> {
     let state = if facts.journal_pending == FileState::Absent {
         &facts.journal
@@ -208,10 +227,15 @@ fn journal_verdict(
             operation_id,
         } => (completed, operation_id),
     };
+    // A pending record of another operation: that recovery holds the gate closed while
+    // this journal can no longer be resumed.
+    if record.is_some_and(|record| record.is_pending() && record.operation_id() != operation_id) {
+        return Some(Verdict::incompatible(InspectReason::RecoveryInterrupted));
+    }
     let committed = matches!(
         marker,
         Some(MarkerDecode::Store { recovery_operation_id: Some(id), .. }) if *id == operation_id
-    );
+    ) || record.is_some_and(|record| record.commits(&operation_id));
     if !completed && !committed {
         return Some(Verdict::interrupted());
     }

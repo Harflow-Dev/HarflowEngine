@@ -1,7 +1,11 @@
 //! Refusals from the engine-owned state files read after `-wal`: the lost-WAL
-//! acceptance record, the verification fence and the commit watermark, in that order.
+//! acceptance record, the verification fence and the commit watermark, in that order;
+//! and the state-recovery record, judged with the recovery journal.
 use crate::watermark::{self, Decoded};
-use hf_domain::ctl::inspect::{FileState, InspectReason};
+use hf_domain::ctl::{
+    inspect::{FileState, InspectReason},
+    state_recovery::StoreRecovery,
+};
 
 /// The lost-WAL acceptance record, after `-wal`: absent or `accepted` for this
 /// generation passes; `pending`, `failed` and an unreadable record read as a missing
@@ -21,9 +25,9 @@ pub(super) fn acceptance_refusal(record: &FileState, generation: &str) -> Option
         _ => Some(InspectReason::InvalidMarker),
     }
 }
-/// The verification fence, after the acceptance record: absent passes; `failed` for
-/// this generation or an unreadable fence refuses as unavailable; anything else is an
-/// invalid marker, as the read session refuses it.
+/// The verification fence, after the acceptance record: absent passes; `failed` or
+/// `commit_lost` for this generation, or an unreadable fence, refuses as unavailable;
+/// anything else is an invalid marker, as the read session refuses it.
 pub(super) fn fence_refusal(fence: &FileState, generation: &str) -> Option<InspectReason> {
     let bytes = match fence {
         FileState::Absent => return None,
@@ -33,7 +37,7 @@ pub(super) fn fence_refusal(fence: &FileState, generation: &str) -> Option<Inspe
     };
     let text = String::from_utf8_lossy(bytes);
     match text.strip_prefix(&format!("harflow-fence-1\n{generation}\n")) {
-        Some("failed\n") => Some(InspectReason::InfrastructureUnavailable),
+        Some("failed\n" | "commit_lost\n") => Some(InspectReason::InfrastructureUnavailable),
         _ => Some(InspectReason::InvalidMarker),
     }
 }
@@ -53,5 +57,18 @@ pub(super) fn watermark_refusal(record: &FileState, generation: &str) -> Option<
         Decoded::Valid { .. } => None,
         Decoded::Unavailable => Some(InspectReason::InfrastructureUnavailable),
         Decoded::Incompatible => Some(InspectReason::InvalidMarker),
+    }
+}
+/// The state-recovery record: absent is `None`; a well-formed record is decoded; an
+/// unreadable record refuses as unavailable; a non-regular, oversized or malformed record
+/// is an invalid marker, as every store opener refuses it as incompatible.
+pub(super) fn recovery_record(record: &FileState) -> Result<Option<StoreRecovery>, InspectReason> {
+    match record {
+        FileState::Absent => Ok(None),
+        FileState::Unreadable => Err(InspectReason::InfrastructureUnavailable),
+        FileState::NotRegular | FileState::Oversize => Err(InspectReason::InvalidMarker),
+        FileState::Bytes(bytes) => StoreRecovery::decode(bytes)
+            .map(Some)
+            .ok_or(InspectReason::InvalidMarker),
     }
 }

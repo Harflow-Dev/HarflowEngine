@@ -79,3 +79,29 @@ fn a_lost_commit_found_by_the_maintenance_commit_is_reported() {
         Err(Error::CommitLost)
     ));
 }
+
+/// A fence of either state, `commit_lost` included, makes maintenance a skip with no
+/// PASSIVE checkpoint and no maintenance commit: the log stays as it was.
+#[test]
+fn a_fenced_store_of_either_state_skips_maintenance_without_a_checkpoint() {
+    for state in ["commit_lost", "failed"] {
+        let scratch = Fixture::new();
+        let (root, store) = grown(&scratch, Arc::new(Recorder::default()));
+        let fence = format!(
+            "harflow-fence-1\n{}\n{state}\n",
+            store.identity().generation
+        );
+        std::fs::write(root.join("store.fence"), fence).unwrap();
+        let main = bytes(&root, MAIN);
+        let wal = bytes(&root, "store.sqlite3-wal");
+        let seq = database_seq(&root);
+        let result = store.maintain_wal(deadline());
+        assert!(
+            matches!(result, Ok(hf_storage::WalMaintenance::Skipped)),
+            "{state}: {result:?}"
+        );
+        assert_eq!(bytes(&root, MAIN), main, "{state}: no PASSIVE ran");
+        assert_eq!(bytes(&root, "store.sqlite3-wal"), wal, "{state}");
+        assert_eq!(database_seq(&root), seq, "{state}: no maintenance commit");
+    }
+}

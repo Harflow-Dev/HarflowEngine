@@ -182,27 +182,34 @@ directory is flushed after it (`File::open(dir).sync_all()`, `EINVAL` tolerated 
 unix only, since non-unix roots are refused at binding). The due record is not flushed: losing it
 only repeats a check. Neither file is created at initialization, so seeded roots never contain them.
 
-`store.fence` holds `harflow-fence-1\n<generation>\nfailed\n`, at most 128 bytes, read like the
-acceptance record. All three files are opened with `O_NOFOLLOW|O_NONBLOCK` on macOS and Linux (x86,
+`store.fence` holds `harflow-fence-1\n<generation>\n<state>\n`, at most 128 bytes, read like the
+acceptance record. The state is `failed` (written by the verifier after a corruption verdict) or
+`commit_lost` (written since E2-B by the writer-role paths that find the database below the
+watermark: writer open and `recover` under `io.lock` after in-place qualification, the commit path
+after its rolled-back transaction, and the verifier under its record lock). A fence is written only
+when none exists for the generation, so `failed` and `commit_lost` never overwrite each other and
+the first to land stays; a failed `commit_lost` write still reports `CommitLost`. Probe and readers
+never write a fence. All three files are opened with `O_NOFOLLOW|O_NONBLOCK` on macOS and Linux (x86,
 x86_64, arm, aarch64; flag values spelled out because hf-storage has no libc dependency), so a FIFO
 swapped in after `lstat` is refused as `Incompatible` by the `fstat` that follows instead of
 blocking, and a symlink swapped in fails the open with `ELOOP` (`Error::Io`; in the read session
 `ReadUnavailable`) instead of being followed; other unix targets open without those flags and keep
-that race. `failed` for the marker's generation is `Error::Fenced`; a foreign generation, malformed
+that race. `failed` for the marker's generation is `Error::Fenced` and `commit_lost` is
+`Error::CommitLost` (the read session's message is unchanged); a foreign generation, malformed
 or oversized content, a non-regular file, or a regular file replaced by another one after `lstat`
 (device/inode mismatch) is `Incompatible`. The check runs after the acceptance record, in the refusal order marker, header,
 journal, `-wal`, acceptance record, fence: in `qualify::precheck` and again at the end of in-place
 qualification (so `open`, `recover`, `probe` and the verifier refuse), in `Store::write` after
 `io.lock` and before `BEGIN` (no retry; every later commit refuses, including WAL maintenance
-writes), in WAL maintenance under `io.lock` before a PASSIVE checkpoint (a fenced store is skipped,
-not checkpointed), and in the read session at open, at every read entry and at every read exit. A running
+writes), in WAL maintenance under `io.lock` before a PASSIVE checkpoint (a fenced store of either
+state is skipped, not checkpointed), and in the read session at open, at every read entry and at every read exit. A running
 handle's commits therefore refuse from the first commit after the fence lands; reads already inside
 a snapshot finish and are then refused at exit. `state-inspect` reads `store.fence` lease-free,
 bounded and `O_NOFOLLOW`, after the acceptance record, and reports `incompatible` with
-`infrastructure_unavailable` for `failed` in the current generation or an unreadable fence and
-`invalid_marker` for anything else. Clearing the fence (after an explicit verify or recover) and
-the owner runtime's behaviour while fenced belong to E2-B; the clearing path needs a precheck
-variant, because `recover` and `probe` refuse a fenced root today.
+`infrastructure_unavailable` for `failed` or `commit_lost` in the current generation or an
+unreadable fence and `invalid_marker` for anything else. Clearing the fence and the owner runtime's
+behaviour while fenced belong to the maintenance actor and E2-B; the clearing path needs a precheck
+variant, because `recover` and `probe` refuse a fenced root.
 
 ## Commit watermark
 
@@ -307,8 +314,8 @@ order marker, header, journal, `-wal`, acceptance record, fence, watermark (file
 `CommitLost`): in `qualify::precheck` with the comparison on the qualification snapshot (so `open`,
 `recover` and `probe` refuse; `open` compares under `io.lock`, and the A0 tamper case of a missing
 `commit_sequence` table stays `Incompatible`), in the verifier on its read-only connection after
-the identity check (a `CommitLost` store is refused before the scan, and neither the due record
-nor the fence is written), and in the read session at open and at every read entry. End-of-qualification and read-exit re-checks test presence only, never the
+the identity check (a `CommitLost` store is refused before the scan, no due record is written,
+and the `commit_lost` fence is recorded under the record lock), and in the read session at open and at every read entry. End-of-qualification and read-exit re-checks test presence only, never the
 sequence. Not covered: a store handle's own reads (`Store::task_read`, `Store::event_read`,
 `read_batch`) are checked at writer open only, and `RecoveryReadSession` (the capped private copy,
 `recovery.rs`) checks neither the fence nor the watermark. `state-inspect` reads the file lease-free and bounded (8192 bytes,

@@ -202,6 +202,15 @@ fn a_database_below_the_watermark_refuses_the_commit_without_poisoning() {
     assert_eq!(database_seq(root), 1);
     assert_eq!(file_bytes(root), file_of(&generation, Some(5), Some(1)));
     write_file(root, &good);
+    // E2-B: the refusal recorded the `commit_lost` fence, which outlives the repaired
+    // watermark; once it is removed the handle commits again (it was not poisoned).
+    let fence = root.join("store.fence");
+    assert_eq!(
+        fs::read(&fence).unwrap(),
+        format!("harflow-fence-1\n{generation}\ncommit_lost\n").into_bytes()
+    );
+    assert!(matches!(put(&store, "fenced"), Err(Error::CommitLost)));
+    fs::remove_file(&fence).unwrap();
     put(&store, "three").unwrap();
     assert_eq!(
         present(&store, &["one", "two", "three"]),

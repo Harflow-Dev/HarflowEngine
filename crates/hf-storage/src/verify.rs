@@ -34,7 +34,8 @@ const BOUND: u64 = 128;
 pub enum Verification {
     /// The check passed; the next one is due one period later.
     Passed,
-    /// The check found corruption; `store.fence` now refuses every write and read.
+    /// The check found corruption; `store.fence` now refuses every write and read (a
+    /// fence of either state already present is left as it is).
     Fenced,
     /// Interrupted at the deadline, busy, or an I/O failure: no fence, due time unchanged.
     Inconclusive,
@@ -84,10 +85,17 @@ impl Store {
             {
                 return Err(Error::Incompatible);
             }
-            // A database below the watermark lost acknowledged commits: refused, not
-            // scanned, and neither the due record nor the fence is written.
-            watermark::not_ahead(mark, &connection).map_err(scan::corruption)?;
-            check(&connection, deadline)?
+            // A database below the watermark lost acknowledged commits: refused and not
+            // scanned; no due record is written, and the `commit_lost` fence is recorded
+            // under `io.lock` once the connection is closed.
+            match watermark::not_ahead(mark, &connection).map_err(scan::corruption) {
+                Err(Error::CommitLost) => None,
+                Err(error) => return Err(error),
+                Ok(()) => Some(check(&connection, deadline)?),
+            }
+        };
+        let Some(verdict) = verdict else {
+            return Err(self.fence_commit_lost());
         };
         self.confirm_unchanged(stamp)?;
         match verdict {
@@ -122,19 +130,28 @@ impl Store {
     /// Any failure to record the fence after a corruption verdict (the lock budget, an
     /// I/O error writing, renaming or flushing it, a read-back mismatch) is
     /// `FenceUnrecorded` with its cause, so the caller always learns corruption was found.
-    /// An existing fence must be absent or this generation's `failed`; any other fence
-    /// (`Incompatible`) is returned as is and left in place, and a failure to read it
-    /// (I/O, `ELOOP`) is `FenceUnrecorded` too.
+    /// An existing fence of this generation (`failed` or `commit_lost`) is kept and counts
+    /// as recorded; any other fence (`Incompatible`) is returned as is and left in place,
+    /// and a failure to read it (I/O, `ELOOP`) is `FenceUnrecorded` too.
     fn write_fence(&self) -> Result<()> {
         let unrecorded = |cause: Error| Error::FenceUnrecorded(Box::new(cause));
         let _io = self.record_lock().map_err(unrecorded)?;
         match fence::check(self.binding.root(), &self.identity.generation) {
-            Ok(()) | Err(Error::Fenced) => {}
-            // An existing fence that is not this generation's `failed` is left in place.
+            // An existing fence of either state for this generation is left as it is.
+            Ok(()) | Err(Error::Fenced | Error::CommitLost) => {}
+            // An existing fence that is not this generation's is left in place.
             Err(Error::Incompatible) => return Err(Error::Incompatible),
             Err(cause) => return Err(unrecorded(cause)),
         }
         fence::write(self.binding.root(), &self.identity.generation).map_err(unrecorded)
+    }
+    /// Records the `commit_lost` fence under `io.lock` (best effort: a lock not taken
+    /// within `RECORD_BUDGET` or a failed write leaves no fence) and returns `CommitLost`.
+    fn fence_commit_lost(&self) -> Error {
+        let Ok(_io) = self.record_lock() else {
+            return Error::CommitLost;
+        };
+        fence::record_commit_lost(&self.binding, &self.identity.generation)
     }
     /// `io.lock` within `RECORD_BUDGET` from now. The lease port does not wait for a held
     /// lock, so `Busy` is retried after a short pause until the budget runs out.

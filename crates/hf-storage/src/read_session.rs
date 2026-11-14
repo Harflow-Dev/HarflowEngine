@@ -4,10 +4,12 @@
 //! checkpoint or write path. A missing `-wal` is refused before SQLite is opened,
 //! because opening would create an empty one and report an empty history. The
 //! deadline is soft: SQLite open and WAL recovery cannot be interrupted, so an
-//! overrun answer is refused after the fact as `DeadlineExceeded`.
+//! overrun answer is refused after the fact as `DeadlineExceeded`. A pending state
+//! recovery refuses before the root is identified and again under the lease
+//! (`recovery_gate.rs`).
 use crate::{
     Error, Identity, Limits, Result, TaskSnapshot, binding::Binding, connection, fence,
-    read_context::ReadContext, wal, wal_acceptance, watermark,
+    read_context::ReadContext, recovery_gate, wal, wal_acceptance, watermark,
 };
 use hf_application::{
     event_read::EventReadResult,
@@ -44,18 +46,21 @@ impl ReadSession {
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         let root = std::path::absolute(root.as_ref())?;
+        recovery_gate::check_lease_free(&root)?;
         let binding = match Binding::identify_existing(&root, leases) {
             Err(error @ (Error::InvalidRoot | Error::Io(_))) => {
                 let fault = marker_file_fault(&root)
                     .or_else(|| non_regular(&root, &["store.lock", "io.lock"]));
-                return Err(fault.unwrap_or(error));
+                return Err(recovery_gate::after_failure(&root, fault.unwrap_or(error)));
             }
-            other => other?,
+            other => other.map_err(|error| recovery_gate::after_failure(&root, error))?,
         };
         let lease_deadline = deadline.min(Instant::now() + LEASE_BUDGET);
         let claim = binding
             .acquire(LeaseMode::Shared, lease_deadline)
             .map_err(named("store.lock"))?;
+        // A recovery that started after the lease-free gate read.
+        recovery_gate::check(&root).map_err(named("store.recovery"))?;
         // Spec order: marker, header, rollback journal, `-wal`, acceptance record, fence,
         // watermark. The `-wal` type is left out of the sidecar check so that a defect
         // there cannot mask the others.

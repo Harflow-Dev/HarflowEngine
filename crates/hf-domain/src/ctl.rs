@@ -10,6 +10,7 @@ pub mod iso_parse;
 pub mod pending;
 pub mod py_int;
 pub mod recovery;
+pub mod state_recovery;
 pub mod state_root;
 pub mod statistics;
 pub mod statistics_time;

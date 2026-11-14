@@ -9,6 +9,7 @@
 use hf_application::{ctl::state_inspect::StateObserverPort, watermark};
 use hf_domain::ctl::{
     inspect::{FileState, RootFacts, RootStat},
+    state_recovery::{RECORD_BOUND, RECORD_NAME},
     state_root::StateRoot,
 };
 use std::{fs, io::ErrorKind, path::Path};
@@ -57,6 +58,7 @@ impl StateObserverPort for FsStateObserver {
         facts.wal_acceptance = handle.read("store.wal-acceptance", IDENTITY_BOUND, true);
         facts.fence = handle.read("store.fence", IDENTITY_BOUND, true);
         facts.watermark = read_watermark(&handle);
+        facts.recovery_record = handle.read(RECORD_NAME, RECORD_BOUND, true);
         facts
     }
 }

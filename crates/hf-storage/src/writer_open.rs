@@ -2,13 +2,17 @@
 //!
 //! Each qualifies the existing store in place (`qualify.rs`) and never copies it.
 //! `open` verifies marker, header, journal, `-wal` and identity only; the whole-store
-//! `quick_check` belongs to `recover` and `probe` (owner decision A2).
+//! `quick_check` belongs to `recover` and `probe` (owner decision A2). Each first passes
+//! the state-recovery gate (`recovery_gate.rs`). `open` and `recover` record a `CommitLost`
+//! they find as the `commit_lost` fence; `probe` never writes one.
 use crate::{
     Checkpoint, CheckpointPolicy, Error, Identity, Limits, Result, Store, WriterOptions,
     binding::Binding,
     checkpoint::checkpoint,
     connection::{self, open_source},
+    fence,
     qualify::{self, Scan},
+    recovery_gate,
 };
 use hf_application::lease::{LeaseMode, LeasePort};
 use std::{
@@ -39,13 +43,15 @@ impl Store {
         options: WriterOptions,
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true, leases)?;
+        let binding = recovery_gate::open_existing(root.as_ref(), leases)?;
         let claim = binding.claim(LeaseMode::Shared, deadline)?;
         // Refusals in read-session order come before `io()`, whose full sidecar check
         // would otherwise report a defective `-wal` as `InvalidRoot`.
-        qualify::precheck(&binding)?;
+        let (expected, _) = qualify::precheck(&binding)?;
         let _io = binding.io(deadline)?;
-        let (identity, wal) = qualify::in_place(&binding, deadline, Scan::Identity)?;
+        // A database below the watermark is fenced `commit_lost` under `io.lock`.
+        let (identity, wal) = qualify::in_place(&binding, deadline, Scan::Identity)
+            .map_err(|error| fence::on_commit_lost(&binding, &expected.generation, error))?;
         let connection = open_source(&binding, &identity, deadline, options.checkpoint)?;
         if options.checkpoint == CheckpointPolicy::Owner {
             Self::passive_at_open(&connection, deadline)?;
@@ -69,13 +75,15 @@ impl Store {
         leases: Arc<dyn LeasePort>,
     ) -> Result<Checkpoint> {
         connection::check_deadline(deadline)?;
-        let binding = Binding::capture(root.as_ref(), true, leases)?;
+        let binding = recovery_gate::open_existing(root.as_ref(), leases)?;
         let _claim = binding.claim(LeaseMode::Exclusive, deadline)?;
         // Refusals in read-session order come before `io()`, whose full sidecar check
         // would otherwise report a defective `-wal` as `InvalidRoot`.
-        qualify::precheck(&binding)?;
+        let (expected, _) = qualify::precheck(&binding)?;
         let _io = binding.io(deadline)?;
-        let (identity, wal) = qualify::in_place(&binding, deadline, Scan::QuickCheck)?;
+        // A database below the watermark is fenced `commit_lost` under `io.lock`.
+        let (identity, wal) = qualify::in_place(&binding, deadline, Scan::QuickCheck)
+            .map_err(|error| fence::on_commit_lost(&binding, &expected.generation, error))?;
         let connection = open_source(&binding, &identity, deadline, CheckpointPolicy::Suppressed)?;
         qualify::recheck_wal(&binding, wal)?;
         let result = checkpoint(&connection, true, deadline)?;
@@ -106,7 +114,7 @@ pub fn probe_with_deadline(
     if !root.as_ref().try_exists()? {
         return Ok(None);
     }
-    let binding = Binding::capture(root.as_ref(), true, leases)?;
+    let binding = recovery_gate::open_existing(root.as_ref(), leases)?;
     let _claim = binding.claim(LeaseMode::Shared, deadline)?;
     let (identity, _) = qualify::in_place(&binding, deadline, Scan::QuickCheck)?;
     binding.check()?;

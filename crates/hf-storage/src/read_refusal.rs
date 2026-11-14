@@ -28,10 +28,13 @@ pub enum ReadRefusal {
     NonemptyJournal,
     /// The identity changed during the read; a retry is allowed.
     Replaced,
-    /// A whole-store check failed and `store.fence` refuses the generation.
+    /// A whole-store check failed and `store.fence` refuses the generation as `failed`.
     Fenced,
-    /// `store.watermark` records commits the database does not hold.
+    /// `store.watermark` records commits the database does not hold, or `store.fence`
+    /// records that loss.
     CommitLost,
+    /// `store.recovery` names a pending state recovery.
+    RecoveryInterrupted,
     /// Any other error.
     Other { message: String },
 }
@@ -60,6 +63,7 @@ impl From<&Error> for ReadRefusal {
             Error::Replaced => Self::Replaced,
             Error::Fenced => Self::Fenced,
             Error::CommitLost => Self::CommitLost,
+            Error::RecoveryInterrupted => Self::RecoveryInterrupted,
             // Writer-only; listed so that a new variant is a deliberate choice here.
             Error::WatermarkUnrecorded => Self::Other {
                 message: error.to_string(),
