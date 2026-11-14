@@ -5,7 +5,7 @@ S2 evidence, not release-binary budget acceptance. Current macOS arm64 ctl reads
 `ReadSession` and one snapshot per command; fresh roots use schema 7, and schema 6 and schema5
 reads refuse as `unsupported_layout` without migration. The
 [E1 receipt](migration-receipts/E1.md) records coordinator-verified release
-evidence and outstanding gates. E1 has not exited or been accepted.
+evidence and the gates carried forward. E1 was accepted on 2026-11-14.
 The protocol and its amendments are in
 [measurement protocol](store-read-measurement.md); guarantees named here are in
 [storage protocol](storage-protocol.md). Raw data is retained outside the
