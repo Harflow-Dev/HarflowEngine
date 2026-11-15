@@ -12,6 +12,7 @@ mod candidate;
 mod candidate_backend;
 mod connections;
 pub mod field;
+mod graph;
 pub mod migrate;
 mod node;
 mod on_demand;
@@ -73,6 +74,12 @@ impl<'a> Validator<'a> {
         }
         let edges = connections::validate(&mut connections, &ids, &kinds)?;
         connections::check_outgoing(&ids, &kinds, &edges)?;
+        let info = graph::Nodes {
+            ids,
+            kinds,
+            start: starts[0],
+        };
+        graph::validate(explicit, &mut nodes, &mut connections, &info, &edges)?;
         d.insert("nodes", Json::Array(nodes));
         if had_connections {
             d.insert("connections", Json::Array(connections));

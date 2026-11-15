@@ -9,7 +9,6 @@ use super::field::{Check, identifier, refuse, refuse_for};
 pub struct Edge {
     pub id: String,
     pub source: usize,
-    #[allow(dead_code)]
     pub target: usize,
     pub default: bool,
 }

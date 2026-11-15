@@ -2,6 +2,7 @@
 //! refusals, name and Git rules, graph algorithms, dependency trees and stored
 //! qualification. No parsing, rendering or effects live here.
 pub mod git;
+pub mod graph;
 pub mod json;
 pub mod json_int;
 pub mod name;
