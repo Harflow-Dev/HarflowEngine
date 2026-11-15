@@ -15,10 +15,11 @@ fn reader_matches_json_loads() {
         let text = case.input().as_str().unwrap_or("");
         match (expected.get("ok"), parse(text)) {
             (Some(Json::Bool(true)), Ok(value)) => {
-                if let Some(want) = expected.get("value") {
-                    // NaN is unequal to itself; compare the written form.
-                    if render(want, Style::Line) != render(&value, Style::Line) {
-                        failures.push(format!("{}: value differs: {value:?}", case.id));
+                // Compare Rust's writers with the text Python's json.dumps produced.
+                for (key, style) in [("line", Style::Line), ("canonical", Style::Canonical)] {
+                    let want = expected.get(key).and_then(Json::as_str).unwrap_or("");
+                    if render(&value, style) != want {
+                        failures.push(format!("{}: {key} text differs", case.id));
                     }
                 }
             }

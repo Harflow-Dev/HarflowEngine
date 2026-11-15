@@ -154,7 +154,7 @@ fn legacy_convergence_at_a_join_node() {
 
 #[test]
 fn unhashable_join_id_is_overwritten() {
-    for stale in ["[]", "{}", "5", "null"] {
+    for stale in ["5", "null"] {
         let input = graph(
             &["a", "b", "c"],
             &[("s", "a"), ("a", "b"), ("a", "c"), ("b", "e"), ("c", "e")],
@@ -167,6 +167,26 @@ fn unhashable_join_id_is_overwritten() {
         assert_eq!(
             at(&definition, "nodes.1.join_id"),
             Some(&Json::text("e")),
+            "{stale}"
+        );
+    }
+}
+
+#[test]
+fn unhashable_join_id_on_a_split_is_refused() {
+    // Python raises TypeError at `legacy in by_id`; decision D1 refuses it with the
+    // cross-branch rule, the rule being checked there.
+    for stale in ["[]", "{}"] {
+        let input = graph(
+            &["a", "b", "c"],
+            &[("s", "a"), ("a", "b"), ("a", "c"), ("b", "e"), ("c", "e")],
+        )
+        .replace(
+            r#"{"id":"a","type":"agent"}"#,
+            &format!(r#"{{"id":"a","type":"agent","join_id":{stale}}}"#),
+        );
+        assert!(
+            refused(&input).starts_with("Cross-branch connection at split a:"),
             "{stale}"
         );
     }

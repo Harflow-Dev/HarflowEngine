@@ -4,11 +4,12 @@ mod workflow_parity_support;
 #[path = "../../hf-application/tests/workflow_support/mod.rs"]
 mod workflow_support;
 
+use hf_application::workflow::ports::DefinitionCodec;
 use hf_application::workflow::validate::Validator;
 use hf_application::workflow::validate::warnings::definition_warnings;
 use hf_domain::workflow::json::Json;
 use hf_interfaces::workflow::messages::failure_message;
-use workflow_parity_support::{Case, load_cases, resolver_entries};
+use workflow_parity_support::{Case, RealCodec, load_cases, resolver_entries};
 use workflow_support::{MapResolver, TableCatalog};
 
 fn check(validator: &Validator<'_>, case: &Case) -> Option<String> {
@@ -16,8 +17,12 @@ fn check(validator: &Validator<'_>, case: &Case) -> Option<String> {
     let outcome = validator.validate(case.input());
     match (expected.get("ok"), outcome) {
         (Some(Json::Bool(true)), Ok(definition)) => {
-            let want = expected.get("definition");
-            if want != Some(&Json::Object(definition.clone())) {
+            if let Some(Json::Str(digest)) = expected.get("definition_sha256") {
+                // Large outputs are recorded by the digest of their canonical form.
+                if RealCodec.definition_sha256(&definition) != *digest {
+                    return Some(format!("{}: definition digest differs", case.id));
+                }
+            } else if expected.get("definition") != Some(&Json::Object(definition.clone())) {
                 return Some(format!("{}: definition differs", case.id));
             }
             let warnings = Json::texts(&definition_warnings(&definition));

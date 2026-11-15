@@ -113,9 +113,18 @@ impl BackendCatalog for TableCatalog {
                     .copied()
                     .eq(patterns.iter().map(String::as_str))
         });
-        match row.and_then(|row| row.refusal) {
-            Some(message) => Err(message.to_string()),
-            None => Ok(()),
+        // A missing row is a failure of the fixtures, not an acceptance: the refusal names
+        // the key so the generator can be told to record it.
+        match row {
+            None => Err(format!(
+                "workflow_support: no recorded allowed_commands outcome for backend={backend:?} \
+                 freedom={:?} patterns={patterns:?}; add it to the corpus generator",
+                freedom.as_str()
+            )),
+            Some(found) => match found.refusal {
+                Some(message) => Err(message.to_string()),
+                None => Ok(()),
+            },
         }
     }
 

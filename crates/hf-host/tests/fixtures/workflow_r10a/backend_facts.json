@@ -186,6 +186,16 @@
    "backend": "claude",
    "freedom": "publish",
    "patterns": [
+    "c0"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
     "c0",
     "c1",
     "c2",
@@ -295,6 +305,16 @@
    "backend": "claude",
    "freedom": "publish",
    "patterns": [
+    "x"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
    ],
    "outcome": {
@@ -361,6 +381,17 @@
    "outcome": {
     "ok": false,
     "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "c0"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'c0' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
    }
   },
   {
@@ -477,6 +508,17 @@
    "backend": "claude",
    "freedom": "read_only",
    "patterns": [
+    "x"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'x' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
    ],
    "outcome": {
@@ -544,6 +586,17 @@
    "outcome": {
     "ok": false,
     "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "c0"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'c0' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
    }
   },
   {
@@ -660,6 +713,17 @@
    "backend": "claude",
    "freedom": "unrestricted",
    "patterns": [
+    "x"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'x' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
    ],
    "outcome": {
@@ -727,6 +791,16 @@
    "outcome": {
     "ok": false,
     "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "c0"
+   ],
+   "outcome": {
+    "ok": true
    }
   },
   {
@@ -842,6 +916,16 @@
    "backend": "claude",
    "freedom": "write_in_repo",
    "patterns": [
+    "x"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
    ],
    "outcome": {
@@ -863,7 +947,29 @@
    "backend": "codex",
    "freedom": "publish",
    "patterns": [
+    "echo hello"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "publish",
+   "patterns": [
     "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "read_only",
+   "patterns": [
+    "echo hello"
    ],
    "outcome": {
     "ok": false,
@@ -885,7 +991,29 @@
    "backend": "codex",
    "freedom": "unrestricted",
    "patterns": [
+    "echo hello"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "unrestricted",
+   "patterns": [
     "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "echo hello"
    ],
    "outcome": {
     "ok": false,

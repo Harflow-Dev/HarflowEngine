@@ -2,19 +2,29 @@
 #![allow(dead_code)]
 use std::path::PathBuf;
 
-use hf_application::owner_runtime::DigestPort;
 use hf_application::workflow::ports::DefinitionCodec;
 use hf_domain::workflow::json::{Json, JsonObject};
 use hf_interfaces::workflow::json_render::{ascii_dumps_len, canonical_bytes};
 use hf_interfaces::workflow::json_text::{Limits, parse_with};
-use hf_storage::Sha256Digest;
+use hf_storage::Sha256Stream;
 
 /// The codec a host composes: canonical bytes hashed with SHA-256.
 pub struct RealCodec;
 
 impl DefinitionCodec for RealCodec {
     fn sha256_hex(&self, bytes: &[u8]) -> String {
-        Sha256Digest.digest_parts(&[bytes]).as_str().to_string()
+        // The inherent methods of the stream need no trait import. The limit is the
+        // stream's own ceiling, so a refusal cannot occur for any definition.
+        let Ok(mut stream) = Sha256Stream::with_limit(512 * 1024 * 1024) else {
+            return String::new();
+        };
+        if stream.update(bytes).is_err() {
+            return String::new();
+        }
+        stream
+            .finish()
+            .map(|digest| digest.as_str().to_string())
+            .unwrap_or_default()
     }
 
     fn definition_sha256(&self, definition: &JsonObject) -> String {

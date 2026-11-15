@@ -29,30 +29,30 @@ it is evidence and is never asserted. P12 cases take the decode reason as the ex
 divergence: seed marks cases where the three seeds disagree (python_evidence holds each outcome).
 backend_facts.json: backend capabilities, allowed_commands outcomes and the path resolver table.
 
-Run summary: {"validate": 915, "digest": 22, "project": 10, "decode": 152, "json_text": 110}
+Run summary: {"validate": 924, "digest": 22, "project": 10, "decode": 152, "json_text": 110}
 Seed divergences: none observed
-Python defects by label: {"P12": 80, "P6": 14, "P1": 6, "P3": 2, "P2": 5, "P8": 4, "P11": 6}
+Python defects by label: {"P12": 80, "P6": 14, "P1": 9, "P3": 2, "P2": 5, "P8": 5, "P11": 6}
 
 Generator sources (sha256):
   ff9e96720182f1637973b947cbaad02e7734f20a57b771d9ef7ea3b9a50ec9d3  cases/builders.py
   f8350a5a733a012f104b13b3a7efd3500ddab6b579b9fe3b9842d95b32adc9c8  cases/cases_candidate.py
   6f62c4a70a79fea99e2e411d5071f4d870d1f655fd13994f8c02e62a8e7e92f2  cases/cases_decode.py
   f7a7143a6ac87046d5184ef1575aa869bb4394aead4f325bd8465be7eb3131a4  cases/cases_digest.py
-  daa521bf907faa0ef819a1470731c0a4de05f37dc7a89264e65663419ae8b43e  cases/cases_graph.py
+  edf5f337777860ce3c3de03fbe01ae2155f8574d1b607ee6ab6da5976408a0c7  cases/cases_graph.py
   265ac0bb26e41866c957825a6bcce6a92bdb1d28942fc7314c7690360e547608  cases/cases_json_text.py
   b483468aa269f7bcc11bcb8efb3c6f06f3e2ce8d97919a4d28d295c889743283  cases/cases_nodes.py
   5b50877375ec12d320d4bf14081d36f292562a2867db986aab94783acadf48fa  cases/cases_qualify.py
   08fad0c07b0a81e035fd24b41edbe5f1730eb9a0de26f41c97289b0897187328  cases/cases_validate_top.py
   a7f59680df4d7d43e7f7cbfa8b1a8fcfb5424f284ccd6df4ad2838e485cdb01a  decisions.py
-  9cf9b02ea5ecffbe7a5cd4a7334da507d91e7923232f860cd7936d2db71eb983  gen_r10a_corpus.py
-  8af87ab9a7ea4b5c67975cecfa1046aa59415994113720eaf4b1467928070990  merge_corpus.py
+  b8a8c369553bf37cf08218a9963da1dd5aea8e0d3534f01d82dc3f248edaaf35  gen_r10a_corpus.py
+  13f1c9a8497045d389440d6e60867a2fae565161556b126aafe9669a790ef225  merge_corpus.py
   3db65d0226b654b1bc0d474e29e6952e825a6d97b4ef04b6bd8f8f1f6b2fc98f  provenance.py
   cb9e1cabe834075d94532226ec718e04075c90cc00e6779384d5fc81813223b6  run_corpus.sh
 
 Fixtures (sha256):
-  e4728d357300811552d1de3f76b706095c870469f6947c3a9588516e27a71d7c  backend_facts.json
+  64c4132e1895b5a4ac6806d21b5f70d746b7550fc1f01b21fb1dba058b6044b8  backend_facts.json
   824714404999b67b8e3d16fe10e97a2148dc5d067080115e4b5f69fd34601b90  decode.json
   9297b8e70fae347c84f84c765fdf27260935da32690ea31dc55edd6c818c4d1e  digest.json
-  61d11cf4a3fd11404d89d8d12cd277c7fddc3ff2a8b7b0f9dc8e9ec471c3fe9f  json_text.json
+  16c1fb41e8697753968633fa869f7aef4af5baa434adb0ba5782f8571aa2bf96  json_text.json
   3b9e547388d2c5797888c932236f07602641672db4a3fefc4164c193a0ceea46  project.json
-  65d5fd4593073e0507db6e86f40bb5ea71e157a54fe9f0d219e695b8ede46f10  validate.json
+  0e681ac52309f193d39785917d8855de2f12d0428443827e8225e5a71c87d52b  validate.json
