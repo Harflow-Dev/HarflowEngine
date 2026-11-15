@@ -1,6 +1,7 @@
 //! `validate_definition`: normalizes a candidate definition and refuses what cannot be
 //! saved. The checks run in Python's order, which also fixes the key order of the result.
 use hf_domain::workflow::json::{Json, JsonObject};
+use hf_domain::workflow::refusal::{DocumentReason, Refusal};
 use hf_domain::workflow::rule_shape::{DefinitionRule, NodeRule};
 use hf_domain::workflow::vocab::{MAX_CONNECTIONS, MAX_NODES, NodeType};
 
@@ -17,6 +18,22 @@ pub mod migrate;
 mod node;
 mod on_demand;
 mod resources;
+pub mod warnings;
+
+/// Why a definition was not accepted.
+#[derive(Clone, Debug, PartialEq)]
+pub enum WorkflowFailure {
+    /// A rule refused it.
+    Refused(Refusal),
+    /// It would be written but could not be read back: the bare stored-document reason.
+    Qualification(DocumentReason),
+}
+
+impl From<Refusal> for WorkflowFailure {
+    fn from(refusal: Refusal) -> Self {
+        WorkflowFailure::Refused(refusal)
+    }
+}
 
 /// Validation over the backend catalog and path resolver of the host.
 pub struct Validator<'a> {
@@ -34,6 +51,12 @@ fn take_list(d: &mut JsonObject, key: &str) -> Option<Vec<Json>> {
 impl<'a> Validator<'a> {
     pub fn new(catalog: &'a dyn BackendCatalog, resolver: &'a dyn PathResolver) -> Self {
         Self { catalog, resolver }
+    }
+
+    /// Normalizes `raw`; stored qualification follows in a later slice.
+    pub fn validate(&self, raw: &Json) -> Result<JsonObject, WorkflowFailure> {
+        let definition = self.normalize(raw)?;
+        Ok(definition)
     }
 
     /// Python's `validate_definition`, without stored qualification.
