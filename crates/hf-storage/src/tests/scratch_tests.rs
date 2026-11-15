@@ -3,7 +3,10 @@
 
 //! The evidence scratch directory removes only what it created: every recorded identity is
 //! verified before each unlink, and a mismatch stops the removal.
-use crate::{Error, maintenance_copy::Scratch};
+use crate::{
+    Error,
+    maintenance_copy::{Scratch, require_owner},
+};
 use std::{fs, io::Write, path::PathBuf};
 
 const OP: &str = "0123456789abcdef0123456789abcdef";
@@ -38,8 +41,9 @@ fn a_replaced_file_stops_removal_and_deletes_nothing_further() {
     fs::write(&wal, b"").unwrap();
     scratch.snapshot().unwrap();
     // Another actor replaces the copy by a different file with the same name.
-    fs::remove_file(scratch.database()).unwrap();
-    fs::write(scratch.database(), b"not ours").unwrap();
+    let swap = scratch.database().with_file_name("swap");
+    fs::write(&swap, b"not ours").unwrap();
+    fs::rename(&swap, scratch.database()).unwrap();
     assert!(matches!(scratch.remove(), Err(Error::Replaced)));
     assert_eq!(fs::read(scratch.database()).unwrap(), b"not ours");
     // The other file was not removed before the mismatch stopped the run, or it was
@@ -112,5 +116,103 @@ fn a_directory_swapped_for_a_link_between_two_deletions_stops_cleanup() {
     assert!(matches!(result, Err(Error::Replaced)));
     // Exactly one of the two files was deleted before the swap; the other is untouched.
     assert_eq!(fs::read_dir(&moved).unwrap().count(), 1);
+    fs::remove_dir_all(parent).unwrap();
+}
+
+fn leftover(parent: &std::path::Path) -> PathBuf {
+    let path = parent.join(format!(".store.harflow-evidence-{OP}"));
+    fs::create_dir(&path).unwrap();
+    path
+}
+
+#[test]
+fn a_leftover_directory_is_cleared_and_creation_proceeds() {
+    let parent = parent("leftover-ok");
+    let old = leftover(&parent);
+    fs::write(old.join("store.sqlite3"), b"old").unwrap();
+    fs::write(old.join("store.sqlite3-wal"), b"").unwrap();
+    let mut scratch = Scratch::create(&parent.join("store"), OP).unwrap();
+    assert!(!scratch.database().exists());
+    scratch.remove().unwrap();
+    assert_eq!(fs::read_dir(&parent).unwrap().count(), 1);
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn a_leftover_swapped_for_a_link_between_listing_and_unlink_deletes_nothing_there() {
+    let parent = parent("leftover-link");
+    let old = leftover(&parent);
+    fs::write(old.join("store.sqlite3-wal"), b"").unwrap();
+    let victim = parent.join("victim");
+    fs::create_dir(&victim).unwrap();
+    fs::write(victim.join("store.sqlite3"), b"live").unwrap();
+    let moved = parent.join("moved");
+    let result = Scratch::create_with(&parent.join("store"), OP, &mut |_| {
+        fs::rename(&old, &moved).unwrap();
+        // The same inode is reachable under the victim, so only the directory
+        // re-check can stop the unlink.
+        fs::hard_link(
+            moved.join("store.sqlite3-wal"),
+            victim.join("store.sqlite3-wal"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&victim, &old).unwrap();
+    });
+    assert!(matches!(result, Err(Error::Replaced)));
+    assert!(victim.join("store.sqlite3-wal").exists());
+    assert_eq!(fs::read(victim.join("store.sqlite3")).unwrap(), b"live");
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn a_leftover_file_swapped_after_listing_is_not_deleted() {
+    let parent = parent("leftover-file");
+    let old = leftover(&parent);
+    fs::write(old.join("store.sqlite3-wal"), b"").unwrap();
+    let result = Scratch::create_with(&parent.join("store"), OP, &mut |_| {
+        fs::write(old.join("swap"), b"theirs").unwrap();
+        fs::rename(old.join("swap"), old.join("store.sqlite3-wal")).unwrap();
+    });
+    assert!(matches!(result, Err(Error::Replaced)));
+    assert_eq!(fs::read(old.join("store.sqlite3-wal")).unwrap(), b"theirs");
+    fs::remove_dir_all(parent).unwrap();
+}
+
+/// A foreign-owned directory cannot be created without root, so the decision function is
+/// tested directly with an owner that differs from the directory's.
+#[test]
+fn a_directory_owned_by_another_user_is_refused() {
+    use std::os::unix::fs::MetadataExt;
+    let parent = parent("owner");
+    let metadata = fs::symlink_metadata(&parent).unwrap();
+    assert!(require_owner(&metadata, metadata.uid()).is_ok());
+    assert!(matches!(
+        require_owner(&metadata, metadata.uid().wrapping_add(1)),
+        Err(Error::InvalidRoot)
+    ));
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn a_snapshot_scratch_replaced_by_another_directory_is_not_removed() {
+    let parent = parent("snapshot");
+    let scratch = crate::recovery_copy::Scratch::create(&parent).unwrap();
+    let moved = parent.join("moved");
+    let path = fs::read_dir(&parent)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .find(|p| {
+            p.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with(".hf-snapshot-")
+        })
+        .unwrap();
+    fs::rename(&path, &moved).unwrap();
+    fs::rename(parent.join("store"), &path).unwrap();
+    fs::write(path.join("keep"), b"x").unwrap();
+    assert!(matches!(scratch.cleanup(), Err(Error::Replaced)));
+    drop(scratch);
+    assert_eq!(fs::read(path.join("keep")).unwrap(), b"x");
     fs::remove_dir_all(parent).unwrap();
 }

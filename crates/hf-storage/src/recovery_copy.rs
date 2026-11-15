@@ -4,6 +4,7 @@ use crate::{
     Error, Identity, Result,
     binding::Binding,
     connection,
+    maintenance_copy::{Ident, ident, same_dir},
     wal::{marker, reject_nonempty_journal},
 };
 use std::{
@@ -15,18 +16,29 @@ use std::{
 };
 const CAP: u64 = 64 * 1024 * 1024;
 static SERIAL: AtomicU64 = AtomicU64::new(0);
-struct Scratch(PathBuf);
+/// The private directory holding the copy. Its device/inode is recorded when created and
+/// verified (a real directory, not a link) immediately before the recursive removal; a
+/// mismatch is `Replaced` from `cleanup` and a silent no-op in `Drop`. Residual: the
+/// instant between that check and `remove_dir_all` is not excluded (path-based removal).
+pub(crate) struct Scratch(PathBuf, Ident);
 impl Drop for Scratch {
     fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
+        if same_dir(&self.0, self.1).is_ok() {
+            let _ = fs::remove_dir_all(&self.0);
+        }
     }
 }
 impl Scratch {
-    fn cleanup(&self) -> Result<()> {
+    pub(crate) fn cleanup(&self) -> Result<()> {
+        match fs::symlink_metadata(&self.0) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            _ => {}
+        }
+        same_dir(&self.0, self.1)?;
         fs::remove_dir_all(&self.0)?;
         Ok(())
     }
-    fn create(parent: &Path) -> Result<Self> {
+    pub(crate) fn create(parent: &Path) -> Result<Self> {
         Binding::validate_probe_path(parent)?;
         #[cfg(unix)]
         use std::os::unix::fs::DirBuilderExt;
@@ -41,7 +53,15 @@ impl Scratch {
             #[cfg(unix)]
             builder.mode(0o700);
             match builder.create(&path) {
-                Ok(()) => return Ok(Self(path)),
+                Ok(()) => {
+                    return match fs::symlink_metadata(&path) {
+                        Ok(metadata) => Ok(Self(path, ident(&metadata))),
+                        Err(error) => {
+                            let _ = fs::remove_dir(&path);
+                            Err(error.into())
+                        }
+                    };
+                }
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
                 Err(error) => return Err(error.into()),
             }
