@@ -12,9 +12,6 @@ use workflow_parity_support::{Case, load_cases, resolver_entries};
 use workflow_support::{MapResolver, TableCatalog};
 
 fn check(validator: &Validator<'_>, case: &Case) -> Option<String> {
-    if case.get("python_bug").as_str() == Some("P12") {
-        return None; // stored qualification lands in the next slice
-    }
     let expected = case.expected();
     let outcome = validator.validate(case.input());
     match (expected.get("ok"), outcome) {

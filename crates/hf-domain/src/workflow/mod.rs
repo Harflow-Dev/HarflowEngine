@@ -1,6 +1,7 @@
 //! Pure values and rules of workflow definitions: an ordered JSON model, vocabulary,
 //! refusals, name and Git rules, graph algorithms, dependency trees and stored
 //! qualification. No parsing, rendering or effects live here.
+pub mod document;
 pub mod git;
 pub mod graph;
 pub mod json;

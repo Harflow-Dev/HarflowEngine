@@ -1,5 +1,6 @@
 //! `validate_definition`: normalizes a candidate definition and refuses what cannot be
 //! saved. The checks run in Python's order, which also fixes the key order of the result.
+use hf_domain::workflow::document::qualify_stored;
 use hf_domain::workflow::json::{Json, JsonObject};
 use hf_domain::workflow::refusal::{DocumentReason, Refusal};
 use hf_domain::workflow::rule_shape::{DefinitionRule, NodeRule};
@@ -53,9 +54,16 @@ impl<'a> Validator<'a> {
         Self { catalog, resolver }
     }
 
-    /// Normalizes `raw`; stored qualification follows in a later slice.
+    /// Normalizes `raw` and qualifies the result the way a save would store it.
     pub fn validate(&self, raw: &Json) -> Result<JsonObject, WorkflowFailure> {
         let definition = self.normalize(raw)?;
+        let mut view = definition.clone();
+        view.remove("workflow_id");
+        view.remove("revision");
+        view.remove("updated_at");
+        view.insert("execution_contract", Json::text("delegation"));
+        view.insert("context_delivery", Json::text("optimized_v1"));
+        qualify_stored(&view, None).map_err(WorkflowFailure::Qualification)?;
         Ok(definition)
     }
 
