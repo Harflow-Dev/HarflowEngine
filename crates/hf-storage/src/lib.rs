@@ -30,7 +30,14 @@ mod task_read;
 mod write_tx;
 pub use task_fixture::TaskFixture;
 pub use task_read::TaskReadSession;
+mod maintenance;
+mod maintenance_copy;
+mod maintenance_evidence;
+mod maintenance_rows;
 mod qualify;
+mod survey;
+pub use maintenance::{LOCK_BUDGET, LOCK_RETRY, MaintenanceSession, SessionRequest};
+pub use maintenance_evidence::EvidenceBounds;
 mod recovery_copy;
 mod scan;
 #[cfg(test)]

@@ -28,16 +28,7 @@ pub(crate) struct WalStamp {
 /// Marker, header, rollback journal, `-wal`, acceptance record, fence, watermark, in that
 /// order. Returns the marker identity and the watermark sequence.
 pub(crate) fn precheck(binding: &Binding) -> Result<(Identity, u64)> {
-    binding.check_sidecars(false)?;
-    let expected = wal::marker(binding)?;
-    connection::qualify_header(&binding.database())?;
-    wal::reject_nonempty_journal(binding)?;
-    require_wal(binding)?;
-    wal_acceptance::check(binding.root(), &expected.generation)?;
-    fence::check(binding.root(), &expected.generation)?;
-    let mark = watermark::read(binding.root(), &expected.generation)?;
-    binding.check()?;
-    Ok((expected, mark))
+    crate::survey::precheck(binding)
 }
 
 /// Opens the source read-only, checks identity against the marker, refuses a database
@@ -83,16 +74,6 @@ pub(crate) fn recheck_wal(binding: &Binding, stamp: WalStamp) -> Result<()> {
             Err(Error::Replaced)
         }
         Err(error) => Err(error),
-    }
-}
-
-/// `lstat` only: a missing or non-regular `-wal` is not a legitimate engine state.
-fn require_wal(binding: &Binding) -> Result<()> {
-    match fs::symlink_metadata(binding.root().join("store.sqlite3-wal")) {
-        Ok(metadata) if metadata.is_file() => Ok(()),
-        Ok(_) => Err(Error::WalMissing),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Err(Error::WalMissing),
-        Err(error) => Err(error.into()),
     }
 }
 

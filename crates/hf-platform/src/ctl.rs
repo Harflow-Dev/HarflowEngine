@@ -5,5 +5,7 @@ mod artifact_authority;
 pub mod artifact_target;
 #[cfg(target_os = "macos")]
 mod kernel_spelling;
+#[cfg(target_os = "macos")]
+pub mod recovery_fs;
 pub mod state_observer;
 pub mod state_root;
