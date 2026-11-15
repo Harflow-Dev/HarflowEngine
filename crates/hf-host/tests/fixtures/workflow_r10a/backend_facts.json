@@ -1,0 +1,1149 @@
+{
+ "backends": [
+  {
+   "name": "antigravity",
+   "turn_cap": false,
+   "model_selection": true,
+   "caller_approvals": false,
+   "workflow_caller_approvals": false,
+   "effort": {
+    "accepts_parameter": true,
+    "levels": [
+     "low",
+     "medium",
+     "high"
+    ]
+   }
+  },
+  {
+   "name": "claude",
+   "turn_cap": true,
+   "model_selection": true,
+   "caller_approvals": true,
+   "workflow_caller_approvals": true,
+   "effort": {
+    "accepts_parameter": true,
+    "levels": [
+     "low",
+     "medium",
+     "high",
+     "xhigh"
+    ]
+   }
+  },
+  {
+   "name": "codex",
+   "turn_cap": false,
+   "model_selection": true,
+   "caller_approvals": true,
+   "workflow_caller_approvals": false,
+   "effort": {
+    "accepts_parameter": true,
+    "levels": [
+     "low",
+     "medium",
+     "high",
+     "xhigh"
+    ]
+   }
+  },
+  {
+   "name": "cursor",
+   "turn_cap": false,
+   "model_selection": true,
+   "caller_approvals": false,
+   "workflow_caller_approvals": false,
+   "effort": {
+    "accepts_parameter": false,
+    "levels": []
+   }
+  },
+  {
+   "name": "opencode",
+   "turn_cap": false,
+   "model_selection": true,
+   "caller_approvals": false,
+   "workflow_caller_approvals": false,
+   "effort": {
+    "accepts_parameter": true,
+    "levels": [
+     "low",
+     "medium",
+     "high",
+     "xhigh"
+    ]
+   }
+  },
+  {
+   "name": "vibe",
+   "turn_cap": true,
+   "model_selection": true,
+   "caller_approvals": true,
+   "workflow_caller_approvals": false,
+   "effort": {
+    "accepts_parameter": false,
+    "levels": []
+   }
+  }
+ ],
+ "command_outcomes": [
+  {
+   "backend": "antigravity",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the antigravity backend"
+   }
+  },
+  {
+   "backend": "antigravity",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the antigravity backend"
+   }
+  },
+  {
+   "backend": "antigravity",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the antigravity backend"
+   }
+  },
+  {
+   "backend": "antigravity",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the antigravity backend"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    ""
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands entries must not be empty"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    " git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern ' git status' has leading or trailing whitespace"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa10"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands accepts at most 16 patterns, got 17"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "git\tstatus"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git\\tstatus' contains a control character"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "git push"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git push' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "git status",
+    "git diff"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "git status",
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' is duplicated"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "publish",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'... is 257 bytes; the limit is 256"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    ""
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands entries must not be empty"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    " git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern ' git status' has leading or trailing whitespace"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa10"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'c0' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands accepts at most 16 patterns, got 17"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "git\tstatus"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git\\tstatus' contains a control character"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "git push"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git push' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "git status",
+    "git diff"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "git status",
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' is duplicated"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "read_only",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'... is 257 bytes; the limit is 256"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    ""
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands entries must not be empty"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    " git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern ' git status' has leading or trailing whitespace"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa10"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'c0' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands accepts at most 16 patterns, got 17"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git\tstatus"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git\\tstatus' contains a control character"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git push"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git push' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status",
+    "git diff"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status",
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' is duplicated"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "unrestricted",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'... is 257 bytes; the limit is 256"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    ""
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands entries must not be empty"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    " git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern ' git status' has leading or trailing whitespace"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa10"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands total size is 2212 bytes; the limit is 2048"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands accepts at most 16 patterns, got 17"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git\tstatus"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git\\tstatus' contains a control character"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git push"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git push' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status",
+    "git diff"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status",
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' is duplicated"
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": true
+   }
+  },
+  {
+   "backend": "claude",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'... is 257 bytes; the limit is 256"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "codex",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the codex backend"
+   }
+  },
+  {
+   "backend": "cursor",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the cursor backend"
+   }
+  },
+  {
+   "backend": "cursor",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the cursor backend"
+   }
+  },
+  {
+   "backend": "cursor",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the cursor backend"
+   }
+  },
+  {
+   "backend": "cursor",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the cursor backend"
+   }
+  },
+  {
+   "backend": "opencode",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the opencode backend"
+   }
+  },
+  {
+   "backend": "opencode",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the opencode backend"
+   }
+  },
+  {
+   "backend": "opencode",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the opencode backend"
+   }
+  },
+  {
+   "backend": "opencode",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands is not qualified for the opencode backend"
+   }
+  },
+  {
+   "backend": "vibe",
+   "freedom": "publish",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  },
+  {
+   "backend": "vibe",
+   "freedom": "read_only",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not read_only"
+   }
+  },
+  {
+   "backend": "vibe",
+   "freedom": "unrestricted",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: allowed_commands is supported only at write_in_repo and publish, not unrestricted"
+   }
+  },
+  {
+   "backend": "vibe",
+   "freedom": "write_in_repo",
+   "patterns": [
+    "git status"
+   ],
+   "outcome": {
+    "ok": false,
+    "message": "allowed_commands pattern 'git status' refused: git is refused except exact fetch <remote> [branch], pull --ff-only <remote> <branch>, switch <branch>, switch -c <branch> [start], checkout -b <branch> [start], commit --no-edit, or merge --continue, optionally after one -C <contained path>"
+   }
+  }
+ ],
+ "resolver": {
+  "/": {
+   "ok": true,
+   "path": "/"
+  },
+  "/a0": {
+   "ok": true,
+   "path": "/a0"
+  },
+  "/a1": {
+   "ok": true,
+   "path": "/a1"
+  },
+  "/a2": {
+   "ok": true,
+   "path": "/a2"
+  },
+  "/a3": {
+   "ok": true,
+   "path": "/a3"
+  },
+  "/a4": {
+   "ok": true,
+   "path": "/a4"
+  },
+  "/a5": {
+   "ok": true,
+   "path": "/a5"
+  },
+  "/a6": {
+   "ok": true,
+   "path": "/a6"
+  },
+  "/a7": {
+   "ok": true,
+   "path": "/a7"
+  },
+  "/nonexistent-r10a/0": {
+   "ok": true,
+   "path": "/nonexistent-r10a/0"
+  },
+  "/nonexistent-r10a/1": {
+   "ok": true,
+   "path": "/nonexistent-r10a/1"
+  },
+  "/nonexistent-r10a/2": {
+   "ok": true,
+   "path": "/nonexistent-r10a/2"
+  },
+  "/nonexistent-r10a/3": {
+   "ok": true,
+   "path": "/nonexistent-r10a/3"
+  },
+  "/nonexistent-r10a/4": {
+   "ok": true,
+   "path": "/nonexistent-r10a/4"
+  },
+  "/nonexistent-r10a/5": {
+   "ok": true,
+   "path": "/nonexistent-r10a/5"
+  },
+  "/nonexistent-r10a/6": {
+   "ok": true,
+   "path": "/nonexistent-r10a/6"
+  },
+  "/nonexistent-r10a/7": {
+   "ok": true,
+   "path": "/nonexistent-r10a/7"
+  },
+  "/nonexistent-r10a/a": {
+   "ok": true,
+   "path": "/nonexistent-r10a/a"
+  },
+  "/nonexistent-r10a/a\u0000b": {
+   "ok": false,
+   "message": "embedded null byte"
+  },
+  "/nonexistent-r10a/a/": {
+   "ok": true,
+   "path": "/nonexistent-r10a/a"
+  },
+  "/nonexistent-r10a/b": {
+   "ok": true,
+   "path": "/nonexistent-r10a/b"
+  },
+  "/nonexistent-r10a/c": {
+   "ok": true,
+   "path": "/nonexistent-r10a/c"
+  },
+  "/nonexistent-r10a/o": {
+   "ok": true,
+   "path": "/nonexistent-r10a/o"
+  },
+  "/nonexistent-r10a/q": {
+   "ok": true,
+   "path": "/nonexistent-r10a/q"
+  },
+  "/nonexistent-r10a/x/../y//z/": {
+   "ok": true,
+   "path": "/nonexistent-r10a/y/z"
+  },
+  "/nonexistent-r10a/y/z": {
+   "ok": true,
+   "path": "/nonexistent-r10a/y/z"
+  },
+  "/nonexistent-r10a/\u00e9": {
+   "ok": true,
+   "path": "/nonexistent-r10a/\u00e9"
+  }
+ }
+}
