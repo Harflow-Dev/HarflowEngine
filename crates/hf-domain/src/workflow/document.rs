@@ -5,6 +5,7 @@ use super::name::is_workflow_name;
 use super::observe::{MAX_STORED, is_absolute};
 use super::refusal::DocumentReason;
 use super::text::is_blank;
+use super::vocab::MAX_JSON_DEPTH;
 
 /// The exact kind of a JSON value, as Python's `type(value)` tells them apart.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -217,10 +218,16 @@ fn check_name(definition: &JsonObject, source_name: &str) -> Result<(), Document
 /// `decode` without its envelope: finite values, the name match (only with `source_name`),
 /// the type of every known field, fallbacks, observed paths, reference identities and
 /// positions. A definition that passes can be written and read back.
+///
+/// Invariant: later steps (and the callers' clone, drop and render) recurse over the
+/// value, so nesting beyond `MAX_JSON_DEPTH` is refused first, iteratively.
 pub fn qualify_stored(
     definition: &JsonObject,
     source_name: Option<&str>,
 ) -> Result<(), DocumentReason> {
+    if definition.nests_beyond(MAX_JSON_DEPTH) {
+        return Err(DocumentReason::TooDeep);
+    }
     if !definition.iter().all(|(_, value)| all_finite(value)) {
         return Err(DocumentReason::NonFiniteValue);
     }

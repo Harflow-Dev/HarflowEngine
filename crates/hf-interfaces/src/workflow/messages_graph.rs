@@ -112,6 +112,7 @@ pub fn reason_message(reason: &DocumentReason) -> String {
             "Incompatible workflow definition product major/minor line".to_string()
         }
         DocumentReason::DefinitionNotObject => "Definition must be an object".to_string(),
+        DocumentReason::TooDeep => "Definition nests deeper than 64 levels".to_string(),
         DocumentReason::NonFiniteValue => "Definition must contain finite JSON values".to_string(),
         DocumentReason::InvalidName => NAME_RULE.to_string(),
         DocumentReason::NameMismatch => "Definition name does not match source name".to_string(),

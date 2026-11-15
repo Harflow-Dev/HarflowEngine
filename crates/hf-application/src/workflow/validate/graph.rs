@@ -129,6 +129,11 @@ fn legacy_joins(
         let closest = graph
             .closest_convergence(postdominators, &targets)
             .ok_or_else(|| refuse_graph(GraphRule::LegacyNoConvergence).with_text(id))?;
+        // Python raises TypeError at `legacy in by_id` for an unhashable value; the rule
+        // being checked is the cross-branch rule, so that is its refusal (decision D1).
+        if matches!(node.get("join_id"), Some(Json::Array(_) | Json::Object(_))) {
+            return Err(refuse_graph(GraphRule::LegacyCrossBranch).with_text(id));
+        }
         let legacy = node
             .get("join_id")
             .and_then(Json::as_str)

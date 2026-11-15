@@ -4,6 +4,8 @@
 /// Refusals of the definition as a whole and of its connections.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum DefinitionRule {
+    /// The definition nests containers deeper than `MAX_JSON_DEPTH`.
+    TooDeep,
     /// The definition is not an object.
     NotObject,
     StartPromptNotText,

@@ -56,11 +56,24 @@ impl BitSet {
         self.words.iter().all(|word| *word == 0)
     }
 
+    /// The members in ascending order, without allocating.
+    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
+        self.words.iter().enumerate().flat_map(|(at, word)| {
+            let mut rest = *word;
+            std::iter::from_fn(move || {
+                if rest == 0 {
+                    return None;
+                }
+                let bit = rest.trailing_zeros() as usize;
+                rest &= rest - 1;
+                Some(at * 64 + bit)
+            })
+        })
+    }
+
     /// The members in ascending order.
     pub fn members(&self) -> Vec<usize> {
-        (0..self.size)
-            .filter(|index| self.contains(*index))
-            .collect()
+        self.iter().collect()
     }
 }
 

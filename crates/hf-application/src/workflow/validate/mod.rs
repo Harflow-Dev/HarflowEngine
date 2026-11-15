@@ -4,7 +4,7 @@ use hf_domain::workflow::document::qualify_stored;
 use hf_domain::workflow::json::{Json, JsonObject};
 use hf_domain::workflow::refusal::{DocumentReason, Refusal};
 use hf_domain::workflow::rule_shape::{DefinitionRule, NodeRule};
-use hf_domain::workflow::vocab::{MAX_CONNECTIONS, MAX_NODES, NodeType};
+use hf_domain::workflow::vocab::{MAX_CONNECTIONS, MAX_JSON_DEPTH, MAX_NODES, NodeType};
 
 use super::ports::{BackendCatalog, PathResolver};
 use field::{Check, is_one_of, positive, refuse};
@@ -55,6 +55,10 @@ impl<'a> Validator<'a> {
     }
 
     /// Normalizes `raw` and qualifies the result the way a save would store it.
+    ///
+    /// Invariant: fallback validation, qualification, clone, drop and rendering recurse over
+    /// the value, so a value nesting containers deeper than `MAX_JSON_DEPTH` is refused
+    /// first, by an iterative check, whatever its origin.
     pub fn validate(&self, raw: &Json) -> Result<JsonObject, WorkflowFailure> {
         let definition = self.normalize(raw)?;
         let mut view = definition.clone();
@@ -69,6 +73,9 @@ impl<'a> Validator<'a> {
 
     /// Python's `validate_definition`, without stored qualification.
     pub fn normalize(&self, raw: &Json) -> Check<JsonObject> {
+        if raw.nests_beyond(MAX_JSON_DEPTH) {
+            return Err(refuse(DefinitionRule::TooDeep));
+        }
         let Json::Object(source) = raw else {
             return Err(refuse(DefinitionRule::NotObject));
         };

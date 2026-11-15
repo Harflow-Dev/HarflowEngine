@@ -25,9 +25,3 @@ pub fn is_blank(text: &str) -> bool {
 pub fn length(text: &str) -> usize {
     text.chars().count()
 }
-
-/// Python's `text.strip() == text`.
-pub fn is_stripped(text: &str) -> bool {
-    !text.chars().next().is_some_and(is_py_space)
-        && !text.chars().next_back().is_some_and(is_py_space)
-}

@@ -122,6 +122,10 @@ pub const EFFORTS: [&str; 4] = ["low", "medium", "high", "xhigh"];
 /// The deepest nesting of referenced workflows.
 pub const MAX_NESTING_DEPTH: usize = 4;
 
+/// The deepest nesting of containers a definition may hold; the reader enforces the same
+/// bound on text.
+pub const MAX_JSON_DEPTH: usize = 64;
+
 /// Bounds Python lacks: connected plus on-demand nodes, and connections.
 pub const MAX_NODES: usize = 1000;
 pub const MAX_CONNECTIONS: usize = 4000;

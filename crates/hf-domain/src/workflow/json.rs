@@ -88,7 +88,43 @@ impl JsonObject {
     }
 }
 
+/// Whether any container sits more than `limit` levels deep, counting `level` containers
+/// already around the starting values. Iterative, so it is safe on any input.
+fn nests_beyond<'a>(start: impl Iterator<Item = &'a Json>, level: usize, limit: usize) -> bool {
+    let mut pending: Vec<(&Json, usize)> = start.map(|value| (value, level)).collect();
+    while let Some((value, around)) = pending.pop() {
+        match value {
+            Json::Array(items) => {
+                if around + 1 > limit {
+                    return true;
+                }
+                pending.extend(items.iter().map(|item| (item, around + 1)));
+            }
+            Json::Object(map) => {
+                if around + 1 > limit {
+                    return true;
+                }
+                pending.extend(map.iter().map(|(_, item)| (item, around + 1)));
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+impl JsonObject {
+    /// Whether this object, counted as one level, nests containers beyond `limit` levels.
+    pub fn nests_beyond(&self, limit: usize) -> bool {
+        limit == 0 || nests_beyond(self.iter().map(|(_, value)| value), 1, limit)
+    }
+}
+
 impl Json {
+    /// Whether the value nests containers beyond `limit` levels (a scalar has none).
+    pub fn nests_beyond(&self, limit: usize) -> bool {
+        nests_beyond(std::iter::once(self), 0, limit)
+    }
+
     pub fn text(value: &str) -> Json {
         Json::Str(value.to_string())
     }
@@ -174,6 +210,20 @@ mod tests {
         let keys: Vec<&str> = map.keys().collect();
         assert_eq!(keys, ["a", "b"]);
         assert_eq!(map.get("a"), Some(&Json::int(3)));
+    }
+
+    #[test]
+    fn nesting_is_counted_iteratively() {
+        let mut value = Json::Null;
+        for _ in 0..3 {
+            value = Json::Array(Vec::from([value]));
+        }
+        assert!(!value.nests_beyond(3));
+        assert!(value.nests_beyond(2));
+        let object = JsonObject::from_entries(Vec::from([("a".to_string(), value)]));
+        assert!(!object.nests_beyond(4));
+        assert!(object.nests_beyond(3));
+        assert!(!Json::Null.nests_beyond(0));
     }
 
     #[test]

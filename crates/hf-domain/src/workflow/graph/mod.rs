@@ -71,11 +71,11 @@ impl Graph {
                 continue;
             }
             reached.insert(node);
-            pending.extend(
-                self.forward_edges(node)
-                    .iter()
-                    .map(|edge| self.edges[*edge].target),
-            );
+            for edge in &self.outgoing[node] {
+                if !self.edges[*edge].backward {
+                    pending.push(self.edges[*edge].target);
+                }
+            }
         }
         reached
     }
@@ -126,15 +126,16 @@ impl Graph {
         for target in targets {
             common.intersect_with(&postdominators[*target]);
         }
-        let closest: Vec<usize> = common
-            .members()
-            .into_iter()
-            .filter(|candidate| common.is_subset(&postdominators[*candidate]))
-            .collect();
-        match closest.as_slice() {
-            [only] => Some(*only),
-            _ => None,
+        let mut closest = None;
+        for candidate in common.iter() {
+            if common.is_subset(&postdominators[candidate]) {
+                if closest.is_some() {
+                    return None;
+                }
+                closest = Some(candidate);
+            }
         }
+        closest
     }
 }
 

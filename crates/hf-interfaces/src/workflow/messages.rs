@@ -66,6 +66,7 @@ pub fn failure_message(failure: &WorkflowFailure) -> String {
 
 fn definition_message(rule: DefinitionRule, a: &Args<'_>) -> String {
     match rule {
+        DefinitionRule::TooDeep => "Workflow definition nests deeper than 64 levels".to_string(),
         DefinitionRule::NotObject => "Workflow definition must be an object".to_string(),
         DefinitionRule::StartPromptNotText => "Start prompt must be a string".to_string(),
         DefinitionRule::InvalidWorkflowName => NAME_RULE.to_string(),

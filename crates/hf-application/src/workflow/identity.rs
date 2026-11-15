@@ -5,6 +5,9 @@ use hf_domain::workflow::text::is_blank;
 use super::ports::{DefinitionCodec, IdSource};
 
 /// The id the engine owns; a definition without one reports a name-derived id.
+///
+/// Precondition: `name` is text, as in every validated or decoded definition. Python hashes
+/// `str(name)`; other kinds are not rendered here and fall back to the empty string.
 pub fn workflow_identity(codec: &dyn DefinitionCodec, definition: &JsonObject) -> String {
     if let Some(Json::Str(id)) = definition.get("workflow_id")
         && !is_blank(id)

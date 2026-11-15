@@ -3,12 +3,14 @@
 //! key's position), integers of any size up to Python's digit limit, and floats read with
 //! correct rounding. It differs deliberately in two ways: a lone surrogate escape is
 //! refused, and input size and nesting are bounded.
+use std::collections::HashMap;
+
 use hf_domain::workflow::json::{Json, JsonInt, JsonObject};
 
 /// The most bytes of text read.
 pub const MAX_TEXT_BYTES: usize = 1 << 20;
 /// The deepest nesting of arrays and objects.
-pub const MAX_DEPTH: usize = 64;
+pub const MAX_DEPTH: usize = hf_domain::workflow::vocab::MAX_JSON_DEPTH;
 /// The most digits of an integer, as in Python's `int` conversion limit.
 pub const INT_DIGIT_LIMIT: usize = 4300;
 
@@ -255,10 +257,12 @@ impl<'a> Reader<'a> {
             return Err(ParseError::TooDeep);
         }
         self.at += 1;
-        let mut map = JsonObject::new();
+        let mut entries: Vec<(String, Json)> = Vec::new();
+        // key -> position, so a repeated key replaces its value in place in constant time
+        let mut positions: HashMap<String, usize> = HashMap::new();
         self.skip_space();
         if self.eat(b'}') {
-            return Ok(Json::Object(map));
+            return Ok(Json::Object(JsonObject::new()));
         }
         loop {
             self.skip_space();
@@ -272,13 +276,19 @@ impl<'a> Reader<'a> {
             }
             self.skip_space();
             let value = self.value(depth)?;
-            map.insert(&key, value);
+            match positions.get(&key) {
+                Some(at) => entries[*at].1 = value,
+                None => {
+                    positions.insert(key.clone(), entries.len());
+                    entries.push((key, value));
+                }
+            }
             self.skip_space();
             if self.eat(b',') {
                 continue;
             }
             if self.eat(b'}') {
-                return Ok(Json::Object(map));
+                return Ok(Json::Object(JsonObject::from_entries(entries)));
             }
             return self.fail();
         }

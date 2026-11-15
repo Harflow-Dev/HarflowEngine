@@ -86,6 +86,8 @@ pub enum DocumentReason {
     UnsupportedVersion,
     IncompatibleLine,
     DefinitionNotObject,
+    /// Containers nest deeper than `MAX_JSON_DEPTH`.
+    TooDeep,
     NonFiniteValue,
     /// A name that is not a valid workflow name: the name text.
     InvalidName,
