@@ -4,9 +4,14 @@
 //! Lock identity handling of the maintenance session: a token that names no lock, a retry
 //! after the lock was created, and a lock file that is not the one acquired.
 mod common;
+#[path = "maintenance_identity/binding.rs"]
+mod maintenance_binding;
 use common::{Fixture, deadline, default_limits};
 use hf_application::{
-    ctl::state_recover::RecoveryFsPort,
+    ctl::state_recover::{
+        RecoveryFsPort,
+        binding::{BindingError, HeldSessionPort},
+    },
     lease::{LeaseError, LeaseGuard, LeaseMode, LeasePort},
 };
 use hf_domain::capture::FileIdentity;

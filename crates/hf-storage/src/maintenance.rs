@@ -58,6 +58,7 @@ struct Proof {
     root: FileIdentity,
     store_lock: FileIdentity,
     io_lock: FileIdentity,
+    legacy_lock: Option<FileIdentity>,
     store_created: bool,
     io_created: bool,
 }
@@ -135,6 +136,7 @@ impl MaintenanceSession {
                 root: root_id,
                 store_lock: store_before,
                 io_lock: io_before,
+                legacy_lock: legacy_before,
                 store_created,
                 io_created,
             },
@@ -179,6 +181,11 @@ impl MaintenanceSession {
             || required(&self.root, IO_LOCK)? != self.proof.io_lock
         {
             return Err(Error::Replaced);
+        }
+        match (&self.proof.legacy_lock, listed(&self.root, LEGACY_LOCK)?) {
+            (None, Some(_)) => return Err(Error::Busy),
+            (Some(before), now) if now.as_ref() != Some(before) => return Err(Error::Replaced),
+            _ => {}
         }
         Ok(())
     }
@@ -281,4 +288,33 @@ fn identity(metadata: &fs::Metadata) -> Result<FileIdentity> {
 #[cfg(not(unix))]
 fn identity(_: &fs::Metadata) -> Result<FileIdentity> {
     Err(Error::InvalidRoot)
+}
+
+impl hf_application::ctl::state_recover::binding::HeldSessionPort for MaintenanceSession {
+    fn verify_held(
+        &self,
+    ) -> std::result::Result<(), hf_application::ctl::state_recover::binding::BindingError> {
+        use hf_application::ctl::state_recover::binding::BindingError;
+        self.verify().map_err(|error| match error {
+            Error::Replaced | Error::InvalidRoot => BindingError::Stale,
+            Error::Busy => BindingError::ActiveOwner,
+            _ => BindingError::Unavailable,
+        })
+    }
+    fn state_root(&self) -> &str {
+        // Non-UTF8 roots cannot match a selected UTF-8 state root.
+        self.root.to_str().unwrap_or("")
+    }
+    fn held_root_identity(&self) -> hf_domain::ctl::recovery_proposal::FileIdentity {
+        proposal_identity(&self.proof.root)
+    }
+    fn held_lock_identity(&self) -> hf_domain::ctl::recovery_proposal::FileIdentity {
+        proposal_identity(&self.proof.store_lock)
+    }
+}
+fn proposal_identity(identity: &FileIdentity) -> hf_domain::ctl::recovery_proposal::FileIdentity {
+    hf_domain::ctl::recovery_proposal::FileIdentity {
+        dev: identity.device as i64,
+        ino: identity.inode,
+    }
 }

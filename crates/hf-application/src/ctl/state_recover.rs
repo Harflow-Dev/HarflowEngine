@@ -2,7 +2,9 @@
 //!
 //! The recover flow itself arrives in a later slice; this module holds what the
 //! maintenance exclusion and the owner evidence need from the platform.
+pub mod binding;
 pub mod evidence;
+pub mod journal;
 
 use std::{io, path::Path};
 

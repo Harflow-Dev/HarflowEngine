@@ -31,6 +31,7 @@ mod read_errors_feeds;
 mod read_errors_pending;
 mod recent_activity;
 pub mod recovery_codec;
+pub mod recovery_journal;
 pub mod render;
 pub mod state_codec;
 mod task_docs;
