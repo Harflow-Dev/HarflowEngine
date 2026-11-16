@@ -46,8 +46,9 @@ fn reverse_postorder(graph: &Graph, start: usize) -> Vec<usize> {
 }
 
 /// For each node, the nodes that dominate it: every path from `start` passes through them.
-/// Passes run in reverse postorder, so the greatest fixed point is reached in a few passes
-/// whatever order the nodes are listed in; the result does not depend on the order.
+/// Passes run in reverse postorder whatever order the nodes are listed in: structured graphs
+/// reach the greatest fixed point in a few passes, any graph in at most O(N) passes. The
+/// result does not depend on the order.
 fn dominators(graph: &Graph, start: usize) -> Vec<BitSet> {
     let count = graph.nodes.len();
     let mut predecessors: Vec<Vec<usize>> = (0..count).map(|_| Vec::new()).collect();
