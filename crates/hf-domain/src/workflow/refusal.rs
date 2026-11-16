@@ -7,6 +7,7 @@ use super::rule_shape::{CandidateRule, DefinitionRule, GitRule, NodeRule, OnDema
 /// Which rule refused.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Rule {
+    Dependency(DependencyRule),
     Definition(DefinitionRule),
     Node(NodeRule),
     OnDemand(OnDemandRule),
@@ -141,4 +142,21 @@ pub struct DependencyRefusal {
     pub refusal: Refusal,
     pub missing_references: Vec<MissingReference>,
     pub truncated: bool,
+}
+
+/// Dependency errors; details carry ids, node ids or the ordered name path.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum DependencyRule {
+    Duplicate,
+    Nesting,
+    MissingIdentity,
+    Cycle,
+    Unknown,
+    NotInTree,
+}
+
+impl From<DependencyRule> for Rule {
+    fn from(rule: DependencyRule) -> Self {
+        Self::Dependency(rule)
+    }
 }

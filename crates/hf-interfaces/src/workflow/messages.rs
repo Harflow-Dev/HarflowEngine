@@ -2,7 +2,7 @@
 //! dash of the name and identifier messages.
 use hf_application::workflow::validate::WorkflowFailure;
 use hf_domain::workflow::json::Json;
-use hf_domain::workflow::refusal::{Refusal, Rule};
+use hf_domain::workflow::refusal::{DependencyRule, Refusal, Rule};
 use hf_domain::workflow::rule_shape::{DefinitionRule, NodeRule};
 
 use super::messages_candidate::{candidate_message, on_demand_message};
@@ -47,6 +47,7 @@ pub(super) const NAME_RULE: &str = "Workflow names must contain 1–100 letters,
 pub fn message(refusal: &Refusal) -> String {
     let args = Args(&refusal.detail);
     match refusal.rule {
+        Rule::Dependency(rule) => dependency_message(rule, &args),
         Rule::Definition(rule) => definition_message(rule, &args),
         Rule::Node(rule) => node_message(rule, &args),
         Rule::OnDemand(rule) => on_demand_message(rule, &args),
@@ -187,6 +188,27 @@ fn node_message(rule: NodeRule, a: &Args<'_>) -> String {
         }
         NodeRule::AllowedCommandsRefused => {
             format!("Node {id} {} candidate: {}", a.text(1), a.text(2))
+        }
+    }
+}
+
+fn dependency_message(rule: DependencyRule, args: &Args<'_>) -> String {
+    let first = args.text(0);
+    match rule {
+        DependencyRule::Duplicate => {
+            format!("Duplicate workflow id {first} names different definitions")
+        }
+        DependencyRule::Nesting => format!("Workflow nesting exceeds 4 levels: {first}"),
+        DependencyRule::MissingIdentity => {
+            format!("Run workflow node {first} has no workflow_id reference")
+        }
+        DependencyRule::Cycle => format!("Workflow reference cycle: {first}"),
+        DependencyRule::Unknown => format!(
+            "Unknown workflow reference {first} at node {}",
+            args.text(1)
+        ),
+        DependencyRule::NotInTree => {
+            format!("Workflow {first} is not part of this dependency tree")
         }
     }
 }
