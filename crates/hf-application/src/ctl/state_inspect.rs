@@ -20,7 +20,9 @@ use hf_domain::ctl::{
     state_recovery::StoreRecovery,
     state_root::StateRoot,
 };
+mod proposal;
 mod records;
+pub use proposal::{InventoryPort, OperationIdPort, ProposalPorts, RecoveryCodecPort};
 const LOCK_NAME: &str = ".harflow-store.lock";
 const PENDING_NAME: &str = ".harflow-store.json.pending";
 const LEGACY_EMPTY: [&str; 4] = [
@@ -105,15 +107,28 @@ pub fn classify_root(
         )),
     }
 }
+/// Classifies a root and, where a recovery is possible, proposes it.
 pub fn inspect_state(
     observer: &dyn StateObserverPort,
     codec: &dyn StateCodecPort,
     policy: StorePolicy,
+    ports: &ProposalPorts<'_>,
     root: &StateRoot,
 ) -> StateInspection {
     let facts = observer.observe(root);
     let verdict = classify(&facts, codec, policy, root);
-    StateInspection::new(root, verdict.status, verdict.reason, verdict.observed)
+    let inspection = |verdict: &Verdict| {
+        StateInspection::new(
+            root,
+            verdict.status,
+            verdict.reason,
+            verdict.observed.clone(),
+        )
+    };
+    match proposal::decide(&facts, &verdict, codec, ports, root) {
+        proposal::Outcome::Unchanged => inspection(&verdict),
+        proposal::Outcome::Offer(offer) => inspection(&verdict).with_recovery(offer),
+    }
 }
 fn classify(
     facts: &RootFacts,
@@ -225,6 +240,7 @@ fn journal_verdict(
         JournalDecode::Qualified {
             completed,
             operation_id,
+            ..
         } => (completed, operation_id),
     };
     // A pending record of another operation: that recovery holds the gate closed while

@@ -27,10 +27,10 @@ class StateInspectTableTests(CtlCase):
                     result = self.inspect(root)
                     self.assertEqual((result["status"], result["reason"]), (status, reason))
                     self.assertEqual(result["state_root"], root)
-                    self.assertIs(result["recovery_supported"], False)
-                    self.assertNotIn("recovery", result)
+                    # E2-B3: a proposal is given exactly where recovery is supported.
+                    self.assertIs(result["recovery_supported"], "recovery" in result)
                     self.assertIs(result["cooperative_ownership_only"], True)
-                    self.assertTrue(set(result) - RESULT_KEYS <= {"observed_store"}, result)
+                    self.assertTrue(set(result) - RESULT_KEYS <= {"observed_store", "recovery"}, result)
                     self.assertTrue(RESULT_KEYS <= set(result), result)
                     self.assertTrue(result["message"])
                 finally:
@@ -75,13 +75,16 @@ class StateInspectDocumentTests(CtlCase):
         for key in ("message", "reason", "status", "recovery_supported", "cooperative_ownership_only"):
             self.assertEqual(result[key], specimen[key], key)
 
-    def test_incompatible_result_has_the_specimen_shape_except_recovery(self):
+    def test_incompatible_result_has_the_specimen_shape(self):
         specimen = fixture("ctl-state-inspect.json")["result"]
         self.write("stray", b"x")
         result = self.inspect()
         self.assertEqual(result["message"], specimen["message"])
         self.assertEqual(result["reason"], specimen["reason"])
-        self.assertEqual(set(result), set(specimen) - {"recovery"})
+        self.assertEqual(set(result), set(specimen))
+        self.assertEqual(set(result["recovery"]), set(specimen["recovery"]))
+        self.assertEqual(result["recovery"]["phase"], "proposed")
+        self.assertIs(result["recovery"]["resumable"], False)
 
     def test_plain_output_is_the_raw_indented_result_without_an_envelope(self):
         os.mkdir(self.state)

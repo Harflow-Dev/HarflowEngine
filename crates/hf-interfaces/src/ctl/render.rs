@@ -1,4 +1,5 @@
 //! JSON documents: sorted keys, compact, envelope stamped after the payload.
+use super::recovery_codec;
 use hf_domain::ctl::{
     identity::{
         CTL_FORMAT, EVENT_FORMAT, HostIdentity, PRODUCT, PRODUCT_VERSION, SETUP_FORMAT,
@@ -57,12 +58,24 @@ pub fn inspection(inspection: &StateInspection) -> Value {
     let mut result = json!({
         "state_root": inspection.state_root,
         "engine_version": PRODUCT_VERSION,
-        "recovery_supported": false,
+        "recovery_supported": inspection.recovery.is_some(),
         "cooperative_ownership_only": true,
         "status": inspection.status.as_str(),
         "reason": inspection.reason.as_str(),
         "message": inspection.reason.message(inspection.status),
     });
+    if let (Some(offer), Value::Object(map)) = (&inspection.recovery, &mut result) {
+        map.insert(
+            "recovery".into(),
+            json!({
+                "operation_id": offer.proposal.operation_id,
+                "confirmation_token": recovery_codec::encode_token(&offer.proposal),
+                "backup_path": offer.proposal.backup_path(),
+                "phase": offer.phase,
+                "resumable": offer.resumable,
+            }),
+        );
+    }
     if !inspection.observed_store.is_empty() {
         let mut observed = Map::new();
         for field in &inspection.observed_store {

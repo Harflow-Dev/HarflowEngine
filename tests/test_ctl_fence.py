@@ -6,6 +6,7 @@ import unittest
 
 from ctl_rows import JOURNAL
 from ctl_support import CtlCase, journal, rust_root, snapshot, storage_constants
+from proposal_support import assert_proposal
 
 FENCE = "store.fence"
 ACCEPTANCE = "store.wal-acceptance"
@@ -59,7 +60,8 @@ class FenceStateTests(FenceCase):
         self.assertEqual((result["status"], result["reason"]),
                          ("incompatible", "infrastructure_unavailable"))
         self.assertEqual(result["message"], UNREADABLE)
-        self.assertNotIn("recovery", result)
+        # Plan 3.3: a present fence is an eligible store-state fact, so a proposal is given.
+        assert_proposal(self, result)
 
     def test_an_unreadable_fence_is_unavailable(self):
         if not hasattr(os, "geteuid") or os.geteuid() == 0:

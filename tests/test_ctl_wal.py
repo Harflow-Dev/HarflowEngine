@@ -5,6 +5,7 @@ import unittest
 
 from ctl_rows import JOURNAL, make_dirs
 from ctl_support import CtlCase, journal, rust_root, snapshot, storage_constants
+from proposal_support import assert_proposal
 
 WAL = "store.sqlite3-wal"
 UNREADABLE = "State root cannot be read"
@@ -18,7 +19,10 @@ class WalRowTests(CtlCase):
         result = self.inspect()
         self.assertEqual((result["status"], result["reason"]), ("incompatible", "infrastructure_unavailable"))
         self.assertEqual(result["message"], UNREADABLE)
-        self.assertNotIn("recovery", result)
+        # Plan 3.3: a missing -wal is an eligible store-state fact. A -wal that is a
+        # directory or a symbolic link is an ordinary inventory entry (a link is recorded,
+        # not followed), so the root stays eligible.
+        assert_proposal(self, result)
         return result
 
     def test_baseline_a_root_with_its_wal_is_ready(self):

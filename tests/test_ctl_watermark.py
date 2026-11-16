@@ -10,6 +10,7 @@ import zlib
 from ctl_rows import JOURNAL
 from ctl_support import (CtlCase, journal, rust_root, snapshot, storage_constants,
                          watermark_bytes, watermark_payload)
+from proposal_support import assert_proposal
 from reads_support import ReadsCase
 from seed_support import A
 
@@ -89,7 +90,8 @@ class WatermarkStateTests(WatermarkCase):
                 self.write(WATERMARK, content)
             result = self.inspect()
             self.assertEqual((result["status"], result["reason"]), UNAVAILABLE)
-            self.assertNotIn("recovery", result)
+            # Plan 3.3: an absent or invalid watermark is an eligible store-state fact.
+            assert_proposal(self, result)
 
         self.each((
             ("missing", None),

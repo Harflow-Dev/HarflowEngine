@@ -38,6 +38,8 @@ pub mod owner;
 #[path = "owner_tests.rs"]
 mod owner_tests;
 
+pub mod digest;
+
 pub mod owner_runtime;
 
 pub mod owner_policy;

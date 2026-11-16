@@ -10,6 +10,7 @@ import unittest
 
 from ctl_rows import JOURNAL, OPERATION
 from ctl_support import CtlCase, journal, rust_root
+from proposal_support import assert_no_proposal, assert_proposal
 
 RECORD = "store.recovery"
 OTHER = "fedcba9876543210fedcba9876543210"
@@ -29,10 +30,13 @@ class RecoveryRecordInspectTests(CtlCase):
         if state is not None:
             self.write(RECORD, record(state, operation))
 
-    def verdict(self):
+    def verdict(self, proposal=False):
+        """The verdict; a proposal is expected exactly where plan 3.3 makes the root eligible."""
         result = self.inspect()
-        self.assertIs(result["recovery_supported"], False)
-        self.assertNotIn("recovery", result)
+        if proposal:
+            assert_proposal(self, result)
+        else:
+            assert_no_proposal(self, result)
         return result["status"], result["reason"]
 
     def test_committed_record_commits_the_journal_in_every_phase(self):
@@ -62,7 +66,8 @@ class RecoveryRecordInspectTests(CtlCase):
 
     def test_pending_record_without_a_journal_is_recovery_interrupted(self):
         self.build(None, "pending")
-        self.assertEqual(self.verdict(), ("incompatible", "recovery_interrupted"))
+        # Plan 3.3: an uncommitted record with no journal leaves the root eligible.
+        self.assertEqual(self.verdict(proposal=True), ("incompatible", "recovery_interrupted"))
 
     def test_record_for_another_operation_commits_nothing(self):
         for phase in PHASES:
@@ -117,10 +122,15 @@ class RecoveryRecordInspectTests(CtlCase):
                 try:
                     self.build()
                     self.write(RECORD, data)
-                    self.assertEqual(self.verdict(), ("incompatible", "invalid_marker"))
+                    # Plan 3.3: the record was read (its content is just not a record), so
+                    # the root is eligible, including an oversize one.
+                    self.assertEqual(self.verdict(proposal=True), ("incompatible", "invalid_marker"))
                 finally:
                     self.cleanup()
-        self.setUp()
+
+    # A record that is a directory or a symbolic link is an invalid marker, and the
+    # recovery walk refuses it, so no proposal is offered.
+    def test_record_that_is_a_directory_is_an_invalid_marker(self):
         self.build()
         os.mkdir(os.path.join(self.state, RECORD))
         self.assertEqual(self.verdict(), ("incompatible", "invalid_marker"))
@@ -146,7 +156,8 @@ class RecoveryRecordInspectTests(CtlCase):
         self.build()
         generation = "a" * 32
         self.write("store.fence", f"harflow-fence-1\n{generation}\ncommit_lost\n")
-        self.assertEqual(self.verdict(), ("incompatible", "infrastructure_unavailable"))
+        # Plan 3.3: a present fence is an eligible store-state fact.
+        self.assertEqual(self.verdict(proposal=True), ("incompatible", "infrastructure_unavailable"))
 
 
 if __name__ == "__main__":

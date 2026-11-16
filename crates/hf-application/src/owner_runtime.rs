@@ -3,9 +3,7 @@ use crate::owner::SharedOwnerState;
 use hf_domain::{capture::*, owner_runtime::*, ownership::*};
 use std::time::Instant;
 mod transition;
-pub trait DigestPort {
-    fn digest_parts(&self, parts: &[&[u8]]) -> Digest;
-}
+pub use crate::digest::DigestPort;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CoordinatorError {
     Poisoned,

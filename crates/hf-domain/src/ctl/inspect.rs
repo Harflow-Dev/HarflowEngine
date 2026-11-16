@@ -1,5 +1,8 @@
 //! Values for the lease-free state observer: results and observed facts.
-use super::state_root::StateRoot;
+use super::{
+    recovery_proposal::{RecoveryOffer, RecoveryProposal},
+    state_root::StateRoot,
+};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InspectStatus {
     Ready,
@@ -88,6 +91,8 @@ pub struct StateInspection {
     pub status: InspectStatus,
     pub reason: InspectReason,
     pub observed_store: Vec<ObservedField>,
+    /// The recovery this engine proposes for the root, when it proposes one.
+    pub recovery: Option<Box<RecoveryOffer>>,
 }
 impl StateInspection {
     pub fn new(
@@ -101,7 +106,12 @@ impl StateInspection {
             status,
             reason,
             observed_store,
+            recovery: None,
         }
+    }
+    pub fn with_recovery(mut self, offer: RecoveryOffer) -> Self {
+        self.recovery = Some(Box::new(offer));
+        self
     }
 }
 /// Result of reading one bounded file without following links.
@@ -136,6 +146,8 @@ pub enum RootStat {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RootFacts {
     pub stat: RootStat,
+    /// Device and inode of the root as the observer saw it, where the platform has them.
+    pub root_id: Option<super::recovery_proposal::FileIdentity>,
     pub entries: Vec<RootEntry>,
     pub entries_truncated: bool,
     pub python_marker: FileState,
@@ -158,6 +170,7 @@ impl RootFacts {
     pub fn without_files(stat: RootStat) -> Self {
         Self {
             stat,
+            root_id: None,
             entries: Vec::new(),
             entries_truncated: false,
             python_marker: FileState::Absent,
@@ -193,5 +206,8 @@ pub enum JournalDecode {
     Qualified {
         completed: bool,
         operation_id: String,
+        phase: String,
+        /// The journal's proposal, when it has the shape this engine writes.
+        proposal: Option<Box<RecoveryProposal>>,
     },
 }

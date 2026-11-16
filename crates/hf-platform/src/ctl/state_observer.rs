@@ -9,6 +9,7 @@
 use hf_application::{ctl::state_inspect::StateObserverPort, watermark};
 use hf_domain::ctl::{
     inspect::{FileState, RootFacts, RootStat},
+    recovery_proposal::FileIdentity,
     state_recovery::{RECORD_BOUND, RECORD_NAME},
     state_root::StateRoot,
 };
@@ -39,6 +40,11 @@ impl StateObserverPort for FsStateObserver {
         if stat != RootStat::Present {
             return facts;
         }
+        // The walk records the device as a 32-bit value.
+        facts.root_id = id.map(|(dev, ino)| FileIdentity {
+            dev: i64::from(dev as i32),
+            ino,
+        });
         let unreadable = || RootFacts::without_files(RootStat::Unreadable);
         let Some(handle) = RootHandle::open(path, id) else {
             return unreadable();

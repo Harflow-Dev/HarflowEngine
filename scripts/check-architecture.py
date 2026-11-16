@@ -41,6 +41,8 @@ HOST_STORAGE_ALLOWED = {
     # The read-only session and its typed snapshot: no writer, opener of a mutable store or fixture surface.
     "hf_storage::ReadSession", "hf_storage::Limits", "hf_storage::Error",
     "hf_storage::ReadRefusal", "hf_storage::TaskSnapshot",
+    # The pure SHA-256 adapter: no I/O and no authority; it hashes a recovery inventory.
+    "hf_storage::Sha256Digest",
 }
 HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 

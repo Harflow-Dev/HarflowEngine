@@ -1,5 +1,5 @@
 //! JSON decoding of the markers and journals older engines leave in a state root.
-use super::json_scan;
+use super::{json_scan, recovery_codec};
 use hf_application::ctl::state_inspect::StateCodecPort;
 use hf_domain::ctl::{
     identity::PRODUCT,
@@ -119,10 +119,16 @@ fn qualified(scan: &json_scan::Scan, bytes: &[u8], root: &str) -> Option<Journal
         && identity(scan.top("root_identity")) == identity(scan.proposal("root_identity"))
         && object(scan.top("inventory"))
         && scan.inventory_names_valid();
+    let proposal = raw(scan.top("proposal"))
+        .and_then(|bytes| serde_json::from_slice::<Value>(bytes).ok())
+        .and_then(|value| recovery_codec::proposal_from_value(&value))
+        .map(Box::new);
     Some(if valid {
         JournalDecode::Qualified {
             completed: phase == "completed",
             operation_id: operation,
+            phase,
+            proposal,
         }
     } else {
         JournalDecode::Unqualified

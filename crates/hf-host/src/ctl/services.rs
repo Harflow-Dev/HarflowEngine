@@ -1,7 +1,7 @@
 //! Composition of the ctl effects: environment, host identity, the state observer and, on
 //! macOS arm64, the store-backed reads.
 use hf_application::ctl::{
-    state_inspect::{StorePolicy, inspect_state},
+    state_inspect::{ProposalPorts, StorePolicy, inspect_state},
     task_reads::{ArtifactTargetPort, PendingLimits, Reads},
 };
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -14,8 +14,13 @@ use hf_domain::{
     },
     process::ProcessIdentity,
 };
-use hf_interfaces::ctl::{dispatch::CtlServices, state_codec::JsonStateCodec};
-use hf_platform::ctl::{state_observer::FsStateObserver, state_root::resolve_state_root};
+use hf_interfaces::ctl::{
+    dispatch::CtlServices, recovery_codec::JsonRecoveryCodec, state_codec::JsonStateCodec,
+};
+use hf_platform::ctl::{
+    inventory::FsInventory, operation_id::OsOperationIds, state_observer::FsStateObserver,
+    state_root::resolve_state_root,
+};
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use super::store_reads::{FsRoots, SnapshotStore};
@@ -56,7 +61,13 @@ impl CtlServices for HostServices {
             schema_version: hf_storage::SCHEMA_VERSION,
             application_id: hf_storage::APPLICATION_ID,
         };
-        inspect_state(&FsStateObserver, &JsonStateCodec, policy, root)
+        let ports = ProposalPorts {
+            inventory: &FsInventory,
+            codec: &JsonRecoveryCodec,
+            digest: &hf_storage::Sha256Digest,
+            ids: &OsOperationIds,
+        };
+        inspect_state(&FsStateObserver, &JsonStateCodec, policy, &ports, root)
     }
     fn store_reads_supported(&self) -> bool {
         cfg!(all(target_os = "macos", target_arch = "aarch64"))

@@ -9,9 +9,14 @@ import unittest
 
 from ctl_extra import EXTRA_ROWS
 from ctl_support import ROOT, SCRIPTED_ENV, CtlCase, binary, snapshot
+from proposal_support import assert_no_proposal, assert_proposal
 
 DESCRIPTOR = ROOT / "crates" / "hf-platform" / "src" / "ctl" / "state_observer" / "descriptor.rs"
 MEMORY_LIMIT = 256 * 1024 * 1024
+# Plan 3.3: these rows are eligible (the root is safe, no Python state, every reserved file
+# readable, verdict not ready/missing). Every other row has a hostile or special entry, an
+# unreadable or unqualified journal, Python state, or is not incompatible-with-data.
+PROPOSAL_ROWS = {"legacy directory is a symlink", "non-ascii file name"}
 MEASURE = (
     "import resource, subprocess, sys\n"
     "run = subprocess.run([sys.argv[1], 'state-inspect', '--json'], capture_output=True,\n"
@@ -35,7 +40,10 @@ class ExtraRowTests(CtlCase):
                     result = self.inspect(root, timeout=15)
                     self.assertLess(time.monotonic() - started, 15)
                     self.assertEqual((result["status"], result["reason"]), (status, reason))
-                    self.assertNotIn("recovery", result)
+                    if name in PROPOSAL_ROWS:
+                        assert_proposal(self, result, root=root)
+                    else:
+                        assert_no_proposal(self, result)
                     self.assertEqual(snapshot(self.base), before)
                 finally:
                     self.cleanup()

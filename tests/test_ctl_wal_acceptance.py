@@ -6,6 +6,7 @@ import unittest
 
 from ctl_rows import JOURNAL
 from ctl_support import CtlCase, journal, rust_root, snapshot, storage_constants
+from proposal_support import assert_proposal
 
 RECORD = "store.wal-acceptance"
 WAL = "store.sqlite3-wal"
@@ -54,7 +55,8 @@ class AcceptanceStateTests(AcceptanceCase):
                     self.assert_unavailable()
                     result = self.inspect()
                     self.assertEqual(result["message"], UNREADABLE)
-                    self.assertNotIn("recovery", result)
+                    # Plan 3.3: a pending or failed acceptance is an eligible store-state fact.
+                    assert_proposal(self, result)
                 finally:
                     self.cleanup()
 
