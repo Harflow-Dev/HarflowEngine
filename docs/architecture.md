@@ -138,3 +138,12 @@ hf-domain, hf-application, hf-storage, hf-platform and hf-interfaces, adds no di
 `sha2` edge, is not a dependency of hf-host and publishes nothing. The five `legacy_*` caller identity
 states answer `{"supported": false}`. `hf_domain::timestamp` parses ISO 8601 instants with an offset
 to microseconds and refuses naive values.
+
+
+The internal [archive recovery checkpoint](migration-receipts/E2-B4-archive.md)
+rechecks a confirmed inventory under the original maintenance exclusion, publishes
+pending before its journal, and archives through BackedUp. Journaled retries use
+recorded process identities without reopening SQLite. The macOS adapter uses the
+exact approved rustix wrapper for descriptor-relative atomic no-overwrite moves;
+file flushes and directory barriers remain explicit and fault-injectable. This
+checkpoint has no public ctl caller, committed receipt or fresh-store initializer.

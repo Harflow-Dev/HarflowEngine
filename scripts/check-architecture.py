@@ -10,7 +10,7 @@ EDGES = {
     "hf-domain": [], "hf-application": ["hf-domain"], "hf-contracts": [],
     "hf-storage": ["hf-application", "hf-domain", "rusqlite", "sha2"],
     "hf-backends": ["hf-application", "hf-domain"],
-    "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix"],
+    "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix", "rustix"],
     "hf-interfaces": ["hf-application", "hf-domain", "serde_json", "base64"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
@@ -95,6 +95,7 @@ def validate(metadata, root):
             ):
                 raise ValueError("sha2 requires storage-only exact reviewed version and no features")
             os_wrappers = {
+                "rustix": ("=1.1.5", ["fs", "std"]),
                 "libproc": ("=0.14.11", []),
                 "sysctl": ("=0.7.1", []),
                 # "dir" lets the state observer list directories from a pinned descriptor

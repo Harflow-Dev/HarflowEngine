@@ -6,7 +6,7 @@
 //! kept, and the names directly under `inventory` are checked as they are scanned.
 const MAX_DEPTH: usize = 4096;
 /// Top-level members whose value range is kept.
-const TOP_KEYS: [&str; 10] = [
+const TOP_KEYS: [&str; 11] = [
     "operation_id",
     "phase",
     "product",
@@ -17,6 +17,7 @@ const TOP_KEYS: [&str; 10] = [
     "backup_path",
     "root_identity",
     "inventory",
+    "engine_version",
 ];
 const PROPOSAL_INDEX: usize = 6;
 const INVENTORY_INDEX: usize = 9;

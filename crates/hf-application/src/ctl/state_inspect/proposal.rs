@@ -91,7 +91,7 @@ fn matches_facts(facts: &RootFacts, inventory: &Inventory) -> bool {
 
 /// Facts-only checks shared by fresh and resumable offers: the root, the reserved files
 /// and the marker.
-fn base_eligible(facts: &RootFacts, codec: &dyn StateCodecPort) -> bool {
+pub(crate) fn base_eligible(facts: &RootFacts, codec: &dyn StateCodecPort) -> bool {
     if facts.stat != RootStat::Present
         || has_non_regular_infrastructure(facts)
         || reserved(facts).any(|state| *state == FileState::Unreadable)
@@ -107,7 +107,7 @@ fn base_eligible(facts: &RootFacts, codec: &dyn StateCodecPort) -> bool {
 }
 
 /// The facts-only part of eligibility: the root, the reserved files and the journals.
-fn eligible(facts: &RootFacts, codec: &dyn StateCodecPort, root: &StateRoot) -> bool {
+pub(crate) fn eligible(facts: &RootFacts, codec: &dyn StateCodecPort, root: &StateRoot) -> bool {
     if !base_eligible(facts, codec) {
         return false;
     }

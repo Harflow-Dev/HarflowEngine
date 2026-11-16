@@ -26,6 +26,14 @@ const RESERVED_NAMES: [&str; 5] = [
 #[derive(Clone, Copy, Debug, Default)]
 pub struct JsonStateCodec;
 impl StateCodecPort for JsonStateCodec {
+    fn journal_engine_version(&self, bytes: &[u8]) -> Option<String> {
+        if bytes.len() > hf_application::ctl::state_recover::journal::JOURNAL_BOUND {
+            return None;
+        }
+        let scan = json_scan::scan_object(bytes, valid_name)?;
+        json_scan::decode_string(slice(bytes, scan.top("engine_version"))?)
+    }
+
     fn decode_marker(&self, bytes: &[u8]) -> MarkerDecode {
         let Ok(Value::Object(map)) = serde_json::from_slice::<Value>(bytes) else {
             return MarkerDecode::Invalid;

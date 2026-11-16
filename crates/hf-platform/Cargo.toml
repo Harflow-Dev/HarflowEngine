@@ -16,3 +16,4 @@ hf-domain = { path = "../hf-domain" }
 libproc = { version = "=0.14.11", default-features = false }
 sysctl = { version = "=0.7.1", default-features = false }
 nix = { version = "=0.31.3", default-features = false, features = ["dir", "fs", "poll", "process", "signal", "socket", "user"] }
+rustix = { version = "=1.1.5", default-features = false, features = ["fs", "std"] }

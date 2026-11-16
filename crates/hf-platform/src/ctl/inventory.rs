@@ -33,7 +33,7 @@ impl InventoryPort for FsInventory {
 }
 
 #[cfg(target_os = "macos")]
-mod descriptor {
+pub(crate) mod descriptor {
     use hf_domain::ctl::recovery_proposal::{
         EntryBody, EntryStat, FileIdentity, INVENTORY_EXCLUDED, Inventory, InventoryEntry,
         InventoryFailure,
@@ -133,6 +133,21 @@ mod descriptor {
             lock,
             entries,
         })
+    }
+
+    pub(crate) fn entry_at(dir: &OwnedFd, name: &OsStr) -> Result<InventoryEntry, Failure> {
+        Walker {
+            budget: 0,
+            bound: hf_domain::ctl::recovery_proposal::INVENTORY_BOUND,
+        }
+        .entry(dir, name, 0)
+    }
+    pub(crate) fn names_at(dir: &OwnedFd) -> Result<Vec<OsString>, Failure> {
+        Walker {
+            budget: 0,
+            bound: hf_domain::ctl::recovery_proposal::INVENTORY_BOUND,
+        }
+        .names(dir)
     }
 
     struct Walker {

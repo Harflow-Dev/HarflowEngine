@@ -199,6 +199,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
             "libproc": ("=0.14.11", []),
             "sysctl": ("=0.7.1", []),
             "nix": ("=0.31.3", ["dir", "fs", "poll", "process", "signal", "socket", "user"]),
+            "rustix": ("=1.1.5", ["fs", "std"]),
         }
         def dependency(name, version, features):
             return {

@@ -11,3 +11,6 @@ pub mod operation_id;
 pub mod recovery_fs;
 pub mod state_observer;
 pub mod state_root;
+
+#[cfg(target_os = "macos")]
+pub mod archive_fs;

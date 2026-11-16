@@ -1,7 +1,5 @@
-//! State recovery: the ports and the owner evidence its maintenance session reads.
-//!
-//! The recover flow itself arrives in a later slice; this module holds what the
-//! maintenance exclusion and the owner evidence need from the platform.
+//! Internal state recovery ports, qualified owner evidence and archive-only flow.
+//! The flow stops at a pending BackedUp handoff; no public recovery caller exists.
 pub mod binding;
 pub mod evidence;
 pub mod journal;
@@ -19,3 +17,5 @@ pub trait RecoveryFsPort: Send + Sync {
     /// Bytes available to an unprivileged writer on the volume holding `path`.
     fn free_space(&self, path: &Path) -> io::Result<u64>;
 }
+
+pub mod flow;

@@ -35,6 +35,10 @@ pub trait StateObserverPort {
     fn observe(&self, root: &StateRoot) -> RootFacts;
 }
 pub trait StateCodecPort {
+    /// Bounded top-level engine provenance; unknown implementations refuse archival.
+    fn journal_engine_version(&self, _bytes: &[u8]) -> Option<String> {
+        None
+    }
     fn decode_marker(&self, bytes: &[u8]) -> MarkerDecode;
     fn decode_journal(&self, bytes: &[u8], root: &StateRoot) -> JournalDecode;
 }
@@ -372,4 +376,22 @@ fn empty_verdict(facts: &RootFacts) -> Verdict {
     } else {
         Verdict::incompatible(InspectReason::UnmarkedNonempty)
     }
+}
+
+/// Recovery reuses inspection admission under the original maintenance guards.
+pub(crate) fn recovery_eligible(
+    facts: &RootFacts,
+    codec: &dyn StateCodecPort,
+    policy: StorePolicy,
+    root: &StateRoot,
+    resume: bool,
+) -> bool {
+    if resume {
+        return proposal::base_eligible(facts, codec);
+    }
+    let verdict = classify(facts, codec, policy, root);
+    matches!(
+        verdict.status,
+        InspectStatus::Incompatible | InspectStatus::Interrupted
+    ) && proposal::eligible(facts, codec, root)
 }
