@@ -9,3 +9,6 @@ pub mod validate;
 pub mod catalog;
 pub mod save;
 mod save_defaults;
+
+pub mod snapshot;
+pub mod snapshot_scopes;
