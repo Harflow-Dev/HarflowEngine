@@ -11,4 +11,4 @@ mod store;
 pub use catalog::TableCatalog;
 pub use codec::FakeCodec;
 pub use misc::{FixedClock, MapResolver, SeqIds};
-pub use store::{MemStore, StoreCall};
+pub use store::{MemStore, StoreCall, StoreOperation};

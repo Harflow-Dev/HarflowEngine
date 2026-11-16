@@ -113,6 +113,10 @@ pub fn reason_message(reason: &DocumentReason) -> String {
         }
         DocumentReason::DefinitionNotObject => "Definition must be an object".to_string(),
         DocumentReason::TooDeep => "Definition nests deeper than 64 levels".to_string(),
+        DocumentReason::IntegerTooLong { digits } => format!(
+            "Exceeds the limit ({} digits) for integer string conversion: value has {digits} digits; use sys.set_int_max_str_digits() to increase the limit",
+            hf_domain::workflow::vocab::INT_DIGIT_LIMIT
+        ),
         DocumentReason::NonFiniteValue => "Definition must contain finite JSON values".to_string(),
         DocumentReason::InvalidName => NAME_RULE.to_string(),
         DocumentReason::NameMismatch => "Definition name does not match source name".to_string(),

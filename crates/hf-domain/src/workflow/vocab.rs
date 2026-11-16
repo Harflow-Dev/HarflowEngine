@@ -126,6 +126,9 @@ pub const MAX_NESTING_DEPTH: usize = 4;
 /// bound on text.
 pub const MAX_JSON_DEPTH: usize = 64;
 
+/// Python decimal integer conversion bound.
+pub const INT_DIGIT_LIMIT: usize = 4300;
+
 /// Bounds Python lacks: connected plus on-demand nodes, and connections.
 pub const MAX_NODES: usize = 1000;
 pub const MAX_CONNECTIONS: usize = 4000;

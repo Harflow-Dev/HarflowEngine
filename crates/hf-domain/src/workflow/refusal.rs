@@ -90,6 +90,10 @@ pub enum DocumentReason {
     /// Containers nest deeper than `MAX_JSON_DEPTH`.
     TooDeep,
     NonFiniteValue,
+    /// Decimal magnitude exceeds the shared reader limit.
+    IntegerTooLong {
+        digits: usize,
+    },
     /// A name that is not a valid workflow name: the name text.
     InvalidName,
     NameMismatch,

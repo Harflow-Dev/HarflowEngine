@@ -11,6 +11,16 @@ enum Entry {
     Corrupt(DocumentRefusal),
 }
 
+/// Operations observed by the double, including reads and lock acquisition.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum StoreOperation {
+    Get { name: String },
+    List,
+    Begin { name: String },
+    Replace { name: String },
+    Remove { name: String },
+}
+
 /// What the store was asked to write.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StoreCall {
@@ -27,6 +37,8 @@ pub enum StoreCall {
 pub struct MemStore {
     entries: RefCell<BTreeMap<String, Entry>>,
     calls: RefCell<Vec<StoreCall>>,
+    operations: RefCell<Vec<StoreOperation>>,
+    failures: RefCell<Vec<(StoreOperation, DocumentRefusal)>>,
 }
 
 fn filename(name: &str) -> String {
@@ -64,6 +76,28 @@ impl MemStore {
         self.calls.borrow().clone()
     }
 
+    /// The complete ordered sequence of port operations.
+    pub fn operations(&self) -> Vec<StoreOperation> {
+        self.operations.borrow().clone()
+    }
+
+    /// Make the next matching port operation fail with the supplied refusal.
+    pub fn fail_next(&self, operation: StoreOperation, refusal: DocumentRefusal) {
+        self.failures.borrow_mut().push((operation, refusal));
+    }
+
+    fn record(&self, operation: StoreOperation) -> Result<(), DocumentRefusal> {
+        self.operations.borrow_mut().push(operation.clone());
+        let mut failures = self.failures.borrow_mut();
+        let Some(index) = failures
+            .iter()
+            .position(|(expected, _)| *expected == operation)
+        else {
+            return Ok(());
+        };
+        Err(failures.remove(index).1)
+    }
+
     fn read(&self, name: &str) -> Result<Option<StoredDefinition>, DocumentRefusal> {
         match self.entries.borrow().get(&filename(name)) {
             None => Ok(None),
@@ -94,14 +128,21 @@ impl DefinitionStore for MemStore {
     type Txn<'a> = MemTxn<'a>;
 
     fn get(&self, name: &str) -> Result<Option<StoredDefinition>, DocumentRefusal> {
+        self.record(StoreOperation::Get {
+            name: name.to_string(),
+        })?;
         self.read(name)
     }
 
     fn list(&self) -> Result<Vec<StoredDefinition>, DocumentRefusal> {
+        self.record(StoreOperation::List)?;
         self.read_all()
     }
 
     fn begin(&self, name: &str) -> Result<MemTxn<'_>, DocumentRefusal> {
+        self.record(StoreOperation::Begin {
+            name: name.to_string(),
+        })?;
         Ok(MemTxn {
             store: self,
             name: name.to_string(),
@@ -116,6 +157,7 @@ impl DefinitionTxn for MemTxn<'_> {
     }
 
     fn list(&self) -> Result<Vec<StoredDefinition>, DocumentRefusal> {
+        self.store.record(StoreOperation::List)?;
         self.store.read_all()
     }
 
@@ -124,6 +166,9 @@ impl DefinitionTxn for MemTxn<'_> {
             name: self.name.clone(),
             definition: definition.clone(),
         });
+        self.store.record(StoreOperation::Replace {
+            name: self.name.clone(),
+        })?;
         self.store.insert(&self.name, definition.clone());
         Ok(())
     }
@@ -132,6 +177,9 @@ impl DefinitionTxn for MemTxn<'_> {
         self.store.calls.borrow_mut().push(StoreCall::Remove {
             name: self.name.clone(),
         });
+        self.store.record(StoreOperation::Remove {
+            name: self.name.clone(),
+        })?;
         self.store
             .entries
             .borrow_mut()
