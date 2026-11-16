@@ -21,20 +21,47 @@ fn reachable(graph: &Graph, start: usize) -> BitSet {
     reached
 }
 
+/// The nodes reachable from `start` in reverse postorder of a depth-first walk over every
+/// connection, so each node comes after its predecessors except across loops.
+fn reverse_postorder(graph: &Graph, start: usize) -> Vec<usize> {
+    let mut seen = BitSet::empty(graph.nodes.len());
+    let mut order: Vec<usize> = Vec::new();
+    let mut stack: Vec<(usize, usize)> = Vec::from([(start, 0)]);
+    seen.insert(start);
+    while let Some((node, cursor)) = stack.pop() {
+        let leaving = graph.outgoing(node);
+        let Some(edge) = leaving.get(cursor) else {
+            order.push(node);
+            continue;
+        };
+        stack.push((node, cursor + 1));
+        let target = graph.edges[*edge].target;
+        if !seen.contains(target) {
+            seen.insert(target);
+            stack.push((target, 0));
+        }
+    }
+    order.reverse();
+    order
+}
+
 /// For each node, the nodes that dominate it: every path from `start` passes through them.
+/// Passes run in reverse postorder, so the greatest fixed point is reached in a few passes
+/// whatever order the nodes are listed in; the result does not depend on the order.
 fn dominators(graph: &Graph, start: usize) -> Vec<BitSet> {
     let count = graph.nodes.len();
     let mut predecessors: Vec<Vec<usize>> = (0..count).map(|_| Vec::new()).collect();
     for edge in &graph.edges {
         predecessors[edge.target].push(edge.source);
     }
+    let order = reverse_postorder(graph, start);
     let mut sets: Vec<BitSet> = (0..count).map(|_| BitSet::full(count)).collect();
     sets[start] = BitSet::empty(count);
     sets[start].insert(start);
     let mut changed = true;
     while changed {
         changed = false;
-        for node in (0..count).filter(|node| *node != start) {
+        for node in order.iter().copied().filter(|node| *node != start) {
             let mut shared = BitSet::full(count);
             for predecessor in &predecessors[node] {
                 shared.intersect_with(&sets[*predecessor]);
@@ -56,13 +83,16 @@ fn has_forward_cycle(graph: &Graph, start: usize) -> bool {
     let mut stack: Vec<(usize, usize)> = Vec::from([(start, 0)]);
     state[start] = 1;
     while let Some((node, cursor)) = stack.pop() {
-        let forward = graph.forward_edges(node);
-        if cursor == forward.len() {
+        let leaving = graph.outgoing(node);
+        let Some(edge) = leaving.get(cursor) else {
             state[node] = 2;
             continue;
-        }
+        };
         stack.push((node, cursor + 1));
-        let target = graph.edges[forward[cursor]].target;
+        if graph.edges[*edge].backward {
+            continue;
+        }
+        let target = graph.edges[*edge].target;
         match state[target] {
             1 => return true,
             0 => {
@@ -79,26 +109,27 @@ fn forward_visited(graph: &Graph, start: usize) -> BitSet {
     graph.forward_reachable(start, None)
 }
 
-/// The nodes with a forward path to some End.
+/// The nodes with a forward path to some End, found by walking forward connections
+/// backwards from every End once.
 fn can_end(graph: &Graph) -> BitSet {
-    let mut ends = BitSet::empty(graph.nodes.len());
+    let count = graph.nodes.len();
+    let mut predecessors: Vec<Vec<usize>> = (0..count).map(|_| Vec::new()).collect();
+    for edge in graph.edges.iter().filter(|edge| !edge.backward) {
+        predecessors[edge.target].push(edge.source);
+    }
+    let mut ends = BitSet::empty(count);
+    let mut pending: Vec<usize> = Vec::new();
     for (index, node) in graph.nodes.iter().enumerate() {
         if node.kind == NodeType::End {
             ends.insert(index);
+            pending.push(index);
         }
     }
-    let mut changed = true;
-    while changed {
-        changed = false;
-        for index in 0..graph.nodes.len() {
-            let reaches = !ends.contains(index)
-                && graph
-                    .forward_edges(index)
-                    .iter()
-                    .any(|edge| ends.contains(graph.edges[*edge].target));
-            if reaches {
-                ends.insert(index);
-                changed = true;
+    while let Some(node) = pending.pop() {
+        for predecessor in &predecessors[node] {
+            if !ends.contains(*predecessor) {
+                ends.insert(*predecessor);
+                pending.push(*predecessor);
             }
         }
     }

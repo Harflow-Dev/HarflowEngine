@@ -15,9 +15,15 @@ impl BitSet {
     }
 
     pub fn full(size: usize) -> Self {
-        let mut set = Self::empty(size);
-        for index in 0..size {
-            set.insert(index);
+        let mut set = Self {
+            words: vec_of(size.div_ceil(64), u64::MAX),
+            size,
+        };
+        let tail = size % 64;
+        if tail != 0
+            && let Some(last) = set.words.last_mut()
+        {
+            *last = (1u64 << tail) - 1;
         }
         set
     }
@@ -100,5 +106,8 @@ mod tests {
         assert!(a.intersects(&b));
         assert!(!BitSet::empty(70).intersects(&a));
         assert!(!a.contains(70));
+        assert_eq!(BitSet::full(70).members().len(), 70);
+        assert_eq!(BitSet::full(64).members().len(), 64);
+        assert!(BitSet::full(0).is_empty());
     }
 }

@@ -56,9 +56,11 @@ impl<'a> Validator<'a> {
 
     /// Normalizes `raw` and qualifies the result the way a save would store it.
     ///
-    /// Invariant: fallback validation, qualification, clone, drop and rendering recurse over
-    /// the value, so a value nesting containers deeper than `MAX_JSON_DEPTH` is refused
-    /// first, by an iterative check, whatever its origin.
+    /// Depth guard: fallback validation, qualification, clone, drop and rendering recurse
+    /// over the value, so an iterative check at the start of `validate` (in `normalize`) and
+    /// of `qualify_stored` refuses containers nested deeper than `MAX_JSON_DEPTH`.
+    /// `Validator::candidate` and `migrate::project_definition` are not guarded yet; R10-B
+    /// decides how its entry points are guarded.
     pub fn validate(&self, raw: &Json) -> Result<JsonObject, WorkflowFailure> {
         let definition = self.normalize(raw)?;
         let mut view = definition.clone();
