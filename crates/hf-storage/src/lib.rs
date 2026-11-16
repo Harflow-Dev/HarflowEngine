@@ -37,6 +37,7 @@ pub use task_read::TaskReadSession;
 mod maintenance;
 mod maintenance_copy;
 mod maintenance_evidence;
+mod maintenance_proposal;
 mod maintenance_rows;
 mod qualify;
 mod survey;

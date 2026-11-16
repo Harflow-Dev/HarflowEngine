@@ -13,7 +13,8 @@ pub const VERSION_PROGRAM: &str = "harflow-ctl version-info";
 /// Commands that need no store.
 pub const COMMANDS: [&str; 2] = ["version-info", "state-inspect"];
 /// Commands that read the store, in the order the usage text lists them.
-pub const READ_COMMANDS: [&str; 12] = [
+pub const READ_COMMANDS: [&str; 13] = [
+    "state-recover",
     "list",
     "status",
     "status-batch",
@@ -45,6 +46,11 @@ pub struct PageArgs {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Parsed {
+    StateRecover {
+        json: bool,
+        operation_id: String,
+        confirmation_token: String,
+    },
     Help(Option<&'static str>),
     VersionInfo {
         json: bool,
@@ -234,6 +240,7 @@ fn split_command(argv: &[String]) -> Result<Option<Split<'_>>, UsageError> {
 }
 fn command_options(name: &str) -> Vec<Opt> {
     match name {
+        "state-recover" => super::cli_recover::OPTIONS.to_vec(),
         "status" => vec![OBSERVER, BRIEF],
         "task-events" => EVENT_OPTIONS.to_vec(),
         "task-prompt" => PROMPT_OPTIONS.to_vec(),
@@ -254,6 +261,7 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
     match name {
         "version-info" => both(Parsed::VersionInfo { json: parsed.json }),
         "state-inspect" => both(Parsed::StateInspect { json: parsed.json }),
+        "state-recover" => both(super::cli_recover::parse(program, parsed)?),
         "list" => both(parse_list(parsed)?),
         "status" => {
             let task_id = parsed
@@ -339,6 +347,7 @@ pub fn help_text(command: Option<&str>) -> String {
         return text;
     }
     match command {
+        Some("state-recover") => "usage: harflow-ctl state-recover [-h] --operation-id OPERATION_ID\n                                 --confirmation-token CONFIRMATION_TOKEN [--json]\n".to_string(),
         Some("version-info") => "usage: harflow-ctl version-info [-h] [--json]\n".to_string(),
         Some("list") => "usage: harflow-ctl list [-h] [--since SINCE] [--json]\n".to_string(),
         Some("status") => concat!(

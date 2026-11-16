@@ -17,6 +17,20 @@ use serde_json::json;
 pub trait CtlServices {
     fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot>;
     fn host_identity(&self) -> HostIdentity;
+    fn recover(
+        &self,
+        _root: &StateRoot,
+        _operation_id: &str,
+        _confirmation_token: &str,
+    ) -> Result<
+        hf_application::ctl::state_recover::journal::RecoveryResult,
+        hf_application::ctl::state_recover::flow::RecoveryFailure,
+    > {
+        Err(
+            hf_application::ctl::state_recover::flow::RecoveryError::InfrastructureUnavailable
+                .into(),
+        )
+    }
     fn inspect(&self, root: &StateRoot) -> StateInspection;
     /// Whether the store-backed reads exist on this platform. Without them those commands
     /// are an invalid choice.
@@ -141,6 +155,20 @@ fn run(parsed: Parsed, services: &dyn CtlServices, format: &str, json_requested:
                     render::pretty(&result)
                 })
             }
+            Err(invalid) => root_error(invalid, format, json_requested),
+        },
+        Parsed::StateRecover {
+            json,
+            operation_id,
+            confirmation_token,
+        } => match services.resolve_state_root() {
+            Ok(root) => super::recover_dispatch::run(
+                &root,
+                &operation_id,
+                &confirmation_token,
+                json,
+                services,
+            ),
             Err(invalid) => root_error(invalid, format, json_requested),
         },
         read => match services.resolve_state_root() {

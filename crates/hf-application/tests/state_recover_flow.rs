@@ -2,6 +2,8 @@
 
 #[path = "state_recover_flow/completion.rs"]
 mod completion;
+#[path = "state_recover_flow/qualified.rs"]
+mod qualified;
 #[path = "state_recover_flow/support.rs"]
 mod support;
 use hf_application::ctl::state_inspect::StorePolicy;

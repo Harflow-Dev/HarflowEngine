@@ -1,7 +1,8 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
-//! `harflow-ctl`: the public read-only skeleton. It composes the state observer with
-//! the ctl transport mapping and writes nothing to the state root.
+//! `harflow-ctl`: public observation, reads and explicitly confirmed recovery.
 mod services;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod state_recover;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod store_history;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

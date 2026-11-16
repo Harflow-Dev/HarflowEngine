@@ -1,4 +1,5 @@
 //! Internal recovery orchestration with a separately callable archive helper.
+pub use super::failure::{RecoveryFailure, RecoveryPhase, RecoveryProgress};
 pub(super) mod admission;
 mod run;
 use super::{
@@ -24,6 +25,7 @@ pub enum RecoveryError {
     ActiveOwner,
     AmbiguousOwner,
     UnsafeRoot,
+    PythonState,
     UnsupportedLayout,
     BackupConflict,
     InfrastructureUnavailable,
@@ -111,23 +113,56 @@ pub fn recover(
     ports: &RecoveryPorts<'_>,
     completion: &super::completion::CompletionPorts<'_>,
 ) -> Result<super::journal::RecoveryResult, RecoveryError> {
-    let journal = match super::completion::committed(request, ports, completion)? {
-        Some(journal) => journal,
-        None => {
-            let (journal, fresh) = admission::admit(request, ports)?;
-            let journal = if journal.phase == super::journal::JournalPhase::BackedUp {
-                journal
-            } else {
-                run::archive(journal, fresh, ports)?
-            };
-            super::completion::initialize(journal, ports, completion).map_err(interrupted)?
-        }
-    };
-    super::completion::finish(journal, ports, completion).map_err(interrupted)
+    recover_qualified(request, ports, completion).map_err(|failure| failure.error)
 }
+
 fn interrupted(error: RecoveryError) -> RecoveryError {
     match error {
         RecoveryError::InfrastructureUnavailable => RecoveryError::RecoveryInterrupted,
         other => other,
     }
+}
+
+/// Public composition uses this path so errors retain only admitted protocol facts.
+pub fn recover_qualified(
+    request: &RecoveryRequest<'_>,
+    ports: &RecoveryPorts<'_>,
+    completion: &super::completion::CompletionPorts<'_>,
+) -> Result<super::journal::RecoveryResult, RecoveryFailure> {
+    let mut progress = None;
+    let committed = super::completion::committed_tracked(request, ports, completion, &mut progress)
+        .map_err(|error| RecoveryFailure {
+            error,
+            progress: progress.clone(),
+        })?;
+    let mut journal = if let Some(journal) = committed {
+        journal
+    } else {
+        let (mut journal, fresh) = admission::admit_tracked(request, ports, &mut progress)
+            .map_err(|error| RecoveryFailure {
+                error,
+                progress: progress.clone(),
+            })?;
+        if journal.phase != super::journal::JournalPhase::BackedUp {
+            run::archive_tracked(&mut journal, fresh, ports)
+                .map_err(|error| RecoveryFailure::journal(error, &journal))?;
+        }
+        super::completion::initialize_tracked(&mut journal, ports, completion)
+            .map_err(|error| RecoveryFailure::journal(interrupted(error), &journal))?;
+        journal
+    };
+    // Preserve qualified entry evidence: constructing a completed document is not
+    // publication of a completed receipt. Fresh R9 failures still report committed.
+    let entry_phase = if journal.phase == super::journal::JournalPhase::Completed {
+        RecoveryPhase::Completed
+    } else {
+        RecoveryPhase::Committed
+    };
+    super::completion::finish_tracked(&mut journal, ports, completion).map_err(|error| {
+        let mut failure = RecoveryFailure::journal(interrupted(error), &journal);
+        if let Some(progress) = &mut failure.progress {
+            progress.phase = entry_phase;
+        }
+        failure
+    })
 }

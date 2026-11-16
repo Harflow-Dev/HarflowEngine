@@ -43,13 +43,14 @@ class VersionInfoTests(CtlCase):
         expected = ["ctl.v1", "version-info.v1"]
         if sys.platform == "darwin" and platform.machine() == "arm64":
             expected = [
-                "task-pending-launch.v1", "interaction-events.v1", "ctl.v1", "version-info.v1", "statistics-page.v1",
+                "task-pending-launch.v1", "interaction-events.v1", "ctl.v1", "version-info.v1",
+                "state-recovery.v1", "statistics-page.v1",
                 "task-event-page.v1", "task-prompt.v1", "task-successors.v1", "task-artifacts.v1",
                 "task-continuation-stop.v1",
             ]
         self.assertEqual(capabilities, expected)
         self.assertEqual(len(capabilities), len(set(capabilities)))
-        for withheld in ("setup.v1", "events.v1", "state-recovery.v1", "statistics-cost-model.v1"):
+        for withheld in ("setup.v1", "events.v1", "statistics-cost-model.v1"):
             self.assertNotIn(withheld, capabilities)
 
     def test_contracts_list_all_three_formats(self):

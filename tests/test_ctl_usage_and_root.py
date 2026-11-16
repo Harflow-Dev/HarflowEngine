@@ -44,8 +44,9 @@ class UsageTests(CtlCase):
         )
 
     def test_unknown_and_later_paths_are_invalid_choices(self):
-        later = ("state-recover", "bogus", "setup")
-        for command in later if STORE_READS else ("list", "status") + later:
+        later = ("bogus", "setup")
+        unavailable = later if STORE_READS else ("list", "status", "state-recover") + later
+        for command in unavailable:
             with self.subTest(command=command):
                 result = self.ctl(command, "--json")
                 self.assertEqual(result.returncode, 2)
@@ -53,6 +54,31 @@ class UsageTests(CtlCase):
                 self.assertIn("invalid choice", message)
                 self.assertIn(f"'{command}'", message)
                 self.assertIn("invalid choice", result.stderr)
+
+    def test_state_recover_help_and_required_options_follow_store_gate(self):
+        result = self.ctl("state-recover", "--help")
+        if not STORE_READS:
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid choice: 'state-recover'", result.stderr)
+            return
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("usage: harflow-ctl state-recover", result.stdout)
+        self.assertIn("--operation-id OPERATION_ID", result.stdout)
+        self.assertIn("--confirmation-token CONFIRMATION_TOKEN", result.stdout)
+
+        missing_both = self.ctl("state-recover", "--json")
+        self.assertEqual(missing_both.returncode, 2)
+        self.assertEqual(
+            one_document(missing_both)["error"]["message"],
+            "the following arguments are required: --operation-id, --confirmation-token",
+        )
+        missing_token = self.ctl("state-recover", "--operation-id", "op", "--json")
+        self.assertEqual(missing_token.returncode, 2)
+        self.assertEqual(
+            one_document(missing_token)["error"]["message"],
+            "the following arguments are required: --confirmation-token",
+        )
 
     def test_extra_arguments_are_unrecognized(self):
         cases = [

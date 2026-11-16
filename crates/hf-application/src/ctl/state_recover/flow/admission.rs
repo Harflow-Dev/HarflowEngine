@@ -18,6 +18,13 @@ pub(super) fn admit(
     r: &RecoveryRequest<'_>,
     p: &RecoveryPorts<'_>,
 ) -> Result<(RecoveryJournal, bool), RecoveryError> {
+    admit_tracked(r, p, &mut None)
+}
+pub(super) fn admit_tracked(
+    r: &RecoveryRequest<'_>,
+    p: &RecoveryPorts<'_>,
+    progress: &mut Option<RecoveryProgress>,
+) -> Result<(RecoveryJournal, bool), RecoveryError> {
     // Layout-2 refusal precedes confirmation errors. This bounded no-follow
     // observation grants no authority; every effect still needs exact held binding.
     let facts = p.observer.observe(r.root);
@@ -65,7 +72,7 @@ pub(super) fn admit(
                 previous = Some(bytes.clone());
             }
             _ => {
-                return resume(r, p, &facts, bytes)
+                return resume(r, p, &facts, bytes, progress)
                     .map(|j| (j, false))
                     .map_err(|error| {
                         if error == RecoveryError::InfrastructureUnavailable {
@@ -153,6 +160,7 @@ fn resume(
     p: &RecoveryPorts<'_>,
     facts: &hf_domain::ctl::inspect::RootFacts,
     bytes: &[u8],
+    progress: &mut Option<RecoveryProgress>,
 ) -> Result<RecoveryJournal, RecoveryError> {
     if !recovery_eligible(facts, p.state_codec, p.policy, r.root, true) {
         return Err(RecoveryError::StaleConfirmation);
@@ -172,6 +180,7 @@ fn resume(
     if journal.proposal != *r.proposal {
         return Err(RecoveryError::StaleConfirmation);
     }
+    *progress = Some(RecoveryProgress::journal(&journal));
     binding(
         r,
         p,

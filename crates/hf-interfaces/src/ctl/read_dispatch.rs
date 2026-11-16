@@ -168,6 +168,7 @@ fn command_name(parsed: &Parsed) -> &'static str {
         Parsed::PendingPage(_) => "task-pending-page",
         Parsed::PendingStatus(_) => "task-pending-status",
         Parsed::StateInspect { .. } => "state-inspect",
+        Parsed::StateRecover { .. } => "state-recover",
         Parsed::VersionInfo { .. } => "version-info",
         Parsed::Help(_) => "help",
     }

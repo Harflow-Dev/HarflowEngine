@@ -6,18 +6,25 @@ pub(super) fn archive(
     fresh: bool,
     p: &RecoveryPorts<'_>,
 ) -> Result<RecoveryJournal, RecoveryError> {
+    archive_tracked(&mut j, fresh, p)?;
+    Ok(j)
+}
+pub(super) fn archive_tracked(
+    j: &mut RecoveryJournal,
+    fresh: bool,
+    p: &RecoveryPorts<'_>,
+) -> Result<(), RecoveryError> {
     if fresh {
         // Even failure of the pending publication itself is an uncertain closed-gate
         // outcome: a retry must inspect it, never assume there was no mutation.
-        p.mutations.write_pending(&j).map_err(interrupted)?;
-        publish_journal(&j, p).map_err(interrupted)?;
+        p.mutations.write_pending(j).map_err(interrupted)?;
+        publish_journal(j, p).map_err(interrupted)?;
     } else {
         // A parsed publication temporary is not proof that its file barrier
         // succeeded. Republish the admitted phase durably before moving data.
-        publish_journal(&j, p).map_err(interrupted)?;
+        publish_journal(j, p).map_err(interrupted)?;
     }
-    archive_pending(&mut j, p).map_err(interrupted)?;
-    Ok(j)
+    archive_pending(j, p).map_err(interrupted)
 }
 fn archive_pending(j: &mut RecoveryJournal, p: &RecoveryPorts<'_>) -> Result<(), RecoveryError> {
     p.session.verify_held().map_err(admission::binding_error)?;

@@ -81,10 +81,11 @@ pub fn completed_result(
     Ok(Some(result))
 }
 /// Detect R8 before the archive observer, inventory or owner evidence can be read.
-pub(super) fn committed(
+pub(super) fn committed_tracked(
     r: &RecoveryRequest<'_>,
     p: &RecoveryPorts<'_>,
     c: &CompletionPorts<'_>,
+    progress: &mut Option<RecoveryProgress>,
 ) -> Result<Option<RecoveryJournal>, RecoveryError> {
     let facts = c.read.read()?;
     if facts.layout_two {
@@ -107,6 +108,13 @@ pub(super) fn committed(
     if j.proposal != *r.proposal {
         return Err(RecoveryError::StaleConfirmation);
     }
+    let mut admitted = RecoveryProgress::journal(&j);
+    admitted.phase = if j.phase == JournalPhase::Completed {
+        RecoveryPhase::Completed
+    } else {
+        RecoveryPhase::Committed
+    };
+    *progress = Some(admitted);
     super::binding::verify_binding(
         p.session,
         r.proposal,
@@ -124,38 +132,37 @@ pub(super) fn committed(
     })?;
     Ok(Some(j))
 }
-pub(super) fn initialize(
-    mut j: RecoveryJournal,
+pub(super) fn initialize_tracked(
+    j: &mut RecoveryJournal,
     p: &RecoveryPorts<'_>,
     c: &CompletionPorts<'_>,
-) -> Result<RecoveryJournal, RecoveryError> {
-    c.staging.validate_archive(&j)?;
+) -> Result<(), RecoveryError> {
+    c.staging.validate_archive(j)?;
     // R7 may have stopped after the BackedUp journal but before its manifest.
     // Qualify original identities while allowing the R7b directory and reused names.
     let manifest = p
         .journal_codec
-        .encode(&j)
+        .encode(j)
         .map_err(|_| RecoveryError::InfrastructureUnavailable)?;
-    p.mutations.write_manifest(&j, &manifest)?;
+    p.mutations.write_manifest(j, &manifest)?;
     if j.staged.is_none() {
-        c.staging.cleanup_staging(&j)?;
-        j.staging = Some(c.staging.prepare_staging(&j)?);
-        publish(&j, p)?;
-        j.staged = Some(c.staging.initialize_staging(&j)?);
-        publish(&j, p)?;
+        c.staging.cleanup_staging(j)?;
+        j.staging = Some(c.staging.prepare_staging(j)?);
+        publish(j, p)?;
+        j.staged = Some(c.staging.initialize_staging(j)?);
+        publish(j, p)?;
     }
-    c.staging.publish_staged(&j)?;
-    c.staging.validate_initialized(&j)?;
-    c.mutations.commit(&j)?;
-    Ok(j)
+    c.staging.publish_staged(j)?;
+    c.staging.validate_initialized(j)?;
+    c.mutations.commit(j)
 }
-pub(super) fn finish(
-    mut j: RecoveryJournal,
+pub(super) fn finish_tracked(
+    j: &mut RecoveryJournal,
     p: &RecoveryPorts<'_>,
     c: &CompletionPorts<'_>,
 ) -> Result<RecoveryResult, RecoveryError> {
     // Once committed, current-store bytes and inventory are deliberately untouched.
-    c.mutations.validate_locations(&j)?;
+    c.mutations.validate_locations(j)?;
     let result = RecoveryResult {
         operation_id: j.operation_id.clone(),
         state_root: j.state_root.clone(),
@@ -169,11 +176,11 @@ pub(super) fn finish(
         .map_err(|_| RecoveryError::InfrastructureUnavailable)?;
     let bytes = p
         .journal_codec
-        .encode(&j)
+        .encode(j)
         .map_err(|_| RecoveryError::InfrastructureUnavailable)?;
-    c.mutations.write_receipt(&j, &receipt)?;
-    p.mutations.write_manifest(&j, &bytes)?;
-    p.mutations.write_journal(&j, &bytes)?;
+    c.mutations.write_receipt(j, &receipt)?;
+    p.mutations.write_manifest(j, &bytes)?;
+    p.mutations.write_journal(j, &bytes)?;
     Ok(result)
 }
 fn publish(j: &RecoveryJournal, p: &RecoveryPorts<'_>) -> Result<(), RecoveryError> {

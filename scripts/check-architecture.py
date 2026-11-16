@@ -43,6 +43,8 @@ HOST_STORAGE_ALLOWED = {
     "hf_storage::ReadRefusal", "hf_storage::TaskSnapshot",
     # The pure SHA-256 adapter: no I/O and no authority; it hashes a recovery inventory.
     "hf_storage::Sha256Digest",
+    # The approved operation-bound recovery session; no mutable Store is exposed.
+    "hf_storage::MaintenanceSession",
 }
 HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 

@@ -28,11 +28,12 @@ const fn gated(name: &'static str) -> Capability {
 }
 /// Advertised capabilities in the order of the canonical Python list (`wire_contracts.py`
 /// `CAPABILITIES`). The list grows only when a path and its evidence land.
-pub const CAPABILITIES: [Capability; 10] = [
+pub const CAPABILITIES: [Capability; 11] = [
     gated("task-pending-launch.v1"),
     gated("interaction-events.v1"),
     always("ctl.v1"),
     always("version-info.v1"),
+    gated("state-recovery.v1"),
     gated("statistics-page.v1"),
     gated("task-event-page.v1"),
     gated("task-prompt.v1"),

@@ -1,4 +1,5 @@
 //! Lease-free, bounded receipt lookup and minimal committed-operation reads.
+mod python_state;
 use super::{descriptor::*, *};
 use hf_application::ctl::{
     state_inspect::StateCodecPort,
@@ -22,13 +23,24 @@ impl<'a> FsRecoveryRead<'a> {
     pub fn new(root: &'a StateRoot, codec: &'a dyn StateCodecPort) -> Self {
         Self { root, codec }
     }
+    /// The layout-2 refusal precedes confirmation parsing. No current store is read.
+    pub fn layout_two_before_confirmation(&self) -> Result<bool, RecoveryError> {
+        let Ok(root) = self.root() else {
+            return Ok(false);
+        };
+        self.layout_two(&root)
+    }
     fn root(&self) -> Result<OwnedFd, RecoveryError> {
         let path = std::path::Path::new(self.root.as_str());
-        if crate::ctl::state_observer::stat_root(path).0 != RootStat::Present {
-            return Err(RecoveryError::UnsafeRoot);
+        let stat = crate::ctl::state_observer::stat_root(path).0;
+        if stat != RootStat::Present {
+            return Err(root_error(stat));
         }
-        absolute(path)
+        // A failed open after safe metadata is not proof of unsafety: retain the
+        // current missing/unsafe/unreadable distinction using root metadata only.
+        absolute(path).map_err(|_| root_error(crate::ctl::state_observer::stat_root(path).0))
     }
+
     fn layout_two(&self, root: &OwnedFd) -> Result<bool, RecoveryError> {
         Ok(read(root, ".harflow-store.json", 16_384)?.is_some_and(|bytes| {
             matches!(self.codec.decode_marker(&bytes), MarkerDecode::Store { observed, .. } if observed.iter().any(|field| field.key == "layout_version" && field.value == Scalar::Int(2)))
@@ -115,5 +127,13 @@ impl ReceiptReadPort for FsRecoveryRead<'_> {
             return Err(RecoveryError::StaleConfirmation);
         }
         Ok(snapshot)
+    }
+}
+
+fn root_error(stat: RootStat) -> RecoveryError {
+    match stat {
+        RootStat::Missing => RecoveryError::StaleConfirmation,
+        RootStat::Unsafe => RecoveryError::UnsafeRoot,
+        RootStat::Unreadable | RootStat::Present => RecoveryError::InfrastructureUnavailable,
     }
 }

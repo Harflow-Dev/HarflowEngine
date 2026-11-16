@@ -57,6 +57,7 @@ fn emitted_lists_keep_the_canonical_order_in_both_availability_states() {
             "interaction-events.v1",
             "ctl.v1",
             "version-info.v1",
+            "state-recovery.v1",
             "statistics-page.v1",
             "task-event-page.v1",
             "task-prompt.v1",

@@ -19,6 +19,12 @@ impl<'a> RecoveryInitializer<'a> {
         Self { session, flush }
     }
 }
+impl MaintenanceSession {
+    /// A files-only initializer whose authority cannot outlive this held session.
+    pub fn initializer<'a>(&'a self, flush: &'a dyn FlushPort) -> impl FreshStorePort + 'a {
+        RecoveryInitializer::new(self, flush)
+    }
+}
 impl FreshStorePort for RecoveryInitializer<'_> {
     fn initialize(
         &self,

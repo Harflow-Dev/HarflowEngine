@@ -69,6 +69,28 @@ impl CtlServices for HostServices {
         };
         inspect_state(&FsStateObserver, &JsonStateCodec, policy, &ports, root)
     }
+    fn recover(
+        &self,
+        root: &StateRoot,
+        operation_id: &str,
+        confirmation_token: &str,
+    ) -> Result<
+        hf_application::ctl::state_recover::journal::RecoveryResult,
+        hf_application::ctl::state_recover::flow::RecoveryFailure,
+    > {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            super::state_recover::recover(root, operation_id, confirmation_token)
+        }
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            let _ = (root, operation_id, confirmation_token);
+            Err(
+                hf_application::ctl::state_recover::flow::RecoveryError::InfrastructureUnavailable
+                    .into(),
+            )
+        }
+    }
     fn store_reads_supported(&self) -> bool {
         cfg!(all(target_os = "macos", target_arch = "aarch64"))
     }

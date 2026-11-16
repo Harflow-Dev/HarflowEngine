@@ -1,5 +1,5 @@
 //! Internal staged state recovery, qualified owner evidence and completed receipts.
-//! No public recovery caller or capability is composed.
+//! The host composes the public confirmation-bound caller through these ports.
 pub mod binding;
 pub mod completion;
 pub mod evidence;
@@ -20,4 +20,5 @@ pub trait RecoveryFsPort: Send + Sync {
     fn free_space(&self, path: &Path) -> io::Result<u64>;
 }
 
+mod failure;
 pub mod flow;

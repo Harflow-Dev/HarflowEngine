@@ -207,9 +207,11 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
     let state = scratch.state();
     let before = scratch.tree();
     // The store-backed reads exist on macOS arm64 only; elsewhere they are an invalid choice too.
-    let mut commands = vec!["state-recover", "bogus"];
-    if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+    let recovery_supported = cfg!(all(target_os = "macos", target_arch = "aarch64"));
+    let mut commands = vec!["bogus"];
+    if !recovery_supported {
         commands.extend([
+            "state-recover",
             "list",
             "status",
             "task-events",
@@ -225,6 +227,14 @@ fn unimplemented_and_unknown_paths_exit_two_with_a_choice_error() {
         assert_eq!(output.status.code(), Some(2), "{command}");
         assert!(output.stdout.is_empty(), "{command}");
         assert!(stderr(&output).contains("invalid choice"), "{command}");
+    }
+    if recovery_supported {
+        let output = scratch.run(&["state-recover"], Some(&state));
+        assert_eq!(output.status.code(), Some(2));
+        assert!(stdout(&output).is_empty());
+        assert!(stderr(&output).contains(
+            "the following arguments are required: --operation-id, --confirmation-token"
+        ));
     }
     let missing = scratch.run(&[], Some(&state));
     assert_eq!(missing.status.code(), Some(2));
