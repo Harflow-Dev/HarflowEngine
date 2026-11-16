@@ -28,10 +28,14 @@ class ProposalFieldTests(ProposalCase):
     def test_the_lock_identity_is_the_stable_lock_files_identity_or_null(self):
         self.stray()
         self.assertIsNone(assert_proposal(self, self.inspect())["lock_identity"])
-        path = self.write(".harflow-store.lock", b"")
+        path = self.write("store.lock", b"")
         info = os.lstat(path)
         decoded = assert_proposal(self, self.inspect())
         self.assertEqual(decoded["lock_identity"], [info.st_dev, info.st_ino])
+        legacy = self.write(".harflow-store.lock", b"different lock")
+        legacy_info = os.lstat(legacy)
+        self.assertNotEqual((info.st_dev, info.st_ino), (legacy_info.st_dev, legacy_info.st_ino))
+        self.assertEqual(assert_proposal(self, self.inspect())["lock_identity"], [info.st_dev, info.st_ino])
 
     def test_the_root_identity_is_the_roots_device_and_inode(self):
         self.stray()

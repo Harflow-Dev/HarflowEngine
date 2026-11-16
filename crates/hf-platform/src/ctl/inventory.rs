@@ -54,7 +54,8 @@ mod descriptor {
 
     /// Directories nested deeper than this are not walked (each level holds a descriptor).
     const MAX_DEPTH: usize = 128;
-    const LOCK_NAME: &str = ".harflow-store.lock";
+    // Bind recovery inventory to the lock identity used by the Rust store.
+    const LOCK_NAME: &str = "store.lock";
 
     type Failure = InventoryFailure;
 

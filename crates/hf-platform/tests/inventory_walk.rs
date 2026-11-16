@@ -136,8 +136,8 @@ fn a_non_regular_excluded_top_level_name_is_unsafe() {
                 _ => symlink("target", &path).unwrap(),
             }
             let result = fixture.walk(100);
-            if name == ".harflow-store.lock" {
-                assert!(result.is_err(), "{name} {kind}");
+            if name == "store.lock" {
+                assert_eq!(result, Err(InventoryFailure::Unreadable), "{name} {kind}");
             } else {
                 assert_eq!(result, Err(InventoryFailure::Special), "{name} {kind}");
             }
@@ -177,7 +177,7 @@ fn exclusions_apply_to_the_top_level_only() {
 fn the_lock_identity_is_the_stable_lock_files_identity() {
     let fixture = Fixture::new();
     assert_eq!(fixture.walk(10).unwrap().lock, None);
-    let lock = fixture.0.join(".harflow-store.lock");
+    let lock = fixture.0.join("store.lock");
     fs::write(&lock, b"").unwrap();
     let meta = fs::symlink_metadata(&lock).unwrap();
     let identity = fixture.walk(10).unwrap().lock.unwrap();
@@ -190,11 +190,11 @@ fn the_lock_identity_is_the_stable_lock_files_identity() {
 #[test]
 fn a_lock_that_is_not_a_regular_file_cannot_be_walked() {
     let directory = Fixture::new();
-    fs::create_dir(directory.0.join(".harflow-store.lock")).unwrap();
+    fs::create_dir(directory.0.join("store.lock")).unwrap();
     assert_eq!(directory.walk(10), Err(InventoryFailure::Unreadable));
     let link = Fixture::new();
     fs::write(link.0.join("target"), b"").unwrap();
-    symlink("target", link.0.join(".harflow-store.lock")).unwrap();
+    symlink("target", link.0.join("store.lock")).unwrap();
     assert_eq!(link.walk(10), Err(InventoryFailure::Unreadable));
 }
 

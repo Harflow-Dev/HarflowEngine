@@ -140,7 +140,7 @@ def assert_proposal(case, result, *, root=None, resumable=False, phase="proposed
     case.assertEqual(proposal["engine_version"], result["engine_version"])
     info = os.lstat(root)
     case.assertEqual(proposal["root_identity"], [info.st_dev, info.st_ino])
-    lock = Path(root) / ".harflow-store.lock"
+    lock = Path(root) / "store.lock"
     if os.path.lexists(lock):
         lock_info = os.lstat(lock)
         case.assertEqual(proposal["lock_identity"], [lock_info.st_dev, lock_info.st_ino])
