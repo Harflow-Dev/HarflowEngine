@@ -166,6 +166,10 @@ fn document_reasons_render() {
             "Definition must be an object",
         ),
         (
+            DocumentReason::TooDeep,
+            "Definition nests deeper than 64 levels",
+        ),
+        (
             DocumentReason::NonFiniteValue,
             "Definition must contain finite JSON values",
         ),

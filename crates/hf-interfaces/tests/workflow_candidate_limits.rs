@@ -275,3 +275,14 @@ fn reasoning_effort_rules() {
         );
     }
 }
+
+#[test]
+fn unrecorded_command_outcome_is_refused_not_accepted() {
+    let message = refused_agent(r#""backend":"claude","allowed_commands":["never-recorded"]"#);
+    assert!(
+        message.starts_with(
+            "Node a claude candidate: workflow_support: no recorded allowed_commands outcome"
+        ),
+        "{message}"
+    );
+}

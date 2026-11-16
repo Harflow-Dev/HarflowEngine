@@ -8,6 +8,11 @@ use super::{Entry, IDENTIFIER_RULE, NAME_RULE};
 
 pub const DEFINITION: &[Entry] = &[
     (
+        D(DR::TooDeep),
+        "[]",
+        "Workflow definition nests deeper than 64 levels",
+    ),
+    (
         D(DR::NotObject),
         "[]",
         "Workflow definition must be an object",

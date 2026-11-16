@@ -153,7 +153,7 @@ fn legacy_convergence_at_a_join_node() {
 }
 
 #[test]
-fn unhashable_join_id_is_overwritten() {
+fn non_text_join_id_on_split_is_overwritten() {
     for stale in ["5", "null"] {
         let input = graph(
             &["a", "b", "c"],
@@ -189,5 +189,49 @@ fn unhashable_join_id_on_a_split_is_refused() {
             refused(&input).starts_with("Cross-branch connection at split a:"),
             "{stale}"
         );
+    }
+}
+
+const CROSS_BRANCH: &str = "Cross-branch connection at split a: its legacy Join follows an earlier convergence; connect branches directly to their first shared node";
+
+fn split_with_join_id(stale: &str) -> String {
+    graph(
+        &["a", "b", "c"],
+        &[("s", "a"), ("a", "b"), ("a", "c"), ("b", "e"), ("c", "e")],
+    )
+    .replace(
+        r#"{"id":"a","type":"agent"}"#,
+        &format!(r#"{{"id":"a","type":"agent","join_id":{stale}}}"#),
+    )
+}
+
+#[test]
+fn container_join_id_on_a_split_is_a_cross_branch_refusal() {
+    for stale in ["[]", "[1]", r#"["e"]"#, "{}", r#"{"a":1}"#] {
+        assert_eq!(refused(&split_with_join_id(stale)), CROSS_BRANCH, "{stale}");
+    }
+}
+
+#[test]
+fn scalar_join_id_on_a_split_is_overwritten() {
+    for stale in ["5", "null", r#""nowhere""#, r#""a""#, "true"] {
+        let definition = accepted(&split_with_join_id(stale));
+        assert_eq!(
+            at(&definition, "nodes.1.join_id"),
+            Some(&Json::text("e")),
+            "{stale}"
+        );
+    }
+}
+
+#[test]
+fn container_join_id_on_a_non_split_node_is_removed() {
+    for stale in ["[]", "[1]", "{}", r#"{"a":1}"#] {
+        let input = graph(&["a", "b"], &[("s", "a"), ("a", "b"), ("b", "e")]).replace(
+            r#"{"id":"b","type":"agent"}"#,
+            &format!(r#"{{"id":"b","type":"agent","join_id":{stale}}}"#),
+        );
+        let definition = accepted(&input);
+        assert_eq!(at(&definition, "nodes.2.join_id"), None, "{stale}");
     }
 }

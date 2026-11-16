@@ -14,7 +14,7 @@ pub const IDENTIFIER_RULE: &str =
     "Identifiers must contain 1–100 letters, digits, dots, dashes or underscores";
 
 /// The number of rules of each kind: definition, node, on-demand, candidate, graph, git.
-pub const RULE_COUNTS: [usize; 6] = [21, 31, 15, 27, 22, 10];
+pub const RULE_COUNTS: [usize; 6] = [22, 31, 15, 27, 22, 10];
 
 pub fn tables() -> [&'static [Entry]; 6] {
     [
