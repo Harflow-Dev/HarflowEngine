@@ -5,7 +5,7 @@ use crate::{
     binding::Binding,
     connection,
     maintenance_copy::{Ident, ident, same_dir},
-    wal::{marker, reject_nonempty_journal},
+    wal::marker,
 };
 use std::{
     fs::{self, File, OpenOptions},
@@ -99,16 +99,18 @@ fn copy(source: &Path, target: &Path, remaining: &mut u64, deadline: Instant) ->
     }
     Ok(())
 }
+/// The caller holds the original shared claim and I/O gate, and passes the identity
+/// returned by `qualify::precheck` under those locks. The required WAL is always copied;
+/// a missing source cannot silently fall back to the main database alone.
 pub(crate) fn with_qualified_copy<T>(
     binding: &Binding,
     parent: &Path,
+    expected: Identity,
     deadline: Instant,
     action: impl FnOnce(&rusqlite::Connection, &Identity) -> Result<T>,
 ) -> Result<T> {
     connection::check_deadline(deadline)?;
     binding.check()?;
-    reject_nonempty_journal(binding)?;
-    let expected = marker(binding)?;
     Binding::validate_probe_path(parent)?;
     let parent = fs::canonicalize(parent)?;
     if parent.starts_with(fs::canonicalize(binding.root())?) {
@@ -129,15 +131,12 @@ fn qualify_copy<T>(
     let database = scratch.0.join("store.sqlite3");
     let mut remaining = CAP;
     copy(&binding.database(), &database, &mut remaining, deadline)?;
-    let source_wal = binding.root().join("store.sqlite3-wal");
-    if source_wal.try_exists()? {
-        copy(
-            &source_wal,
-            &scratch.0.join("store.sqlite3-wal"),
-            &mut remaining,
-            deadline,
-        )?;
-    }
+    copy(
+        &binding.root().join("store.sqlite3-wal"),
+        &scratch.0.join("store.sqlite3-wal"),
+        &mut remaining,
+        deadline,
+    )?;
     binding.check()?;
     connection::qualify_header(&database)?;
     let connection = rusqlite::Connection::open_with_flags(

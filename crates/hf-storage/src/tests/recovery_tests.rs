@@ -13,6 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 use support::{Fixture, accepted_binding, deadline};
+mod b7;
 mod faults;
 
 pub(super) fn readonly(root: &std::path::Path) -> Connection {
@@ -29,6 +30,9 @@ pub(super) fn source_hashes(root: &std::path::Path) -> Vec<(String, Option<Vec<u
         "store.sqlite3-wal",
         "store.sqlite3-shm",
         "store.watermark",
+        "store.fence",
+        "store.wal-acceptance",
+        "store.recovery",
     ]
     .iter()
     .map(|name| ((*name).to_string(), file_hash(root, name)))
@@ -36,15 +40,22 @@ pub(super) fn source_hashes(root: &std::path::Path) -> Vec<(String, Option<Vec<u
 }
 
 fn file_hash(root: &std::path::Path, name: &str) -> Option<Vec<u8>> {
-    match fs::read(root.join(name)) {
-        Ok(bytes) => Some(Sha256::digest(bytes).to_vec()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound && name.ends_with("-wal") => {
-            None
+    let path = root.join(name);
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => panic!("cannot inspect source file {name}: {error}"),
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            let target = fs::read_link(path)
+                .unwrap_or_else(|error| panic!("cannot read source symlink {name}: {error}"));
+            Some(Sha256::digest(target.as_os_str().as_encoded_bytes()).to_vec())
         }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound && name.ends_with("-shm") => {
-            None
+        Ok(metadata) if metadata.is_dir() => Some(b"<directory>".to_vec()),
+        Ok(metadata) if metadata.is_file() => {
+            let bytes = fs::read(path)
+                .unwrap_or_else(|error| panic!("cannot read source file {name}: {error}"));
+            Some(Sha256::digest(bytes).to_vec())
         }
-        Err(error) => panic!("cannot read required source file {name}: {error}"),
+        Ok(_) => Some(b"<other-file-type>".to_vec()),
     }
 }
 
@@ -160,7 +171,6 @@ fn absent_invalid_and_expired_sources_refuse_without_initialization() {
     let mut header = fs::read(malformed.join("store.sqlite3")).unwrap();
     header[0] = b'X';
     fs::write(malformed.join("store.sqlite3"), header).unwrap();
-    let _ = fs::remove_file(malformed.join("store.sqlite3-wal"));
     let malformed_session = RecoveryReadSession::new(
         &malformed,
         malformed.parent().unwrap().join("scratch2"),
@@ -168,7 +178,7 @@ fn absent_invalid_and_expired_sources_refuse_without_initialization() {
         crate::tests::lease::lease_port(),
     );
     let result = malformed_session.read(&support::id(41), deadline());
-    assert!(result.is_err(), "{result:?}");
+    assert!(result.is_err(), "malformed header: {result:?}");
 }
 
 #[test]

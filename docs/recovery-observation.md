@@ -53,11 +53,22 @@ no record and create no root.
 ## Source-preserving storage
 
 The read session acquires the existing shared store claim and nonblocking exclusive
-I/O gate, copies main+WAL to a private directory outside the source root, and opens
+I/O gate. After the recovery gate and under both locks, `qualify::precheck` requires
+the Decision B WAL, acceptance record, unfenced generation and valid watermark. It
+captures the marker identity and watermark sequence before copying. Main and the
+required WAL are copied to a private directory outside the source root, and it opens
 SQLite only on that copy. Recovery and quick-check work occur on the copy. Source
 SQLite is never opened/configured, checkpointed or repaired; no source SHM is created
 by the inspector. Source binding/marker/deadline are checked around the read and
 scratch is cleaned on return. Handles close before identity/raw ports run.
+
+The copied SQLite identity must match the prechecked identity. Before reading any
+ownership, capture or event evidence, the copied commit sequence must be at least
+the captured watermark. `Fenced`, `CommitLost`, `WalMissing` and
+`RecoveryInterrupted` explicitly return `RecoveryError::Unavailable`; these refusals
+never grant authority or heal a source file. The original I/O gate remains held
+through copy qualification and evidence reads, excluding cooperating commits across
+the watermark/copy interval. See the [B7 receipt](migration-receipts/E2-B7-recovery-read.md).
 
 Each main+WAL copy is bounded by64MiB, with a64KiB copy buffer. At most two copies
 occur per inspection:128MiB maximum copy work, under the same deadline. This is a
