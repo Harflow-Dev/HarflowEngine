@@ -1,6 +1,7 @@
 use hf_application::process::IdentityPort;
-use hf_domain::process::ProcessIdentity;
+use hf_domain::process::{IdentityObservation, ProcessIdentity};
 use libproc::{bsd_info::BSDInfo, proc_pid::pidinfo};
+use nix::{errno::Errno, sys::signal::kill, unistd::Pid};
 use sysctl::{Ctl, Sysctl};
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MacIdentity;
@@ -17,6 +18,51 @@ impl IdentityPort for MacIdentity {
             return None;
         }
         ProcessIdentity::new(pid, info.pbi_start_tvsec, info.pbi_start_tvusec, before).ok()
+    }
+
+    fn observe(&self, expected: &ProcessIdentity) -> IdentityObservation {
+        match self.identity(expected.pid()) {
+            Some(actual) if actual == *expected => return IdentityObservation::Matching,
+            Some(_) => return IdentityObservation::Mismatch,
+            None => {}
+        }
+        // A failed identity lookup does not preserve errno or prove absence.
+        // A positive PID and None perform only a presence probe, sending no signal.
+        let Ok(native_pid) = i32::try_from(expected.pid()) else {
+            return IdentityObservation::Unknown;
+        };
+        if native_pid <= 1 {
+            return IdentityObservation::Unknown;
+        }
+        let before = boot_uuid();
+        let probe = kill(Pid::from_raw(native_pid), None);
+        let after = boot_uuid();
+        classify_absence(expected, before, probe, after)
+    }
+}
+
+fn classify_absence(
+    expected: &ProcessIdentity,
+    before: Option<String>,
+    probe: Result<(), Errno>,
+    after: Option<String>,
+) -> IdentityObservation {
+    let normalize = |boot| {
+        ProcessIdentity::new(
+            expected.pid(),
+            expected.start_seconds(),
+            expected.start_microseconds(),
+            boot,
+        )
+        .ok()
+        .map(|identity| identity.boot_uuid().to_owned())
+    };
+    let before = before.and_then(normalize);
+    let after = after.and_then(normalize);
+    if before.is_some() && before == after && probe == Err(Errno::ESRCH) {
+        IdentityObservation::Dead
+    } else {
+        IdentityObservation::Unknown
     }
 }
 
@@ -72,4 +118,59 @@ pub fn observed_executable_path(
         return Err(std::io::Error::other("executable observation invalid path"));
     }
     Ok(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::classify_absence;
+    use hf_domain::process::{IdentityObservation, ProcessIdentity};
+    use nix::errno::Errno;
+
+    const BOOT: &str = "abcdef01-2345-6789-abcd-ef0123456789";
+
+    fn identity() -> ProcessIdentity {
+        ProcessIdentity::new(42, 1_700_000_000, 5, BOOT.into()).unwrap()
+    }
+
+    #[test]
+    fn stable_valid_boot_and_esrch_prove_dead() {
+        let expected = identity();
+        let upper = BOOT.to_ascii_uppercase();
+
+        assert_eq!(
+            classify_absence(&expected, Some(upper), Err(Errno::ESRCH), Some(BOOT.into())),
+            IdentityObservation::Dead
+        );
+    }
+
+    #[test]
+    fn successful_and_non_esrch_probes_remain_unknown() {
+        let expected = identity();
+        for probe in [Ok(()), Err(Errno::EPERM), Err(Errno::EINVAL)] {
+            assert_eq!(
+                classify_absence(&expected, Some(BOOT.into()), probe, Some(BOOT.into())),
+                IdentityObservation::Unknown
+            );
+        }
+    }
+
+    #[test]
+    fn missing_malformed_or_changing_boot_evidence_remains_unknown() {
+        let expected = identity();
+        let cases = [
+            (None, Some(BOOT.into())),
+            (Some(BOOT.into()), None),
+            (Some("malformed".into()), Some("malformed".into())),
+            (
+                Some(BOOT.into()),
+                Some("11111111-2222-3333-4444-555555555555".into()),
+            ),
+        ];
+        for (before, after) in cases {
+            assert_eq!(
+                classify_absence(&expected, before, Err(Errno::ESRCH), after),
+                IdentityObservation::Unknown
+            );
+        }
+    }
 }

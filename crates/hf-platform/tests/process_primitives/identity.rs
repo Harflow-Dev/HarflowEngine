@@ -1,6 +1,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::common::*;
-use hf_domain::process::{IdentityObservation, ProcessIdentity};
+use hf_application::ctl::state_recover::evidence::{
+    Basis, EvidenceSet, Item, Refusal, Source, Subject, assess, recheck,
+};
+use hf_application::process::IdentityPort;
+use hf_domain::process::{IdentityObservation, ProcessExit, ProcessIdentity};
 use hf_platform::process::{
     MacIdentity, OwnedSignal, RetainedOwnedChild, SignalOutcome, SpawnInitialization,
 };
@@ -30,6 +34,154 @@ fn registered_identity_matches_independent_bsdinfo_and_boot_uuid() {
         "fixture unexpectedly observed as zombie before product wait"
     );
     cooperative_quit(&mut child);
+}
+
+fn assert_independently_absent(pid: u32) {
+    let end = deadline(1_000);
+    while !independent_process_state_until(pid, end).is_empty() && Instant::now() < end {}
+    assert!(
+        independent_process_state_until(pid, deadline(250)).is_empty(),
+        "reaped fixture PID {pid} remained visible in the process table"
+    );
+}
+
+#[test]
+fn reaped_original_identity_is_dead() {
+    let mut child = spawn("hold", &[], 4096);
+    pump_until(&mut child, |value| {
+        value.capture().stdout.bytes.starts_with(b"READY\n")
+    });
+    let identity = child.registered_identity().unwrap().clone();
+    cooperative_quit(&mut child);
+    assert_independently_absent(child.pid());
+
+    assert_eq!(MacIdentity.observe(&identity), IdentityObservation::Dead);
+}
+
+#[test]
+fn reaped_owner_passes_real_identity_assessment_and_recheck() {
+    let mut child = spawn("hold", &[], 4096);
+    pump_until(&mut child, |value| {
+        value.capture().stdout.bytes.starts_with(b"READY\n")
+    });
+    let identity = child.registered_identity().unwrap().clone();
+    cooperative_quit(&mut child);
+    assert_independently_absent(child.pid());
+    let evidence = EvidenceSet {
+        basis: Basis::Clear,
+        items: vec![Item {
+            source: Source::OwnershipOwner,
+            subject: Subject::Identity(identity.clone()),
+        }],
+    };
+
+    assert_eq!(
+        assess(&evidence, &MacIdentity).unwrap().checked,
+        vec![identity.clone()]
+    );
+    assert_eq!(recheck(&[identity], &MacIdentity), Ok(()));
+}
+
+#[test]
+fn live_owner_is_active_with_real_identity_adapter() {
+    let mut child = spawn("hold", &[], 4096);
+    pump_until(&mut child, |value| {
+        value.capture().stdout.bytes.starts_with(b"READY\n")
+    });
+    let identity = child.registered_identity().unwrap().clone();
+    let evidence = EvidenceSet {
+        basis: Basis::Clear,
+        items: vec![Item {
+            source: Source::OwnershipOwner,
+            subject: Subject::Identity(identity.clone()),
+        }],
+    };
+
+    assert_eq!(
+        MacIdentity.observe(&identity),
+        IdentityObservation::Matching
+    );
+    assert_eq!(assess(&evidence, &MacIdentity), Err(Refusal::ActiveOwner));
+    assert_eq!(
+        recheck(&[identity], &MacIdentity),
+        Err(Refusal::ActiveOwner)
+    );
+    cooperative_quit(&mut child);
+}
+
+#[test]
+fn changed_identity_is_mismatch_with_real_identity_adapter() {
+    let mut child = spawn("hold", &[], 4096);
+    pump_until(&mut child, |value| {
+        value.capture().stdout.bytes.starts_with(b"READY\n")
+    });
+    let actual = child.registered_identity().unwrap().clone();
+    let changed = ProcessIdentity::new(
+        actual.pid(),
+        actual.start_seconds(),
+        actual.start_microseconds(),
+        "11111111-2222-3333-4444-555555555555".into(),
+    )
+    .unwrap();
+    let evidence = EvidenceSet {
+        basis: Basis::Clear,
+        items: vec![Item {
+            source: Source::OwnershipOwner,
+            subject: Subject::Identity(changed.clone()),
+        }],
+    };
+
+    assert_eq!(MacIdentity.observe(&changed), IdentityObservation::Mismatch);
+    assert_eq!(
+        assess(&evidence, &MacIdentity).unwrap().checked,
+        vec![changed]
+    );
+    cooperative_quit(&mut child);
+}
+
+#[test]
+fn unreaped_exited_owner_remains_active_until_original_wait() {
+    let mut child = spawn("hold", &[], 4096);
+    pump_until(&mut child, |value| {
+        value.capture().stdout.bytes.starts_with(b"READY\n")
+    });
+    let identity = child.registered_identity().unwrap().clone();
+    write_all(&mut child, b"quit\n");
+    child.close_stdin();
+    let end = deadline(3_000);
+    while !independent_process_state_until(child.pid(), end).starts_with('Z')
+        && Instant::now() < end
+    {}
+    assert!(
+        independent_process_state_until(child.pid(), deadline(250)).starts_with('Z'),
+        "fixture did not remain an unreaped zombie"
+    );
+    let observed = MacIdentity.observe(&identity);
+    let evidence = EvidenceSet {
+        basis: Basis::Clear,
+        items: vec![Item {
+            source: Source::OwnershipOwner,
+            subject: Subject::Identity(identity.clone()),
+        }],
+    };
+
+    match observed {
+        IdentityObservation::Matching => {
+            assert_eq!(assess(&evidence, &MacIdentity), Err(Refusal::ActiveOwner));
+        }
+        IdentityObservation::Unknown => {
+            assert_eq!(
+                assess(&evidence, &MacIdentity),
+                Err(Refusal::AmbiguousOwner)
+            );
+        }
+        other => panic!("zombie identity assessment was not conservative: {other:?}"),
+    }
+    assert!(matches!(child.try_wait().unwrap(), ProcessExit::Code(0)));
+    assert_independently_absent(child.pid());
+    pump_until(&mut child, |value| {
+        value.capture().stdout.eof && value.capture().stderr.eof
+    });
 }
 
 #[test]
