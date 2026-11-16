@@ -2,53 +2,27 @@ use super::tree::{Tree, field, fields};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use hf_application::ctl::state_recover::{
     evidence::{Basis, OwnerEvidence},
-    journal::{JOURNAL_BOUND, JournalError, JournalPhase, RecoveryJournal},
+    journal::{JOURNAL_BOUND, JournalError, JournalPhase, RecoveryJournal, StagedFile},
 };
 use hf_domain::{
     ctl::recovery_proposal::{FileIdentity, Inventory, RecoveryProposal},
     process::ProcessIdentity,
 };
 
-/// Decode a complete supported precommit journal without recursive JSON parsing.
+/// Decode a complete supported journal without recursive JSON parsing.
 pub fn decode_journal(bytes: &[u8]) -> Result<RecoveryJournal, JournalError> {
     if bytes.len() > JOURNAL_BOUND {
         return Err(JournalError::TooLarge);
     }
     let t = Tree::parse(bytes)?;
     let m = t.object(0)?;
-    fields(
-        m,
-        &[
-            "product",
-            "format",
-            "v",
-            "engine_version",
-            "state_root",
-            "operation_id",
-            "proposal",
-            "backup_path",
-            "root_identity",
-            "lock_identity",
-            "inventory",
-            "created_at",
-            "phase",
-            "backup_identity",
-            "data_identity",
-            "previous_journal_bytes",
-            "owner_evidence",
-        ],
-    )?;
+    validate_header(&t, m)?;
     let get = |key| field(m, key);
-    if t.text(get("product")?)? != "harflow"
-        || t.text(get("format")?)? != "harflow.state-recovery"
-        || t.unsigned(get("v")?)? != 1
-    {
-        return Err(JournalError::Invalid);
-    }
     let phase = match t.text(get("phase")?)?.as_str() {
         "planned" => JournalPhase::Planned,
         "prepared" => JournalPhase::Prepared,
         "backed_up" => JournalPhase::BackedUp,
+        "completed" => JournalPhase::Completed,
         _ => return Err(JournalError::UnsupportedPhase),
     };
     let root_identity = identity(&t, get("root_identity")?)?;
@@ -82,6 +56,20 @@ pub fn decode_journal(bytes: &[u8]) -> Result<RecoveryJournal, JournalError> {
         data_identity: optional_identity(&t, get("data_identity")?)?,
         previous_journal_bytes,
         owner_evidence: evidence(&t, get("owner_evidence")?)?,
+        staging: m
+            .get("staging")
+            .map(|id| optional_identity(&t, *id))
+            .transpose()?
+            .flatten(),
+        staged: m
+            .get("staged")
+            .map(|id| staged(&t, *id))
+            .transpose()?
+            .flatten(),
+        result: m
+            .get("result")
+            .map(|id| super::result::decode_tree(&t, *id))
+            .transpose()?,
     };
     journal.validate()?;
     Ok(journal)
@@ -161,4 +149,69 @@ fn evidence(t: &Tree, id: usize) -> Result<OwnerEvidence, JournalError> {
         );
     }
     Ok(OwnerEvidence { basis, checked })
+}
+
+fn staged(
+    t: &Tree,
+    id: usize,
+) -> Result<Option<std::collections::BTreeMap<String, StagedFile>>, JournalError> {
+    if t.null(id) {
+        return Ok(None);
+    }
+    let mut files = std::collections::BTreeMap::new();
+    for (name, id) in t.object(id)? {
+        let m = t.object(*id)?;
+        fields(m, &["identity", "size", "mtime_ns", "sha256"])?;
+        files.insert(
+            name.clone(),
+            StagedFile {
+                identity: identity(t, field(m, "identity")?)?,
+                size: t.unsigned(field(m, "size")?)?,
+                mtime_ns: t.signed(field(m, "mtime_ns")?)?,
+                sha256: t.text(field(m, "sha256")?)?,
+            },
+        );
+    }
+    Ok(Some(files))
+}
+
+fn validate_header(
+    t: &Tree,
+    m: &std::collections::BTreeMap<String, usize>,
+) -> Result<(), JournalError> {
+    let required = m
+        .iter()
+        .filter(|(key, _)| !["staging", "staged", "result"].contains(&key.as_str()))
+        .map(|(k, v)| (k.clone(), *v))
+        .collect();
+    fields(
+        &required,
+        &[
+            "product",
+            "format",
+            "v",
+            "engine_version",
+            "state_root",
+            "operation_id",
+            "proposal",
+            "backup_path",
+            "root_identity",
+            "lock_identity",
+            "inventory",
+            "created_at",
+            "phase",
+            "backup_identity",
+            "data_identity",
+            "previous_journal_bytes",
+            "owner_evidence",
+        ],
+    )?;
+    let get = |key| field(m, key);
+    if t.text(get("product")?)? != "harflow"
+        || t.text(get("format")?)? != "harflow.state-recovery"
+        || t.unsigned(get("v")?)? != 1
+    {
+        return Err(JournalError::Invalid);
+    }
+    Ok(())
 }

@@ -1,5 +1,5 @@
-//! Internal archive-only recovery. A successful return is a pending B5 handoff.
-mod admission;
+//! Internal recovery orchestration with a separately callable archive helper.
+pub(super) mod admission;
 mod run;
 use super::{
     binding::HeldSessionPort,
@@ -33,6 +33,11 @@ pub enum RecoveryError {
 pub trait JournalCodecPort {
     fn encode(&self, journal: &RecoveryJournal) -> Result<Vec<u8>, JournalError>;
     fn decode(&self, bytes: &[u8]) -> Result<RecoveryJournal, JournalError>;
+    fn encode_result(
+        &self,
+        result: &super::journal::RecoveryResult,
+    ) -> Result<Vec<u8>, JournalError>;
+    fn decode_result(&self, bytes: &[u8]) -> Result<super::journal::RecoveryResult, JournalError>;
 }
 
 /// Effects run under the original session. Implementations fence root/locks and the
@@ -91,10 +96,38 @@ pub struct BackedUpHandoff {
     pub journal: RecoveryJournal,
 }
 
-pub fn recover(
+/// Archive helper; production recovery continues through initialization and completion.
+pub fn archive_only(
     request: &RecoveryRequest<'_>,
     ports: &RecoveryPorts<'_>,
 ) -> Result<BackedUpHandoff, RecoveryError> {
     let (journal, fresh) = admission::admit(request, ports)?;
     run::archive(journal, fresh, ports).map(|journal| BackedUpHandoff { journal })
+}
+
+/// Complete internal recovery; historical receipts must be queried before session acquisition.
+pub fn recover(
+    request: &RecoveryRequest<'_>,
+    ports: &RecoveryPorts<'_>,
+    completion: &super::completion::CompletionPorts<'_>,
+) -> Result<super::journal::RecoveryResult, RecoveryError> {
+    let journal = match super::completion::committed(request, ports, completion)? {
+        Some(journal) => journal,
+        None => {
+            let (journal, fresh) = admission::admit(request, ports)?;
+            let journal = if journal.phase == super::journal::JournalPhase::BackedUp {
+                journal
+            } else {
+                run::archive(journal, fresh, ports)?
+            };
+            super::completion::initialize(journal, ports, completion).map_err(interrupted)?
+        }
+    };
+    super::completion::finish(journal, ports, completion).map_err(interrupted)
+}
+fn interrupted(error: RecoveryError) -> RecoveryError {
+    match error {
+        RecoveryError::InfrastructureUnavailable => RecoveryError::RecoveryInterrupted,
+        other => other,
+    }
 }

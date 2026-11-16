@@ -47,7 +47,7 @@ impl FsArchive<'_> {
     ) -> Result<(), RecoveryError> {
         if record {
             let saved = StoreRecovery::decode(bytes).ok_or(RecoveryError::BackupConflict)?;
-            if saved.operation_id() != j.operation_id || !saved.is_pending() {
+            if saved.operation_id() != j.operation_id {
                 return Err(RecoveryError::BackupConflict);
             }
         } else {

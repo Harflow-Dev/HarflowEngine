@@ -1,11 +1,13 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+#[path = "state_recover_flow/completion.rs"]
+mod completion;
 #[path = "state_recover_flow/support.rs"]
 mod support;
 use hf_application::ctl::state_inspect::StorePolicy;
 use hf_application::ctl::state_recover::{
     evidence::{Basis, EvidenceError, EvidenceSet, OwnerEvidencePort},
-    flow::{RecoveryError, RecoveryPorts, RecoveryRequest, recover},
+    flow::{RecoveryError, RecoveryPorts, RecoveryRequest, archive_only},
     journal::{JournalPhase, RecoveryJournal},
 };
 use hf_domain::ctl::{
@@ -70,7 +72,7 @@ fn qualified_earlier_snapshot_is_recorded_without_claiming_clear_evidence() {
         journal_codec: &f.journal_codec,
         mutations: &f.mutations,
     };
-    let result = recover(&request, &ports).unwrap();
+    let result = archive_only(&request, &ports).unwrap();
     assert_eq!(result.journal.owner_evidence.basis, Basis::EarlierSnapshot);
     assert_eq!(result.journal.phase, JournalPhase::BackedUp);
 }
@@ -113,7 +115,7 @@ fn claimed_owner_without_child_remains_ambiguous() {
         mutations: &f.mutations,
     };
     assert_eq!(
-        recover(&request, &ports),
+        archive_only(&request, &ports),
         Err(RecoveryError::AmbiguousOwner)
     );
     assert!(f.mutations.calls().iter().all(|call| call != "pending"));
@@ -208,6 +210,9 @@ fn completed_previous_journal_is_preserved_byte_for_byte_when_hash_matches() {
         phase: JournalPhase::BackedUp,
         backup_identity: Some(FileIdentity { dev: 7, ino: 40 }),
         data_identity: Some(FileIdentity { dev: 7, ino: 41 }),
+        staging: None,
+        staged: None,
+        result: None,
         previous_journal_bytes: None,
         owner_evidence: hf_application::ctl::state_recover::evidence::OwnerEvidence {
             basis: Basis::Clear,
@@ -327,7 +332,7 @@ fn owner_evidence_unreadable_refuses_before_pending_or_archive_mutation() {
         mutations: &f.mutations,
     };
     assert_eq!(
-        recover(&request, &ports),
+        archive_only(&request, &ports),
         Err(RecoveryError::AmbiguousOwner)
     );
     assert_eq!(

@@ -146,4 +146,7 @@ pending before its journal, and archives through BackedUp. Journaled retries use
 recorded process identities without reopening SQLite. The macOS adapter uses the
 exact approved rustix wrapper for descriptor-relative atomic no-overwrite moves;
 file flushes and directory barriers remain explicit and fault-injectable. This
-checkpoint has no public ctl caller, committed receipt or fresh-store initializer.
+checkpoint remains available as an internal archive helper. The subsequent
+[staged completion slice](migration-receipts/E2-B5-completion.md) initializes a
+fresh store under the original maintenance exclusion, publishes its identity last,
+then commits and reconciles a completed receipt. It adds no public ctl caller.

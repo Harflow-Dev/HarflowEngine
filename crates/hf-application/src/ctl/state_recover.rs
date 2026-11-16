@@ -1,7 +1,9 @@
-//! Internal state recovery ports, qualified owner evidence and archive-only flow.
-//! The flow stops at a pending BackedUp handoff; no public recovery caller exists.
+//! Internal staged state recovery, qualified owner evidence and completed receipts.
+//! No public recovery caller or capability is composed.
 pub mod binding;
+pub mod completion;
 pub mod evidence;
+pub mod initialization;
 pub mod journal;
 
 use std::{io, path::Path};

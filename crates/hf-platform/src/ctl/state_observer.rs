@@ -97,7 +97,7 @@ fn file_id(_: &fs::Metadata) -> FileId {
 /// A missing root is `Missing` whatever its ancestors are. An existing root must be a
 /// plain directory under plain directories, must not be the filesystem root or the home
 /// directory, and must share a device with its parent.
-fn stat_root(path: &Path) -> (RootStat, FileId) {
+pub(super) fn stat_root(path: &Path) -> (RootStat, FileId) {
     // The reference refuses these before it looks at the filesystem at all.
     if path.parent().is_none() || super::state_root::home_directory().as_deref() == Some(path) {
         return (RootStat::Unsafe, None);

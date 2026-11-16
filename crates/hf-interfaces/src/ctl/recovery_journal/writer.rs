@@ -6,16 +6,16 @@ use hf_application::ctl::state_recover::{
 use hf_domain::ctl::recovery_proposal::{EntryBody, FileIdentity, InventoryEntry};
 use std::{collections::BTreeMap, fmt::Write as _};
 
-struct Writer(Vec<u8>);
+pub(super) struct Writer(pub(super) Vec<u8>);
 impl Writer {
-    fn raw(&mut self, text: &str) -> Result<(), JournalError> {
+    pub(super) fn raw(&mut self, text: &str) -> Result<(), JournalError> {
         if text.len() > JOURNAL_BOUND.saturating_sub(self.0.len()) {
             return Err(JournalError::TooLarge);
         }
         self.0.extend_from_slice(text.as_bytes());
         Ok(())
     }
-    fn string(&mut self, text: &str) -> Result<(), JournalError> {
+    pub(super) fn string(&mut self, text: &str) -> Result<(), JournalError> {
         self.raw("\"")?;
         for ch in text.chars() {
             match ch {
@@ -80,8 +80,32 @@ pub fn encode_journal(j: &RecoveryJournal) -> Result<Vec<u8>, JournalError> {
     previous(&mut out, j.previous_journal_bytes.as_deref())?;
     out.raw(",\"product\":\"harflow\",\"proposal\":")?;
     proposal(&mut out, &j.proposal)?;
+    if let Some(result) = &j.result {
+        out.raw(",\"result\":")?;
+        super::result::write(&mut out, result)?;
+    }
     out.raw(",\"root_identity\":")?;
     out.identity(j.root_identity)?;
+    if let Some(files) = &j.staged {
+        out.raw(",\"staged\":{")?;
+        for (index, (name, file)) in files.iter().enumerate() {
+            if index > 0 {
+                out.raw(",")?;
+            }
+            out.string(name)?;
+            out.raw(":{\"identity\":")?;
+            out.identity(file.identity)?;
+            write!(out, ",\"mtime_ns\":{},\"sha256\":", file.mtime_ns)
+                .map_err(|_| JournalError::TooLarge)?;
+            out.string(&file.sha256)?;
+            write!(out, ",\"size\":{}}}", file.size).map_err(|_| JournalError::TooLarge)?;
+        }
+        out.raw("}")?;
+    }
+    if let Some(staging) = j.staging {
+        out.raw(",\"staging\":")?;
+        out.identity(staging)?;
+    }
     out.raw(",\"state_root\":")?;
     out.string(&j.state_root)?;
     out.raw(",\"v\":1}\n")?;

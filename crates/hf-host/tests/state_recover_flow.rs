@@ -6,7 +6,7 @@
 use hf_application::ctl::{
     state_inspect::{OperationIdPort, ProposalPorts, StorePolicy, inspect_state},
     state_recover::{
-        flow::{RecoveryPorts, RecoveryRequest, recover},
+        flow::{RecoveryPorts, RecoveryRequest, archive_only as recover},
         journal::JournalPhase,
     },
 };
@@ -41,3 +41,6 @@ mod support;
 
 #[path = "state_recover_flow/conflicts.rs"]
 mod conflicts;
+
+#[path = "state_recover_flow/fault_trace.rs"]
+mod fault_trace;

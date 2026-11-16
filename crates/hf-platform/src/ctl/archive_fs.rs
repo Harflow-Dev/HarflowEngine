@@ -6,9 +6,14 @@
 mod descriptor;
 mod exclusive_rename;
 pub use exclusive_rename::MacExclusiveRename;
+mod initialization;
 mod locations;
 mod publication;
 mod skeleton;
+pub use initialization::FsRecovery;
+mod completed_read;
+mod completion;
+pub use completed_read::FsRecoveryRead;
 use hf_application::ctl::state_recover::{
     binding::HeldSessionPort,
     flow::{ArchiveMutationPort, JournalCodecPort, RecoveryError},

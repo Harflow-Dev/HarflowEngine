@@ -1,7 +1,7 @@
 use hf_application::ctl::state_recover::{
     binding::{BindingError, HeldSessionPort},
     flow::JournalCodecPort,
-    journal::{JournalError, JournalPhase, RecoveryJournal},
+    journal::{JournalError, JournalPhase, RecoveryJournal, RecoveryResult},
 };
 use hf_domain::ctl::{
     identity::PRODUCT_VERSION,
@@ -106,6 +106,12 @@ impl JournalCodecPort for Codec {
     fn decode(&self, _: &[u8]) -> Result<RecoveryJournal, JournalError> {
         self.0.lock().unwrap().clone().ok_or(JournalError::Invalid)
     }
+    fn encode_result(&self, _: &RecoveryResult) -> Result<Vec<u8>, JournalError> {
+        Ok(b"result\n".to_vec())
+    }
+    fn decode_result(&self, _: &[u8]) -> Result<RecoveryResult, JournalError> {
+        Err(JournalError::Invalid)
+    }
 }
 
 pub(super) struct Fixture {
@@ -164,6 +170,9 @@ impl Fixture {
             phase: JournalPhase::Prepared,
             backup_identity: Some(backup_id),
             data_identity: Some(data_id),
+            staging: None,
+            staged: None,
+            result: None,
             previous_journal_bytes: None,
             owner_evidence: hf_application::ctl::state_recover::evidence::OwnerEvidence {
                 basis: hf_application::ctl::state_recover::evidence::Basis::Clear,

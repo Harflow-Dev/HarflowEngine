@@ -45,6 +45,7 @@ mod commit_sequence_tests;
 mod conversation_tests;
 mod event_seek_tests;
 mod event_snapshot_tests;
+mod initialize_tests;
 mod ownership_atomicity_tests;
 mod ownership_tests;
 mod read_session_deadline_tests;

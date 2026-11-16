@@ -140,6 +140,9 @@ fn fresh(
         data_identity: None,
         previous_journal_bytes: previous,
         owner_evidence,
+        staging: None,
+        staged: None,
+        result: None,
     };
     preflight(&journal, p)?;
     Ok(journal)
@@ -263,6 +266,32 @@ fn preflight(journal: &RecoveryJournal, p: &RecoveryPorts<'_>) -> Result<(), Rec
         maximum.phase = phase;
         bounded(&maximum, p)?;
     }
+    maximum.staging = Some(identity);
+    bounded(&maximum, p)?;
+    maximum.staged = Some(
+        super::super::journal::FRESH_FILES
+            .iter()
+            .map(|name| {
+                (
+                    (*name).to_string(),
+                    super::super::journal::StagedFile {
+                        identity,
+                        size: u64::MAX,
+                        mtime_ns: i64::MIN,
+                        sha256: "f".repeat(64),
+                    },
+                )
+            })
+            .collect(),
+    );
+    bounded(&maximum, p)?;
+    maximum.result = Some(super::super::journal::RecoveryResult {
+        operation_id: maximum.operation_id.clone(),
+        state_root: maximum.state_root.clone(),
+        backup_path: maximum.backup_path.clone(),
+    });
+    maximum.phase = JournalPhase::Completed;
+    bounded(&maximum, p)?;
     Ok(())
 }
 

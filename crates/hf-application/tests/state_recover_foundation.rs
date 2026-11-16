@@ -226,6 +226,9 @@ fn journal(phase: JournalPhase) -> RecoveryJournal {
         phase,
         backup_identity: (phase != JournalPhase::Planned).then_some(identity(20)),
         data_identity: (phase != JournalPhase::Planned).then_some(identity(21)),
+        staging: None,
+        staged: None,
+        result: None,
         previous_journal_bytes: None,
         owner_evidence: OwnerEvidence {
             basis: Basis::Clear,

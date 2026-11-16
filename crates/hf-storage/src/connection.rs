@@ -128,7 +128,15 @@ pub(crate) fn configure(connection: &Connection, deadline: Instant) -> Result<()
     }
     check_deadline(deadline)
 }
-pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Result<()> {
+pub(crate) enum InitialCheckpoint {
+    Truncate,
+    KeepFrames,
+}
+pub(crate) fn initialize(
+    connection: &mut Connection,
+    deadline: Instant,
+    checkpoint: InitialCheckpoint,
+) -> Result<()> {
     let transaction = connection.transaction()?;
     transaction.execute_batch(&format!("PRAGMA application_id={APPLICATION_ID}; PRAGMA user_version={SCHEMA_VERSION};
         CREATE TABLE store_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),generation TEXT NOT NULL);
@@ -149,10 +157,13 @@ pub(crate) fn initialize(connection: &mut Connection, deadline: Instant) -> Resu
         .map_err(|_| Error::CommitOutcomeUnknown)?;
     // Publish the fixed schema in the main file before allowing header qualification.
     timeout(connection, deadline)?;
-    let (busy, log, done): (u32, i64, i64) =
-        connection.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        })?;
+    let statement = match checkpoint {
+        InitialCheckpoint::Truncate => "PRAGMA wal_checkpoint(TRUNCATE)",
+        InitialCheckpoint::KeepFrames => "PRAGMA wal_checkpoint(FULL)",
+    };
+    let (busy, log, done): (u32, i64, i64) = connection.query_row(statement, [], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+    })?;
     if busy != 0 || log != done {
         return Err(Error::Busy);
     }

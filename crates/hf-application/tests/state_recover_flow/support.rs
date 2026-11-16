@@ -8,7 +8,7 @@ use hf_application::{
             evidence::{Basis, EvidenceError, EvidenceSet, OwnerEvidencePort},
             flow::{
                 ArchiveMutationPort, BackedUpHandoff, JournalCodecPort, RecoveryError,
-                RecoveryPorts, RecoveryRequest, recover,
+                RecoveryPorts, RecoveryRequest, archive_only,
             },
             journal::{JournalError, RecoveryJournal},
         },
@@ -154,6 +154,7 @@ impl IdentityPort for Identities {
 #[derive(Default)]
 pub(super) struct JournalCodec {
     pub(super) journal: Mutex<Option<RecoveryJournal>>,
+    pub(super) result: Mutex<Option<hf_application::ctl::state_recover::journal::RecoveryResult>>,
 }
 impl JournalCodecPort for JournalCodec {
     fn encode(&self, journal: &RecoveryJournal) -> Result<Vec<u8>, JournalError> {
@@ -162,6 +163,23 @@ impl JournalCodecPort for JournalCodec {
     }
     fn decode(&self, _: &[u8]) -> Result<RecoveryJournal, JournalError> {
         self.journal
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or(JournalError::Invalid)
+    }
+    fn encode_result(
+        &self,
+        result: &hf_application::ctl::state_recover::journal::RecoveryResult,
+    ) -> Result<Vec<u8>, JournalError> {
+        *self.result.lock().unwrap() = Some(result.clone());
+        Ok(b"result".to_vec())
+    }
+    fn decode_result(
+        &self,
+        _: &[u8],
+    ) -> Result<hf_application::ctl::state_recover::journal::RecoveryResult, JournalError> {
+        self.result
             .lock()
             .unwrap()
             .clone()
@@ -331,7 +349,7 @@ impl Fixture {
             journal_codec: &self.journal_codec,
             mutations: &self.mutations,
         };
-        recover(&request, &ports)
+        archive_only(&request, &ports)
     }
     pub(super) fn install_resume(&mut self, journal: RecoveryJournal) {
         self.facts.facts.journal = FileState::Bytes(b"journal".to_vec());

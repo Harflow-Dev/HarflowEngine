@@ -16,6 +16,7 @@ pub enum JournalPhase {
     Planned,
     Prepared,
     BackedUp,
+    Completed,
 }
 impl JournalPhase {
     pub fn as_str(self) -> &'static str {
@@ -23,6 +24,7 @@ impl JournalPhase {
             Self::Planned => "planned",
             Self::Prepared => "prepared",
             Self::BackedUp => "backed_up",
+            Self::Completed => "completed",
         }
     }
 }
@@ -35,6 +37,26 @@ pub enum JournalError {
     TooLarge,
 }
 
+pub const FRESH_FILES: [&str; 4] = [
+    "store.identity",
+    "store.sqlite3",
+    "store.sqlite3-wal",
+    "store.watermark",
+];
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StagedFile {
+    pub identity: FileIdentity,
+    pub size: u64,
+    pub mtime_ns: i64,
+    pub sha256: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RecoveryResult {
+    pub operation_id: String,
+    pub state_root: String,
+    pub backup_path: String,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecoveryJournal {
     pub engine_version: String,
@@ -51,6 +73,9 @@ pub struct RecoveryJournal {
     pub data_identity: Option<FileIdentity>,
     pub previous_journal_bytes: Option<Vec<u8>>,
     pub owner_evidence: OwnerEvidence,
+    pub staging: Option<FileIdentity>,
+    pub staged: Option<std::collections::BTreeMap<String, StagedFile>>,
+    pub result: Option<RecoveryResult>,
 }
 impl RecoveryJournal {
     /// Structural cross-field checks, separate from current root admission.
@@ -58,7 +83,7 @@ impl RecoveryJournal {
         let p = &self.proposal;
         let phase_ids = match self.phase {
             JournalPhase::Planned => self.backup_identity.is_none() && self.data_identity.is_none(),
-            JournalPhase::Prepared | JournalPhase::BackedUp => {
+            JournalPhase::Prepared | JournalPhase::BackedUp | JournalPhase::Completed => {
                 self.backup_identity.is_some() && self.data_identity.is_some()
             }
         };
@@ -87,6 +112,34 @@ impl RecoveryJournal {
                 .contains_key(&format!(".harflow-recovery-init-{}", self.operation_id))
             || self.owner_evidence.basis == Basis::Unreadable
             || !phase_ids
+        {
+            return Err(JournalError::Invalid);
+        }
+        let extension_valid = match self.phase {
+            JournalPhase::Planned | JournalPhase::Prepared => {
+                self.staging.is_none() && self.staged.is_none() && self.result.is_none()
+            }
+            JournalPhase::BackedUp => {
+                self.result.is_none() && (self.staged.is_none() || self.staging.is_some())
+            }
+            JournalPhase::Completed => {
+                self.result.is_some() && (self.staged.is_none() || self.staging.is_some())
+            }
+        };
+        if !extension_valid {
+            return Err(JournalError::Invalid);
+        }
+        if let Some(files) = &self.staged
+            && (files.len() != FRESH_FILES.len()
+                || FRESH_FILES.iter().any(|name| !files.contains_key(*name))
+                || files.values().any(|file| !is_digest(&file.sha256)))
+        {
+            return Err(JournalError::Invalid);
+        }
+        if let Some(result) = &self.result
+            && (result.operation_id != self.operation_id
+                || result.state_root != self.state_root
+                || result.backup_path != self.backup_path)
         {
             return Err(JournalError::Invalid);
         }

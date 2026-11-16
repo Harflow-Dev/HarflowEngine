@@ -14,7 +14,11 @@ pub use event_fixture::EventFixture;
 pub use event_writer::{EVENT_BODY_LIMIT, EVENT_KIND_LIMIT, EVENT_LINE_LIMIT, EventAppend};
 mod checkpoint;
 mod connection;
+mod initialize;
+pub use initialize::initialize_files;
+mod recovery_initialize;
 pub use checkpoint::Checkpoint;
+pub use recovery_initialize::RecoveryInitializer;
 mod operations;
 mod ownership;
 mod ownership_codec;
@@ -251,18 +255,10 @@ impl Store {
             .acquire(&root.join("io.lock"), LeaseMode::Exclusive, true, deadline)
             .map_err(lease_error)?;
         let binding = Binding::capture(root, false, leases.clone())?;
-        let mut connection = Connection::open(binding.database())?;
-        connection::suppress_checkpoints(&connection)?;
+        initialize::fixture_files(root, options.flush.as_ref(), deadline, &|| {
+            binding.check_root()
+        })?;
         binding.check_root()?;
-        connection::configure(&connection, deadline)?;
-        connection::initialize(&mut connection, deadline)?;
-        let identity = connection::identity(&connection, deadline)?;
-        connection::check_deadline(deadline)?;
-        watermark::create(root, &identity.generation, options.flush.as_ref())?;
-        small_file::sync_dir(root)?;
-        wal::publish(root, &identity)?;
-        small_file::sync_dir(root)?;
-        drop(connection);
         drop(io);
         drop(claim);
         Self::open_with(root, limits, deadline, leases, options)
