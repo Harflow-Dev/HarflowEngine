@@ -485,7 +485,7 @@ manual-checkpoint limits remain unchanged; open/recover/probe no longer have a s
 
 The separate [private capture/completion foundation](capture-completion.md)
 introduced schema4; schema5 changed the locking protocol. Current fresh roots use
-schema7. Schema6 added `task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`
+schema8. Schema6 added `task_facts`, `task_processes`, `task_prompts`, `artifact_manifests`
 and `artifact_items` beside the existing task/event/watch tables; schema7 replaces the
 `task_pending` id list with `launch_attempts` (pre-record launch receipts: one row per receipt
 filename stem, with invalid names, refused receipts and the status columns the ordinary
@@ -503,7 +503,19 @@ to it fail inside the transaction and roll back. For the same reason the
 initialized) was added to schema7 without a version bump; a root initialized before it refuses a
 writer open and recovery as incompatible, before any mutation. The value counts committed write
 transactions, including commits that change no row; it is not a change detector.
-Header/status blobs remain the served bytes. Schema6 and schema5 roots refuse as
+Schema8 adds `lifecycle_records`: one task-to-operation/attempt/root binding, a lifecycle CAS
+revision independent of the ownership fence revision, sticky cancellation and bounded typed
+execution observations. Preparation inserts reservation, initial task and launch association
+in one commit. Event/source publication requires an explicit application
+`DurableCaptureAdmission` capability, which receives the binding, actual recorded child,
+previous/next offsets and known-loss observations. No permissive default or production
+raw-capture implementation is supplied here. A trusted owner-held adapter must verify
+actual synced source identity and bounds before this seam qualifies T3; caller-provided
+offsets and unit-test admissions do not establish raw durability. Once admitted, source
+offsets, normalized events and watch invalidation commit together.
+Observed result, backend obligations, OS descendant samples and cleanup evidence remain
+independent; no public terminal projection, EOF, settlement or release follows.
+Header/status blobs remain the served bytes. Schema7 and older roots refuse as
 `unsupported_layout`, without upgrade or repair; no checked-in database fixture or
 internal root depends on an older schema. Open/recover/probe qualify in place with no size cap; public ctl
 reads use `ReadSession`, including `recovery-activity`. The internal operation-scoped
@@ -552,13 +564,13 @@ fixture `add_task_fixture` goes through the same insert, with its prompt row sto
 | `title` | 65,536 bytes; with a 2000-character preview (at most 8000 bytes) and a source name it stays within the default 1 MiB read budget of the prompt read (checked at compile time) | Rust bound |
 | `session_id`, `status` | 1024 bytes and 256 characters; 256 bytes | shared with the fixture writer |
 | Process | `pid` 2..=`i32::MAX`; an identity's `pid` equals the row's; start seconds fit a SQLite integer | Rust bound |
-| `republish_header` | header and status blobs 2048 bytes each, `recorded_status` 256 bytes, checked before the task is looked up | Rust bound |
+| `republish_header` | production header and status blobs 16384 bytes each (fixture replacement remains 2048), `recorded_status` 256 bytes, checked before the task is looked up | Rust bound |
 
 All bounds refuse with `LimitExceeded` before any write. The fixture wrapper applies the blob,
 session, status, pid and start bounds but not the fact text or identity-pid bounds, so fixtures
 can seed over-long facts to exercise the read bounds.
 
-The header JSON compaction that keeps a header within 2048 bytes belongs to the interface layer;
+The production header/status projection bound is 16384 bytes; interface preflight occurs before launch. Historical fixture replacement retains its 2048-byte bound. JSON compaction belongs to the interface layer;
 the writer takes the header bytes as given and refuses a larger one (`LimitExceeded`).
 
 E2-D callers of the writer own what the reference store does around a record write and the

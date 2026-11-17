@@ -105,10 +105,8 @@ fn collect(
             break;
         }
         let id = TaskId::new(row.get(0)?).map_err(|_| Error::Incompatible)?;
-        let row = task_read::materialize(db, &id, deadline)?;
-        let next = bytes
-            .checked_add(task_read::row_bytes(&row))
-            .ok_or(Error::LimitExceeded)?;
+        let declared = task_read::materialized_size(db, &id, deadline)?;
+        let next = bytes.checked_add(declared).ok_or(Error::LimitExceeded)?;
         if next > cap {
             if result.rows.is_empty() {
                 return Err(Error::LimitExceeded);
@@ -116,6 +114,7 @@ fn collect(
             result.partial = true;
             break;
         }
+        let row = task_read::materialize(db, &id, deadline)?;
         bytes = next;
         result.rows.push(row);
     }

@@ -34,6 +34,9 @@ impl Store {
     /// and the store's `Limits` as an extra bound. An existing id is refused; nothing is
     /// replaced.
     pub fn add_task_fixture(&self, task: &FixtureTask, deadline: Instant) -> Result<()> {
+        if task.header.len() > 2048 || task.status.len() > 2048 {
+            return Err(Error::LimitExceeded);
+        }
         self.check_bounds(1, payload_bytes(task))?;
         let p = &task.prompt;
         let new = NewTask {

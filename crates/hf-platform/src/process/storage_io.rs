@@ -50,6 +50,25 @@ impl PrivateStorageIo {
             stderr_read: 0,
         }
     }
+    pub(super) fn into_unused_parts(self) -> io::Result<(File, File, File)> {
+        if self.tx.is_some()
+            || self.sent != 0
+            || self.tx_abandoned
+            || self.rx_invalid
+            || !self.rx.is_empty()
+            || self.expected.is_some()
+            || self.frame.is_some()
+            || self.eof
+            || self.failed
+            || self.stderr_read != 0
+        {
+            return Err(io::Error::other("protocol endpoints already used"));
+        }
+        let input = self
+            .input
+            .ok_or_else(|| io::Error::other("protocol input absent"))?;
+        Ok((input, self.output, self.error))
+    }
     /// Takes ownership of one complete codec frame, including its length prefix.
     pub fn queue_frame(&mut self, frame: Vec<u8>) -> io::Result<()> {
         if self.input.is_none()

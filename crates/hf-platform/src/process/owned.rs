@@ -57,11 +57,32 @@ impl RetainedOwnedChild {
         source: &impl IdentityPort,
         deadline: Instant,
     ) -> io::Result<Self> {
+        Self::spawn_with_group(spec, source, deadline, false)
+    }
+    /// Explicit owner-bootstrap handoff: inherit the already detached owner's group.
+    /// The caller must enter its fresh session before starting any threads.
+    pub fn spawn_in_owner_group(
+        spec: SpawnSpec,
+        source: &impl IdentityPort,
+        deadline: Instant,
+    ) -> io::Result<Self> {
+        Self::spawn_with_group(spec, source, deadline, true)
+    }
+    fn spawn_with_group(
+        spec: SpawnSpec,
+        source: &impl IdentityPort,
+        deadline: Instant,
+        inherit: bool,
+    ) -> io::Result<Self> {
         let deadline = deadline.min(Instant::now() + std::time::Duration::from_secs(2));
         check_spawn_deadline(deadline)?;
         spec.validate()?;
         check_spawn_deadline(deadline)?;
-        let spawned = super::spawn::spawn(&spec, deadline)?;
+        let spawned = if inherit {
+            super::spawn::spawn_group(&spec, deadline, true)?
+        } else {
+            super::spawn::spawn(&spec, deadline)?
+        };
         let child = spawned.pid;
         let stdin = Some(spawned.input);
         let stdout = Some(spawned.output);
@@ -100,32 +121,6 @@ impl RetainedOwnedChild {
             initialization,
             capture_transferred: false,
         })
-    }
-    /// Private fixture transport only; consumes stdout directly without capture
-    /// buffering. Do not call `pump` or `wait_until` until the protocol is complete:
-    /// those methods also consume stdout. Protocol bytes do not enter capture;
-    /// stderr remains separate and must be drained by subsequent capture pumping.
-    pub fn read_fixture_frame(&self, deadline: Instant) -> io::Result<Vec<u8>> {
-        let stdout = self
-            .stdout
-            .as_ref()
-            .ok_or_else(|| io::Error::other("fixture stdout absent"))?;
-        crate::fixture::read_frame(stdout, deadline)
-    }
-    pub fn write_fixture_frame(&self, bytes: &[u8], deadline: Instant) -> io::Result<()> {
-        let input = self
-            .stdin
-            .as_ref()
-            .ok_or_else(|| io::Error::other("fixture stdin absent"))?;
-        crate::fixture::write_all(input, bytes, deadline)
-    }
-    /// Checks protocol EOF without changing capture EOF or exit evidence.
-    pub fn fixture_eof(&self, deadline: Instant) -> io::Result<()> {
-        let stdout = self
-            .stdout
-            .as_ref()
-            .ok_or_else(|| io::Error::other("fixture stdout absent"))?;
-        crate::fixture::require_eof(stdout, deadline)
     }
     pub fn initialization(&self) -> SpawnInitialization {
         self.initialization
@@ -178,12 +173,20 @@ impl RetainedOwnedChild {
         origin: super::CaptureOrigin,
         deadline: Instant,
     ) -> io::Result<super::PrivateFixtureCaptureReader> {
+        self.start_capture_reader(origin, Some(deadline))
+    }
+    /// Production drainage has no foreground lifetime or cumulative byte cutoff.
+    pub fn start_capture_reader(
+        &mut self,
+        origin: super::CaptureOrigin,
+        deadline: Option<Instant>,
+    ) -> io::Result<super::PrivateFixtureCaptureReader> {
         if self.registered.as_ref() != Some(&origin.child)
             || self.initialization != SpawnInitialization::Ready
             || self.capture != Capture::default()
             || self.stdout.is_none()
             || self.stderr.is_none()
-            || Instant::now() >= deadline
+            || deadline.is_some_and(|end| Instant::now() >= end)
         {
             return Err(io::Error::other("capture handoff refused before transfer"));
         }
@@ -196,35 +199,13 @@ impl RetainedOwnedChild {
             .take()
             .ok_or_else(|| io::Error::other("stderr absent"))?;
         self.capture_transferred = true;
-        super::reader_loop::start(origin, out, err, deadline).map_err(|error| {
+        let result = match deadline {
+            Some(end) => super::reader_loop::start(origin, out, err, end),
+            None => super::reader_loop::start_production(origin, out, err),
+        };
+        result.map_err(|error| {
             io::Error::other(format!("private capture startup pipe loss: {error}"))
         })
-    }
-    /// Atomically transfers private protocol pipes; the original child remains sole waiter.
-    pub fn take_private_storage_io(
-        &mut self,
-        expected: &ProcessIdentity,
-    ) -> io::Result<super::PrivateStorageIo> {
-        if self.initialization != SpawnInitialization::Ready
-            || self.registered.as_ref() != Some(expected)
-            || self.reaped
-            || self.wait_authority_lost
-            || self.authority_unknown
-            || self.capture != Capture::default()
-            || self.capture_transferred
-            || self.stdin.is_none()
-            || self.stdout.is_none()
-            || self.stderr.is_none()
-        {
-            return Err(io::Error::other("storage handoff refused before transfer"));
-        }
-        let (Some(input), Some(output), Some(error)) =
-            (self.stdin.take(), self.stdout.take(), self.stderr.take())
-        else {
-            return Err(io::Error::other("storage handoff invariant violated"));
-        };
-        self.capture_transferred = true;
-        Ok(super::PrivateStorageIo::new(input, output, error))
     }
     /// Exit-only observation after independent pipe ownership transfer.
     pub fn wait_exit_until(
@@ -376,3 +357,6 @@ fn check_spawn_deadline(deadline: Instant) -> io::Result<()> {
         Ok(())
     }
 }
+
+#[path = "owned/transport.rs"]
+mod transport;

@@ -6,7 +6,7 @@
 mod common;
 mod fixture_support;
 mod task_writer_support;
-use fixture_support::{A, B, World, is_hex32, later, one, tid, world};
+use fixture_support::{A, B, C, World, is_hex32, later, one, tid, world};
 use hf_domain::{
     ctl::history::{PromptBlob, StoredPrompt, sidecar_digest},
     process::ProcessIdentity,
@@ -133,24 +133,43 @@ fn a_process_start_beyond_i64_is_refused_as_a_limit_and_publishes_nothing() {
 }
 
 #[test]
-fn header_and_status_blobs_of_2048_bytes_land_and_2049_are_refused() {
+fn production_header_and_status_accept_16384_and_refuse_16385_before_writing() {
     let w = world();
     let mut t = done(A);
-    t.header = vec![b'h'; 2048];
-    t.status = vec![b's'; 2048];
+    t.header = vec![b'h'; 2049];
+    t.status = vec![b's'; 2049];
     put(&w, &t);
-    let len: i64 = one(
-        &w.db(),
-        "SELECT length(header)+length(status) FROM task_headers WHERE id=?1",
-        [A],
-    );
-    assert_eq!(len, 4096);
+    let accepted: (i64, i64) = w
+        .db()
+        .query_row(
+            "SELECT length(header),length(status) FROM task_headers WHERE id=?1",
+            [A],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(accepted, (2049, 2049));
+
+    let mut max = done(B);
+    max.header = vec![b'h'; hf_storage::TASK_PROJECTION_BYTES];
+    max.status = vec![b's'; hf_storage::TASK_PROJECTION_BYTES];
+    put(&w, &max);
+    let accepted: (i64, i64) = w
+        .db()
+        .query_row(
+            "SELECT length(header),length(status) FROM task_headers WHERE id=?1",
+            [B],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(accepted, (16_384, 16_384));
+
     for header in [true, false] {
-        let mut t = done(B);
-        *(if header { &mut t.header } else { &mut t.status }) = vec![b'x'; 2049];
+        let mut t = done(C);
+        *(if header { &mut t.header } else { &mut t.status }) =
+            vec![b'x'; hf_storage::TASK_PROJECTION_BYTES + 1];
         assert!(matches!(refused(&w, &t), Error::LimitExceeded));
     }
-    assert_eq!(rows(&w, B), ["NONE", "NONE", "NONE", "NONE"]);
+    assert_eq!(rows(&w, C), ["NONE", "NONE", "NONE", "NONE"]);
 }
 
 fn prompt_cell<T: rusqlite::types::FromSql>(w: &World, id: &str, expression: &str) -> T {

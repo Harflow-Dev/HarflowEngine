@@ -151,6 +151,7 @@ pub(crate) fn initialize(
     transaction.execute_batch(crate::launch_attempts::SCHEMA)?;
     transaction.execute_batch(crate::chain_stops::SCHEMA)?;
     transaction.execute_batch(crate::write_tx::SEQUENCE_SCHEMA)?;
+    transaction.execute_batch(crate::lifecycle_codec::SCHEMA)?;
     timeout(&transaction, deadline)?;
     transaction
         .commit()

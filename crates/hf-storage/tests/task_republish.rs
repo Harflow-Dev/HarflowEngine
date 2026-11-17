@@ -154,11 +154,9 @@ fn a_missing_or_damaged_task_is_refused_and_nothing_commits() {
 }
 
 #[test]
-fn blobs_of_2048_bytes_land_and_2049_are_refused_before_any_lookup() {
+fn production_blobs_accept_16384_and_refuse_16385_before_any_lookup() {
     let w = world();
     put(&w, &running(A));
-    let ok = vec![b'b'; 2048];
-    let over = vec![b'b'; 2049];
     let run = |header: &[u8], status: &[u8], id: &str| {
         w.store.republish_header(
             &tid(id),
@@ -168,9 +166,25 @@ fn blobs_of_2048_bytes_land_and_2049_are_refused_before_any_lookup() {
             later(5),
         )
     };
-    assert_eq!(run(&ok, &ok, A).unwrap(), Republished::Landed);
+    let historical_plus_one = vec![b'h'; 2049];
+    assert_eq!(
+        run(&historical_plus_one, &historical_plus_one, A).unwrap(),
+        Republished::Landed
+    );
+    let accepted = vec![b'b'; hf_storage::TASK_PROJECTION_BYTES];
+    assert_eq!(run(&accepted, &accepted, A).unwrap(), Republished::Landed);
+    let accepted_lengths: (i64, i64) = w
+        .db()
+        .query_row(
+            "SELECT length(header),length(status) FROM task_headers WHERE id=?1",
+            [A],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(accepted_lengths, (16_384, 16_384));
     let before = (rows(&w, A), published(&w));
-    for (header, status) in [(&over, &ok), (&ok, &over)] {
+    let over = vec![b'b'; hf_storage::TASK_PROJECTION_BYTES + 1];
+    for (header, status) in [(&over, &accepted), (&accepted, &over)] {
         for id in [A, C] {
             let error = run(header, status, id).unwrap_err();
             assert!(matches!(error, Error::LimitExceeded), "{id}: {error:?}");

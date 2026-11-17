@@ -22,7 +22,17 @@ pub fn initialize_files(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn fixture_files(
+    existing_dir: &Path,
+    flush: &dyn FlushPort,
+    deadline: Instant,
+    verify: &dyn Fn() -> Result<()>,
+) -> Result<Identity> {
+    new_root_files(existing_dir, flush, deadline, verify)
+}
+/// Neutral initializer used by fresh production namespaces and closed fixture wrappers.
+pub(crate) fn new_root_files(
     existing_dir: &Path,
     flush: &dyn FlushPort,
     deadline: Instant,

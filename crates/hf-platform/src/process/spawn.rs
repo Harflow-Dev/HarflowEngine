@@ -68,6 +68,13 @@ fn normalize(fd: OwnedFd) -> io::Result<File> {
     Ok(File::from(fd.as_fd().try_clone_to_owned()?))
 }
 pub(super) fn spawn(spec: &SpawnSpec, deadline: Instant) -> io::Result<Spawned> {
+    spawn_group(spec, deadline, false)
+}
+pub(super) fn spawn_group(
+    spec: &SpawnSpec,
+    deadline: Instant,
+    inherit: bool,
+) -> io::Result<Spawned> {
     let expected = executable(spec)?;
     if fs::canonicalize(&spec.cwd)? != fs::canonicalize(std::env::current_dir()?)? {
         return Err(invalid());
@@ -91,12 +98,14 @@ pub(super) fn spawn(spec: &SpawnSpec, deadline: Instant) -> io::Result<Spawned> 
         actions.add_close(fd.as_raw_fd())?;
     }
     let mut attr = PosixSpawnAttr::init()?;
-    let flags = PosixSpawnFlags::POSIX_SPAWN_SETPGROUP
-        | PosixSpawnFlags::POSIX_SPAWN_SETSIGDEF
+    let mut flags = PosixSpawnFlags::POSIX_SPAWN_SETSIGDEF
         | PosixSpawnFlags::POSIX_SPAWN_SETSIGMASK
         | PosixSpawnFlags::from_bits_retain(nix::libc::POSIX_SPAWN_CLOEXEC_DEFAULT);
+    if !inherit {
+        flags |= PosixSpawnFlags::POSIX_SPAWN_SETPGROUP;
+        attr.set_pgroup(Pid::from_raw(0))?;
+    }
     attr.set_flags(flags)?;
-    attr.set_pgroup(Pid::from_raw(0))?;
     attr.set_sigdefault(&SigSet::all())?;
     attr.set_sigmask(&SigSet::empty())?;
     if Instant::now() >= deadline {

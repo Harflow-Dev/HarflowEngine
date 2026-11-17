@@ -31,6 +31,14 @@ impl RootHold {
             _claim: claim,
         })
     }
+    /// Revalidate retained physical source identity without acquiring another lease.
+    pub fn revalidate(&self) -> Result<()> {
+        self._binding.check()?;
+        if self._binding.source_stamp(self.source.generation.clone())? != self.source {
+            return Err(Error::Replaced);
+        }
+        Ok(())
+    }
     pub fn identity(&self) -> &Identity {
         &self.identity
     }

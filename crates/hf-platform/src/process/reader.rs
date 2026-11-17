@@ -83,14 +83,14 @@ impl ReaderView {
         self.shared.final_value.get().cloned()
     }
 }
-pub struct PrivateFixtureCaptureReader {
+pub struct CaptureReader {
     pub(super) origin: CaptureOrigin,
     pub(super) shared: Arc<Shared>,
     pub(super) receiver: Receiver<CaptureBatch>,
     pub(super) worker: Option<JoinHandle<ReaderFinal>>,
     pub(super) join_failed: bool,
 }
-impl PrivateFixtureCaptureReader {
+impl CaptureReader {
     pub fn is_finished(&self) -> bool {
         self.worker.as_ref().is_none_or(|w| w.is_finished())
     }
@@ -154,7 +154,7 @@ impl PrivateFixtureCaptureReader {
 /// Defensive policy for the private fixed-helper reader only. The host must
 /// settle it before releasing its Store/root guard. No general process Drop
 /// policy is changed. An unresolved worker may not escape unwind by detachment.
-impl Drop for PrivateFixtureCaptureReader {
+impl Drop for CaptureReader {
     fn drop(&mut self) {
         self.request_stop();
         let deadline = Instant::now() + Duration::from_secs(1);
@@ -169,3 +169,6 @@ impl Drop for PrivateFixtureCaptureReader {
         }
     }
 }
+
+/// Compatibility name for the existing bounded diagnostic constructor.
+pub type PrivateFixtureCaptureReader = CaptureReader;

@@ -1,3 +1,4 @@
 [
-  "crates/hf-platform/src/ctl/artifact_authority.rs"
+  "crates/hf-platform/src/ctl/artifact_authority.rs",
+  "crates/hf-interfaces/src/task_runtime/projection.rs"
 ]

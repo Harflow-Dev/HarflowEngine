@@ -8,3 +8,5 @@ pub mod claude_offline;
 pub mod claude_qualification;
 
 pub mod claude_live_probe;
+
+pub mod backend_launch;

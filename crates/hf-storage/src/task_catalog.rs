@@ -7,7 +7,7 @@ use hf_domain::{
 };
 use rusqlite::{Row, params_from_iter, types::Value};
 
-const BLOB_LIMIT: i64 = 2048;
+const BLOB_LIMIT: i64 = crate::task_writer::TASK_PROJECTION_BYTES as i64;
 
 pub(crate) fn task_id(text: String) -> Result<TaskId> {
     TaskId::new(text).map_err(|_| Error::MalformedRow)

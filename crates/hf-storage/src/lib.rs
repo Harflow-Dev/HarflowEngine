@@ -74,7 +74,7 @@ use std::{
 pub use verify::{RECORD_BUDGET, VERIFY_PERIOD, Verification};
 pub use writer_open::{probe, probe_with_deadline};
 
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 pub const APPLICATION_ID: u32 = 1_212_560_210;
 #[derive(Debug)]
 pub enum Error {
@@ -234,8 +234,16 @@ impl Store {
         leases: Arc<dyn LeasePort>,
         options: WriterOptions,
     ) -> Result<Self> {
+        Self::initialize_new(root.as_ref(), limits, deadline, leases, options)
+    }
+    fn initialize_new(
+        root: &Path,
+        limits: Limits,
+        deadline: Instant,
+        leases: Arc<dyn LeasePort>,
+        options: WriterOptions,
+    ) -> Result<Self> {
         connection::check_deadline(deadline)?;
-        let root = root.as_ref();
         Binding::validate_parent(root)?;
         std::fs::create_dir(root).map_err(|error| {
             if error.kind() == std::io::ErrorKind::AlreadyExists {
@@ -256,13 +264,32 @@ impl Store {
             .acquire(&root.join("io.lock"), LeaseMode::Exclusive, true, deadline)
             .map_err(lease_error)?;
         let binding = Binding::capture(root, false, leases.clone())?;
-        initialize::fixture_files(root, options.flush.as_ref(), deadline, &|| {
+        initialize::new_root_files(root, options.flush.as_ref(), deadline, &|| {
             binding.check_root()
         })?;
         binding.check_root()?;
         drop(io);
         drop(claim);
         Self::open_with(root, limits, deadline, leases, options)
+    }
+    /// Initialize a new Rust-owned namespace with authoritative empty catalog coverage.
+    /// Existing roots always refuse; the caller supplies its accepted durability adapter.
+    pub fn initialize_runtime(
+        root: impl AsRef<Path>,
+        limits: Limits,
+        deadline: Instant,
+        leases: Arc<dyn LeasePort>,
+        options: WriterOptions,
+    ) -> Result<Self> {
+        let store = Self::initialize_new(root.as_ref(), limits, deadline, leases, options)?;
+        store.write(deadline, write_tx::Publish::Nothing, None, |tx| {
+            tx.execute(
+                "INSERT INTO task_dataset VALUES(1,1,lower(hex(randomblob(16))),1,1,1)",
+                [],
+            )?;
+            Ok(())
+        })?;
+        Ok(store)
     }
     pub fn identity(&self) -> &Identity {
         &self.identity
@@ -342,8 +369,8 @@ pub use artifact_writer::{
 };
 pub use task_republish::Republished;
 pub use task_writer::{
-    FACT_TEXT_LIMIT, PROMPT_BLOB_LIMIT, PROMPT_PREVIEW_CHARS, REPO_PATH_LIMIT, TITLE_LIMIT,
-    TaskCreate, TaskFacts, TaskProcess,
+    FACT_TEXT_LIMIT, PROMPT_BLOB_LIMIT, PROMPT_PREVIEW_CHARS, REPO_PATH_LIMIT,
+    TASK_PROJECTION_BYTES, TITLE_LIMIT, TaskCreate, TaskFacts, TaskProcess,
 };
 
 /// Whether `root` holds a readable store marker for this schema. Reads one file and
@@ -353,3 +380,24 @@ pub fn marker_is_current(root: impl AsRef<Path>) -> bool {
     std::fs::symlink_metadata(&marker).is_ok_and(|m| m.is_file())
         && wal::read_marker_at(root.as_ref(), true).is_ok()
 }
+
+mod lifecycle_codec;
+mod task_lifecycle;
+
+mod lifecycle_read;
+
+pub use task_lifecycle::LifecycleEventPublication;
+
+mod lifecycle_invariants;
+
+mod task_runtime;
+pub use task_runtime::SpawnPublication;
+
+mod runtime_acceptance;
+
+mod runtime_terminal;
+pub use runtime_terminal::TerminalPublication;
+
+mod runtime_callers;
+
+mod runtime_refusal;

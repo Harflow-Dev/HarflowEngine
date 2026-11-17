@@ -132,11 +132,11 @@ pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<TaskRow> {
         status: row.get(9)?,
     })
 }
-pub(crate) fn materialize(
+pub(crate) fn materialized_size(
     connection: &Connection,
     id: &TaskId,
     deadline: Instant,
-) -> Result<TaskRow> {
+) -> Result<usize> {
     connection::timeout(connection, deadline)?;
     let lengths: (i64, Option<i64>, i64, i64) = connection.query_row(
         "SELECT length(header),length(status),coalesce(length(CAST(session AS BLOB)),0),coalesce(length(CAST(recorded_status AS BLOB)),0) FROM task_headers WHERE id=?1",
@@ -144,13 +144,28 @@ pub(crate) fn materialize(
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
     )?;
     if lengths.0 < 0
-        || lengths.0 > 2048
-        || lengths.1.is_some_and(|n| !(0..=2048).contains(&n))
+        || lengths.0 > crate::task_writer::TASK_PROJECTION_BYTES as i64
+        || lengths
+            .1
+            .is_some_and(|n| !(0..=crate::task_writer::TASK_PROJECTION_BYTES as i64).contains(&n))
         || !(0..=1024).contains(&lengths.2)
         || !(0..=256).contains(&lengths.3)
     {
         return Err(Error::LimitExceeded);
     }
+    Ok(id.as_str().len()
+        + 32
+        + lengths.0 as usize
+        + lengths.1.unwrap_or(0) as usize
+        + lengths.2 as usize
+        + lengths.3 as usize)
+}
+pub(crate) fn materialize(
+    connection: &Connection,
+    id: &TaskId,
+    deadline: Instant,
+) -> Result<TaskRow> {
+    materialized_size(connection, id, deadline)?;
     connection::timeout(connection, deadline)?;
     let row = connection.query_row("SELECT id,stamp,session,active,recorded_status,exited,drained,owned,header,status FROM task_headers WHERE id=?1",[id.as_str()],decode)?;
     connection::check_deadline(deadline)?;

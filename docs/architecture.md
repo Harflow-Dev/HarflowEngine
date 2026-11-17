@@ -29,7 +29,7 @@ detached owner, public execution capability or descendant-containment guarantee.
 
 The [durable ownership foundation](ownership-foundation.md) adds isolated internal
 intent/reservation/claim transactions and fenced observations. The original B1 stage selected
-schema2; current fresh roots use schema 7 as described in the fixture seed paragraph below. No automatic upgrade,
+schema2; current fresh roots use schema 8 as described in the fixture seed paragraph below. No automatic upgrade,
 detached runtime or public execution API is added.
 
 The [private fixture owner handoff](owner-handoff.md) composes B1 with actual owned
@@ -115,8 +115,7 @@ same-context, Queue-only fixture over injected ports and reserved `__r06/` fixtu
 records. It adds no delivery transport, public capability or production evidence
 adapter. Every other route refuses before port I/O.
 
-Store schema 7 keeps the schema 6 typed fact tables, replaces `task_pending` with
-`launch_attempts` and adds `chain_stops`; a schema 6 root is refused as `unsupported_layout`.
+Store schema 8 adds fenced `lifecycle_records` binding task, operation, attempt and root generation, with an independent lifecycle CAS revision and durable execution observations. Schema 7 introduced `launch_attempts` and `chain_stops`; schema 7 and older roots refuse as `unsupported_layout`, without automatic conversion. Lifecycle evidence publication does not publish terminal status, EOF, settlement or release; that canonical projection remains a separate gate. Event/source publication requires an explicit `DurableCaptureAdmission` application port. This foundation supplies no production raw-capture adapter: real source identity, sync and known-loss admission remain an owner-composition qualification gate, so this source seam alone does not qualify T3.
 
 Store schema 6 added the typed fact tables for the read families (`task_facts`, `task_processes`,
 `task_prompts`, `artifact_manifests`, `artifact_items`) beside the unchanged `task_dataset`,
@@ -156,3 +155,8 @@ checks layout 2 before confirmation, qualifies lease-free historical receipts be
 maintenance acquisition, and preserves admitted journal progress in typed application
 failures. The host names only the approved MaintenanceSession recovery seam; its
 initializer remains tied to the held session. No mutable Store is exposed to ctl.
+
+The unqualified [task runtime transaction core](task-runtime-core.md) adds private
+T0 intents, atomic observed-spawn T2 publication, separately admitted acceptance
+and typed terminal projection. Public owner composition, complete status projection
+and inherited invitation/control qualification remain separate unfinished gates.

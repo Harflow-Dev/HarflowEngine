@@ -1,8 +1,8 @@
 #![cfg(unix)]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-//! Schema 7: version pins, the additive tables, their CHECK constraints and the refusal
-//! of a schema 6 root.
+//! Schema 8: version pins, the lifecycle evidence table, existing CHECK constraints and the refusal
+//! of a schema 7 root.
 mod common;
 mod fixture_support;
 use fixture_support::{A, B, MAIN, World, count, done, later, one, quoted, tid, total, world};
@@ -23,19 +23,19 @@ fn names(w: &World, kind: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_schema_is_version_seven_in_the_constant_the_marker_and_the_database() {
-    assert_eq!(SCHEMA_VERSION, 7);
+fn the_schema_is_version_eight_in_the_constant_the_marker_and_the_database() {
+    assert_eq!(SCHEMA_VERSION, 8);
     let w = world();
     let version: i64 = one(&w.db(), "PRAGMA user_version", []);
-    assert_eq!(version, 7);
+    assert_eq!(version, 8);
     let marker = fs::read_to_string(w.root.join("store.identity")).unwrap();
     let lines: Vec<&str> = marker.lines().collect();
-    assert_eq!((lines[0], lines[1]), ("harflow-storage-2", "7"));
-    assert_eq!(w.store.identity().schema_version, 7);
+    assert_eq!((lines[0], lines[1]), ("harflow-storage-2", "8"));
+    assert_eq!(w.store.identity().schema_version, 8);
 }
 
 #[test]
-fn initialization_adds_the_five_fact_tables_and_their_indexes_to_the_older_ones() {
+fn initialization_adds_lifecycle_evidence_and_the_fact_tables_to_the_older_ones() {
     let w = world();
     let tables = names(&w, "table");
     for table in [
@@ -48,6 +48,7 @@ fn initialization_adds_the_five_fact_tables_and_their_indexes_to_the_older_ones(
         "task_headers",
         "launch_attempts",
         "chain_stops",
+        "lifecycle_records",
         "task_watch_meta",
         "event_dataset",
         "event_streams",
@@ -68,7 +69,7 @@ fn initialization_adds_the_five_fact_tables_and_their_indexes_to_the_older_ones(
 }
 
 #[test]
-fn a_schema_6_root_is_refused_by_the_writer_and_the_reader() {
+fn a_schema_7_root_is_refused_by_the_writer_and_the_reader() {
     let w = world();
     let root = w.root.clone();
     let scratch = w.scratch;
@@ -77,11 +78,11 @@ fn a_schema_6_root_is_refused_by_the_writer_and_the_reader() {
     let generation = marker.lines().nth(2).unwrap().to_owned();
     fs::write(
         root.join("store.identity"),
-        format!("harflow-storage-2\n6\n{generation}\n"),
+        format!("harflow-storage-2\n7\n{generation}\n"),
     )
     .unwrap();
     let db = Connection::open(root.join(MAIN)).unwrap();
-    db.execute_batch("PRAGMA user_version=6;").unwrap();
+    db.execute_batch("PRAGMA user_version=7;").unwrap();
     drop(db);
     let _ = fs::remove_file(root.join("store.sqlite3-shm"));
     fs::write(root.join("store.sqlite3-wal"), b"").unwrap();
@@ -92,7 +93,7 @@ fn a_schema_6_root_is_refused_by_the_writer_and_the_reader() {
         later(5),
         common::lease::lease_port(),
     ) {
-        Ok(_) => panic!("a schema 6 root must be refused"),
+        Ok(_) => panic!("a schema 7 root must be refused"),
         Err(error) => error,
     };
     assert_eq!(ReadRefusal::from(&error), ReadRefusal::UnsupportedLayout);
@@ -104,7 +105,7 @@ fn a_schema_6_root_is_refused_by_the_writer_and_the_reader() {
     );
     assert!(
         refused.is_err(),
-        "the writer must refuse a schema 6 root too"
+        "the writer must refuse a schema 7 root too"
     );
     drop(scratch);
 }

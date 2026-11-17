@@ -19,6 +19,26 @@ pub(super) fn start(
     err: File,
     deadline: Instant,
 ) -> io::Result<PrivateFixtureCaptureReader> {
+    start_policy(
+        origin,
+        out,
+        err,
+        Some(deadline.min(Instant::now() + Duration::from_secs(8))),
+    )
+}
+pub(super) fn start_production(
+    origin: CaptureOrigin,
+    out: File,
+    err: File,
+) -> io::Result<PrivateFixtureCaptureReader> {
+    start_policy(origin, out, err, None)
+}
+fn start_policy(
+    origin: CaptureOrigin,
+    out: File,
+    err: File,
+    deadline: Option<Instant>,
+) -> io::Result<PrivateFixtureCaptureReader> {
     let shared = Arc::new(Shared {
         progress: Mutex::new(ReaderProgress::default()),
         final_value: OnceLock::new(),
@@ -28,7 +48,6 @@ pub(super) fn start(
     let (sender, receiver) = sync_channel(4);
     let work = shared.clone();
     let tag = origin.clone();
-    let deadline = deadline.min(Instant::now() + Duration::from_secs(8));
     let worker = std::thread::Builder::new()
         .name("fixture-pipe-reader".into())
         .spawn(move || run(tag, out, err, deadline, sender, work))?;
@@ -40,11 +59,11 @@ pub(super) fn start(
         join_failed: false,
     })
 }
-fn read_one(pipe: &mut File, stats: &mut ReaderStreamStats) -> Vec<u8> {
-    if stats.eof || stats.error.is_some() || stats.read >= STREAM_LIMIT {
+fn read_one(pipe: &mut File, stats: &mut ReaderStreamStats, limit: Option<u64>) -> Vec<u8> {
+    if stats.eof || stats.error.is_some() || limit.is_some_and(|cap| stats.read >= cap) {
         return Vec::new();
     }
-    let mut bytes = vec![0; (STREAM_LIMIT - stats.read).min(16384) as usize];
+    let mut bytes = vec![0; limit.map_or(16384, |cap| (cap - stats.read).min(16384) as usize)];
     match pipe.read(&mut bytes) {
         Ok(0) => {
             stats.eof = true;
@@ -52,7 +71,7 @@ fn read_one(pipe: &mut File, stats: &mut ReaderStreamStats) -> Vec<u8> {
         }
         Ok(count) => {
             bytes.truncate(count);
-            stats.read += count as u64;
+            stats.read = stats.read.saturating_add(count as u64);
         }
         Err(error)
             if matches!(
@@ -85,32 +104,41 @@ fn enqueue(
         progress.discard = true;
     }
     if progress.discard {
-        progress.stdout.discarded += out;
-        progress.stderr.discarded += err;
+        progress.stdout.discarded = progress.stdout.discarded.saturating_add(out);
+        progress.stderr.discarded = progress.stderr.discarded.saturating_add(err);
     } else {
-        progress.stdout.enqueued += out;
-        progress.stderr.enqueued += err;
+        progress.stdout.enqueued = progress.stdout.enqueued.saturating_add(out);
+        progress.stderr.enqueued = progress.stderr.enqueued.saturating_add(err);
     }
 }
 fn run(
     origin: CaptureOrigin,
     mut out: File,
     mut err: File,
-    deadline: Instant,
+    deadline: Option<Instant>,
     sender: SyncSender<CaptureBatch>,
     shared: Arc<Shared>,
 ) -> ReaderFinal {
     let mut progress = ReaderProgress::default();
-    let mut rounds = 0;
-    while rounds < 4096 && Instant::now() < deadline && !shared.stop.load(Ordering::Acquire) {
+    let mut rounds: u64 = 0;
+    let limit = deadline.map(|_| STREAM_LIMIT);
+    while (deadline.is_none() || rounds < 4096)
+        && deadline.is_none_or(|end| Instant::now() < end)
+        && !shared.stop.load(Ordering::Acquire)
+    {
         if finished(&progress.stdout) && finished(&progress.stderr) {
             break;
         }
-        if progress.stdout.read >= STREAM_LIMIT || progress.stderr.read >= STREAM_LIMIT {
+        if limit.is_some_and(|cap| progress.stdout.read >= cap || progress.stderr.read >= cap) {
             break;
         }
-        rounds += 1;
-        if let Err(error) = poll_pair(&out, &err, &progress, deadline) {
+        rounds = rounds.saturating_add(1);
+        if let Err(error) = poll_pair(
+            &out,
+            &err,
+            &progress,
+            deadline.unwrap_or_else(|| Instant::now() + Duration::from_millis(20)),
+        ) {
             progress
                 .stdout
                 .error
@@ -123,8 +151,8 @@ fn run(
         }
         let batch = CaptureBatch {
             origin: origin.clone(),
-            stdout: read_one(&mut out, &mut progress.stdout),
-            stderr: read_one(&mut err, &mut progress.stderr),
+            stdout: read_one(&mut out, &mut progress.stdout, limit),
+            stderr: read_one(&mut err, &mut progress.stderr, limit),
         };
         enqueue(batch, &mut progress, &sender, &shared);
         shared.publish(&progress);

@@ -8,7 +8,8 @@ use sha2::{Digest as _, Sha256};
 use std::time::Instant;
 
 /// Largest header or status blob, in bytes.
-pub(crate) const BLOB_LIMIT: usize = 2048;
+pub const TASK_PROJECTION_BYTES: usize = 16384;
+pub(crate) const BLOB_LIMIT: usize = TASK_PROJECTION_BYTES;
 /// A prompt of more characters than this is stored as a sidecar with a preview of this many.
 pub const PROMPT_PREVIEW_CHARS: usize = 2000;
 /// Largest prompt the writer stores, so that every stored sidecar can be verified on read.
@@ -52,7 +53,7 @@ pub struct TaskProcess {
     pub pid: u32,
     pub start: Option<ProcessIdentity>,
 }
-/// A new task. `header` and `status` are the served bytes, at most 2048 each; the prompt is
+/// A new task. `header` and `status` are the served bytes, at most TASK_PROJECTION_BYTES each; the prompt is
 /// the full text, stored inline up to 2000 characters and as a sidecar blob above that.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TaskCreate {
@@ -83,45 +84,12 @@ pub(crate) struct NewTask<'a> {
 impl Store {
     /// Stores one new task and publishes it. An existing id, valid or damaged, is refused
     /// with `TaskExists` and nothing is written.
-    /// Refused with `LimitExceeded` before any write: a blob over 2048 bytes, a prompt over
+    /// Refused with `LimitExceeded` before any write: a blob over TASK_PROJECTION_BYTES, a prompt over
     /// 4 MiB, a fact text over its bound, or a process whose identity names another pid.
     pub fn create_task(&self, task: &TaskCreate, deadline: Instant) -> Result<()> {
-        if task.prompt.len() > PROMPT_BLOB_LIMIT || !facts_within(task) {
-            return Err(Error::LimitExceeded);
-        }
-        let id = task.facts.id.as_str();
-        let cut = task.prompt.char_indices().nth(PROMPT_PREVIEW_CHARS);
-        let sidecar = cut.map(|(end, _)| {
-            let digest = sha256_hex(task.prompt.as_bytes());
-            let name = format!("{id}.prompt.{digest}.txt");
-            (end, digest, name)
-        });
-        let prompt = match &sidecar {
-            None => PromptRow {
-                inline_text: Some(&task.prompt),
-                preview: None,
-                claimed_sha256: None,
-                source_name: None,
-                blob: None,
-            },
-            Some((end, digest, name)) => PromptRow {
-                inline_text: None,
-                preview: Some(&task.prompt[..*end]),
-                claimed_sha256: Some(digest),
-                source_name: Some(name),
-                blob: Some(task.prompt.as_bytes()),
-            },
-        };
-        self.insert_task(
-            &NewTask {
-                facts: &task.facts,
-                header: &task.header,
-                status: &task.status,
-                prompt,
-                process: task.process.as_ref(),
-            },
-            deadline,
-        )
+        self.write(deadline, Publish::GenerationAndRevision, None, |tx| {
+            create_in(tx, task)
+        })
     }
     /// The shared insert of `create_task` and the fixture wrapper: validation, then one
     /// commit that rotates the dataset generation and bumps the watch revision.
@@ -267,4 +235,52 @@ fn insert_process(tx: &Transaction<'_>, id: &str, process: &TaskProcess) -> Resu
         ],
     )?;
     Ok(())
+}
+
+/// Creates task rows in the caller-owned transaction; never commits independently.
+pub(crate) fn create_in(tx: &Transaction<'_>, task: &TaskCreate) -> Result<()> {
+    if task.prompt.len() > PROMPT_BLOB_LIMIT || !facts_within(task) {
+        return Err(Error::LimitExceeded);
+    }
+    let id = task.facts.id.as_str();
+    let cut = task.prompt.char_indices().nth(PROMPT_PREVIEW_CHARS);
+    let sidecar = cut.map(|(end, _)| {
+        let digest = sha256_hex(task.prompt.as_bytes());
+        let name = format!("{id}.prompt.{digest}.txt");
+        (end, digest, name)
+    });
+    let prompt = match &sidecar {
+        None => PromptRow {
+            inline_text: Some(&task.prompt),
+            preview: None,
+            claimed_sha256: None,
+            source_name: None,
+            blob: None,
+        },
+        Some((end, digest, name)) => PromptRow {
+            inline_text: None,
+            preview: Some(&task.prompt[..*end]),
+            claimed_sha256: Some(digest),
+            source_name: Some(name),
+            blob: Some(task.prompt.as_bytes()),
+        },
+    };
+    insert_new(
+        tx,
+        &NewTask {
+            facts: &task.facts,
+            header: &task.header,
+            status: &task.status,
+            prompt,
+            process: task.process.as_ref(),
+        },
+    )
+}
+
+fn insert_new(tx: &Transaction<'_>, task: &NewTask<'_>) -> Result<()> {
+    validate(task)?;
+    if task_valid(tx, &task.facts.id)?.is_some() {
+        return Err(Error::TaskExists);
+    }
+    insert(tx, task)
 }

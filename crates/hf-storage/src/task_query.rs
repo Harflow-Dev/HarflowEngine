@@ -85,6 +85,15 @@ fn ids_query(
         connection::timeout(db, deadline)?;
         let lookup = lookup(db, scope, id, coverage, deadline)?;
         if let Lookup::Found(found) = &lookup {
+            let declared = task_read::materialized_size(db, found, deadline)?;
+            let next = bytes
+                .checked_add(declared)
+                .and_then(|n| n.checked_add(lookup_bytes(&lookup)))
+                .ok_or(Error::LimitExceeded)?;
+            context.check_bounds(result.rows.len() + 1, next)?;
+            if next > 128 * 1024 {
+                return Err(Error::LimitExceeded);
+            }
             let row = task_read::materialize(db, found, deadline)?;
             bytes = bytes
                 .checked_add(task_read::row_bytes(&row))
