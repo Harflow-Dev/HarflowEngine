@@ -6,6 +6,7 @@ import json
 import os
 import unittest
 
+from ctl_support import storage_constants
 from seed_support import A, B, LEGACY, SeedCase, task, world
 
 OPERATIONS = (
@@ -96,8 +97,14 @@ class ShapeTests(SeedCase):
         marker = os.path.join(self.state, "store.identity")
         with open(marker) as stream:
             current = stream.read()
+        lines = current.splitlines(keepends=True)
+        current_schema = storage_constants()
+        self.assertEqual(lines[1], f"{current_schema}\n")
+        lines[1] = f"{current_schema - 1}\n"
+        older = "".join(lines)
+        self.assertNotEqual(older, current)
         with open(marker, "w") as stream:
-            stream.write(current.replace("\n7\n", "\n6\n"))
+            stream.write(older)
         self.ok("root_state", expect='"other"\n')
         with open(marker, "w") as stream:
             stream.write("not a marker\n")

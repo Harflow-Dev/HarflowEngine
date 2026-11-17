@@ -64,6 +64,15 @@ Evidence is retained outside the product repository in workspace
   complete case; neither actual task completion nor the frozen six-case lifecycle
   acceptance was demonstrated.
 
+The OS-enabled Python black-box run recorded 951 tests with one stale test failure,
+two skips and three expected failures. The failing marker test still replaced
+schema 7 literally after the schema had advanced to 8. It now derives the current
+version from the owning source, asserts the mutation changes the marker, and
+retains the previous-version refusal assertion. All 32 fixture-seed module tests
+passed afterward (`first-run-python-seed-r4.log`). The entire Python suite was
+not rerun after this test-only correction; this is not a full compatibility or
+lifecycle acceptance claim.
+
 Read-only diagnostics localized a concrete pre-root caller-admission blocker:
 PID 1 `proc_pidinfo(PROC_PIDTBSDINFO)` returned EPERM, including with requested
 OS access, while own and parent observations succeeded. Unknown ancestry still
