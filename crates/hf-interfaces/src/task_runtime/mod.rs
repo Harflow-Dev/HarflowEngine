@@ -1,4 +1,15 @@
 //! Production task codecs, separate from the HFOP fixture invitation.
+mod environment;
+mod event_bounds;
+mod events;
+pub use events::{NormalizedEvent, backend_events};
+mod protocol;
+pub use environment::{decode_environment, encode_environment};
+pub use protocol::{decode_not_started, encode_not_started};
+pub use protocol::{
+    decode_started, decode_writer_ack, decode_writer_command, encode_started, encode_writer_ack,
+    encode_writer_command,
+};
 mod metadata;
 pub use metadata::{
     CanonicalLaunchValidator, InitialLaunchMetadata, decode_metadata, encode_metadata,
@@ -19,8 +30,14 @@ pub fn encode_live_message(
 mod chunks;
 pub use chunks::{BlobChunk, BlobTransfer, CHUNK_BYTES, FRAME_BYTES, decode_chunk, encode_chunk};
 
+mod summary;
 mod terminal;
-pub use terminal::{CanonicalTerminalProjection, task_finished, terminal_projection};
+pub use summary::{
+    CanonicalTerminalSummaryProjection, successful_result_summary, terminal_projection_with_summary,
+};
+pub use terminal::{
+    CanonicalTerminalProjection, task_finished, task_finished_observed, terminal_projection,
+};
 
 mod projection;
 pub use projection::spawn_projection;

@@ -3,6 +3,8 @@ pub mod bootstrap;
 pub mod caller;
 pub mod channel;
 pub mod raw;
+pub mod settlement;
+pub mod space;
 /// Enter a detached session at the fresh, single-thread owner entry point.
 /// This is deliberately not a child pre-exec hook and never signals a group.
 pub fn enter_owner_session() -> std::io::Result<u32> {

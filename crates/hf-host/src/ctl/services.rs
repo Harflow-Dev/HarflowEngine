@@ -50,6 +50,24 @@ impl HostServices {
 }
 
 impl CtlServices for HostServices {
+    fn run_task(
+        &self,
+        root: &StateRoot,
+        request: &hf_application::ctl::task_run::RunRequest,
+    ) -> Result<String, hf_application::ctl::task_run::RunFailure> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            hf_host::task_runtime::run_for_ctl_exit(root, request)
+        }
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            let _ = (root, request);
+            Err(hf_application::ctl::task_run::RunFailure::Refused(
+                "Execution is unavailable on this platform.".into(),
+            ))
+        }
+    }
+
     fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot> {
         resolve_state_root(std::env::var_os("HARFLOW_STATE_ROOT"))
     }

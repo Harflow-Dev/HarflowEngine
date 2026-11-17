@@ -106,6 +106,15 @@ impl RawCapture {
     pub fn progress(&self) -> CaptureProgress {
         self.synced
     }
+    /// Original open raw source identities; no pathname reopening or inferred EOF.
+    pub fn source_identities(
+        &self,
+    ) -> (
+        hf_domain::capture::FileIdentity,
+        hf_domain::capture::FileIdentity,
+    ) {
+        (self.stdout.identity(), self.stderr.identity())
+    }
     pub fn is_poisoned(&self) -> bool {
         self.poisoned
     }

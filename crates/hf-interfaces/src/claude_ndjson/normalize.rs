@@ -6,6 +6,7 @@ pub(super) fn records(
     v: &Value,
     attempt: &Id,
     limits: Limits,
+    production: bool,
 ) -> Result<Vec<BackendRecord>, BackendError> {
     let session = string(v, "session_id", limits)?;
     let parent = match v.get("parent_tool_use_id") {
@@ -13,7 +14,7 @@ pub(super) fn records(
         Some(Value::String(s)) if valid_string(s, limits) => Some(s.clone()),
         _ => return Err(BackendError::Shape),
     };
-    let kinds = normalize(v, limits)?;
+    let kinds = normalize(v, limits, production)?;
     if kinds.len() > limits.max_records {
         return Err(BackendError::Budget);
     }
@@ -52,13 +53,20 @@ fn string(v: &Value, key: &str, limits: Limits) -> Result<String, BackendError> 
         .map(String::from)
         .ok_or(BackendError::Shape)
 }
-fn normalize(v: &Value, limits: Limits) -> Result<Vec<RecordKind>, BackendError> {
-    if matches!(v["type"].as_str(), Some("system" | "result")) {
+fn normalize(v: &Value, limits: Limits, production: bool) -> Result<Vec<RecordKind>, BackendError> {
+    if matches!(v["type"].as_str(), Some("system" | "result"))
+        && !(production && v["type"] == "system" && v["subtype"] == "init")
+    {
         reject_effects(v)?;
     }
     let kind = match v["type"].as_str() {
         Some("system") if v["subtype"].as_str() == Some("init") => RecordKind::Init,
         Some("system") if matches!(v["subtype"].as_str(), Some("status" | "compact_boundary")) => {
+            RecordKind::Metadata
+        }
+        Some("system") if production && v["subtype"] == "post_turn_summary" => RecordKind::Metadata,
+        Some("rate_limit_event") if production => {
+            reject_effects(v)?;
             RecordKind::Metadata
         }
         Some("result") => {
@@ -80,6 +88,10 @@ fn normalize(v: &Value, limits: Limits) -> Result<Vec<RecordKind>, BackendError>
         }
         Some("assistant") => return content(&v["message"]["content"], true, limits),
         Some("user") => return content(&v["message"]["content"], false, limits),
+        Some("stream_event") if production => {
+            super::production_boundary(v)?;
+            RecordKind::Metadata
+        }
         _ => return Err(BackendError::Unsupported),
     };
     Ok(vec![kind])

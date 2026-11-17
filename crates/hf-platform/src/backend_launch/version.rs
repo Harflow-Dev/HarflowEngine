@@ -13,6 +13,7 @@ pub(super) fn probe(
     environment: &[(OsString, OsString)],
     factory: &impl StreamingDigestFactory,
     pending: &mut Option<RetainedOwnedChild>,
+    settled: &mut Option<super::SettledVersionProbe>,
     deadline: Instant,
 ) -> Result<String, LaunchRefusal> {
     let spec = prepare_version_probe(expected, environment, factory, deadline)?;
@@ -24,7 +25,7 @@ pub(super) fn probe(
         .map_err(|_| LaunchRefusal::Unavailable)?;
     child.close_stdin();
     *pending = Some(child);
-    collect(pending, deadline)
+    collect(pending, settled, expected, deadline)
 }
 /// Builds a version-only spawn specification after rechecking the original
 /// preparation pin. This function never executes the candidate.
@@ -60,6 +61,8 @@ pub fn prepare_version_probe(
 }
 fn collect(
     pending: &mut Option<RetainedOwnedChild>,
+    settled: &mut Option<super::SettledVersionProbe>,
+    expected: &BinaryPin,
     deadline: Instant,
 ) -> Result<String, LaunchRefusal> {
     let child = pending.as_mut().ok_or(LaunchRefusal::Unavailable)?;
@@ -94,7 +97,10 @@ fn collect(
     } else {
         Err(LaunchRefusal::Unavailable)
     };
-    *pending = None;
+    *settled = Some(
+        super::SettledVersionProbe::qualify(pending, expected)
+            .ok_or(LaunchRefusal::ProbeUnsettled)?,
+    );
     result
 }
 pub(super) fn parse_version(bytes: &[u8]) -> Result<String, LaunchRefusal> {

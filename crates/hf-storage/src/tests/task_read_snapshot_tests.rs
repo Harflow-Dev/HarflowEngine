@@ -56,7 +56,8 @@ fn task_read_uses_one_sqlite_snapshot_while_a_fixture_is_replaced() {
                 launches: Vec::new(),
                 coverage: snapshot_coverage(),
             },
-            Instant::now() + Duration::from_secs(2),
+            // This pre-child fixture setup is separately bounded; it is not the concurrent snapshot window.
+            Instant::now() + Duration::from_secs(10),
         )
         .unwrap();
 

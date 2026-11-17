@@ -156,7 +156,15 @@ maintenance acquisition, and preserves admitted journal progress in typed applic
 failures. The host names only the approved MaintenanceSession recovery seam; its
 initializer remains tied to the held session. No mutable Store is exposed to ctl.
 
-The unqualified [task runtime transaction core](task-runtime-core.md) adds private
-T0 intents, atomic observed-spawn T2 publication, separately admitted acceptance
-and typed terminal projection. Public owner composition, complete status projection
-and inherited invitation/control qualification remain separate unfinished gates.
+The [task runtime transaction core](task-runtime-core.md) introduced private T0
+intents, atomic observed-spawn T2 publication, separately admitted acceptance and
+typed terminal projection. The experimental [first-run source checkpoint](migration-receipts/E2-first-run-source.md)
+now composes public run admission with inherited same-binary original owner/writer
+channels, raw-source admission, T2/T3 capture publication and T5 terminal projection.
+Bounded successful root result text is display-only and must match committed
+result evidence before terminal status projection; it never supplies execution
+authority. Cancellation remains unavailable, no full-control acceptance is
+recorded, and no execution capability is promoted. The first normal release fake
+completion attempt refused at caller admission before creating its state root;
+actual task completion, caller-anchor qualification, lifecycle acceptance and
+production adoption remain unproved.

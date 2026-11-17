@@ -220,4 +220,10 @@ impl WriterLink {
     pub fn stderr_bytes(&self) -> u64 {
         self.stderr_seen
     }
+    pub fn protocol_channel(&mut self) -> Result<&mut Channel, Error> {
+        if self.fault.is_some() || self.ready.is_none() {
+            return Err(Error::Poisoned);
+        }
+        self.channel.as_mut().ok_or(Error::Refused)
+    }
 }

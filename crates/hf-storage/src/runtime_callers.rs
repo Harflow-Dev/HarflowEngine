@@ -123,3 +123,69 @@ impl Store {
         Ok(result)
     }
 }
+
+impl Store {
+    /// Complete deny-only ordinary active-process inventory for mutating run admission.
+    /// No ancestry/session filter can hide an unqualified row. Only a valid terminal
+    /// fact with an integer exit is excluded; missing or legacy identity refuses all.
+    pub fn ordinary_runtime_mutation_candidates(
+        &self,
+        limit: usize,
+        deadline: Instant,
+    ) -> Result<Vec<ProcessIdentity>> {
+        if limit == 0 || limit > 64 {
+            return Err(Error::LimitExceeded);
+        }
+        let mut db = self.admit(deadline)?;
+        let tx = db.transaction()?;
+        let context = self.read_context();
+        if crate::TaskSnapshot::new(&context, &tx, deadline).damaged()? {
+            return Err(Error::MalformedRow);
+        }
+        let mut statement = tx.prepare(ORDINARY_RUNTIME_INVENTORY)?;
+        let mut rows = statement.query([(limit + 1) as i64])?;
+        let mut result = Vec::new();
+        while let Some(row) = rows.next()? {
+            crate::connection::check_deadline(deadline)?;
+            if result.len() == limit {
+                return Err(Error::LimitExceeded);
+            }
+            result.push(ordinary_runtime_identity(row)?);
+        }
+        self.binding.check()?;
+        crate::connection::check_deadline(deadline)?;
+        Ok(result)
+    }
+}
+// CASE prevents copying unbounded variable-length data before the host-side checks.
+const ORDINARY_RUNTIME_INVENTORY: &str = "SELECT \
+ CASE WHEN typeof(task)='text' AND length(CAST(task AS BLOB)) BETWEEN 1 AND 64 THEN task END,\
+ CASE WHEN typeof(status)='text' AND length(CAST(status AS BLOB)) BETWEEN 1 AND 256 THEN status END,\
+ CASE WHEN typeof(boot)='text' AND length(CAST(boot AS BLOB)) BETWEEN 1 AND 64 THEN boot END,\
+ pid,seconds,micros,valid,exit_kind FROM (\
+ SELECT f.id AS task,f.status AS status,p.boot_uuid AS boot,p.pid AS pid,\
+ p.start_seconds AS seconds,p.start_micros AS micros,f.valid AS valid,typeof(f.exit_code) AS exit_kind \
+ FROM task_facts f LEFT JOIN task_processes p ON p.task=f.id \
+ WHERE NOT (typeof(f.valid)='integer' AND f.valid=1 AND typeof(f.status)='text' \
+ AND f.status IN ('completed','failed','timed_out','cancelled') AND typeof(f.exit_code)='integer') \
+ UNION ALL \
+ SELECT p.task,NULL,p.boot_uuid,p.pid,p.start_seconds,p.start_micros,NULL,'null' \
+ FROM task_processes p LEFT JOIN task_facts f ON f.id=p.task WHERE f.id IS NULL\
+ ) LIMIT ?1";
+fn ordinary_runtime_identity(row: &rusqlite::Row<'_>) -> Result<ProcessIdentity> {
+    let task: String = row.get(0)?;
+    hf_domain::task_read::TaskId::new(task).map_err(|_| Error::MalformedRow)?;
+    let _status: String = row.get(1)?;
+    let boot: String = row.get(2)?;
+    if row.get::<_, i64>(6)? != 1 {
+        return Err(Error::MalformedRow);
+    }
+    let exit_kind: String = row.get(7)?;
+    if !matches!(exit_kind.as_str(), "null" | "integer") {
+        return Err(Error::MalformedRow);
+    }
+    let pid = u32::try_from(row.get::<_, i64>(3)?).map_err(|_| Error::MalformedRow)?;
+    let seconds = u64::try_from(row.get::<_, i64>(4)?).map_err(|_| Error::MalformedRow)?;
+    let micros = u64::try_from(row.get::<_, i64>(5)?).map_err(|_| Error::MalformedRow)?;
+    ProcessIdentity::new(pid, seconds, micros, boot).map_err(|_| Error::MalformedRow)
+}

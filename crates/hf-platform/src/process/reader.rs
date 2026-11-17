@@ -128,6 +128,12 @@ impl CaptureReader {
     pub fn origin(&self) -> &CaptureOrigin {
         &self.origin
     }
+    pub(crate) fn joined_final(&self) -> Option<ReaderFinal> {
+        if self.worker.is_some() || self.join_failed {
+            return None;
+        }
+        self.shared.final_value.get().cloned()
+    }
     pub fn view(&self) -> ReaderView {
         ReaderView {
             shared: self.shared.clone(),

@@ -2,11 +2,14 @@
 mod json;
 mod limits;
 mod normalize;
+mod production;
 use hf_domain::{
     backend::{BackendError, BackendRecord},
     ownership::Id,
 };
 pub use limits::Limits;
+use production::production_boundary;
+pub use production::{Boundary, line_boundary};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
@@ -27,6 +30,7 @@ pub struct Decoder {
     pending: Vec<u8>,
     fault: Option<BackendError>,
     closed: bool,
+    production: bool,
 }
 impl Decoder {
     pub fn new(attempt: Id, limits: Limits) -> Result<Self, BackendError> {
@@ -36,7 +40,14 @@ impl Decoder {
             pending: Vec::new(),
             fault: None,
             closed: false,
+            production: false,
         })
+    }
+    /// Production parsing preserves fixture refusals while admitting actual CLI metadata.
+    pub fn new_production(attempt: Id, limits: Limits) -> Result<Self, BackendError> {
+        let mut decoder = Self::new(attempt, limits)?;
+        decoder.production = true;
+        Ok(decoder)
     }
     pub fn pending_bytes(&self) -> usize {
         self.pending.len()
@@ -56,8 +67,9 @@ impl Decoder {
         }
         for (index, byte) in input.iter().take(4096).enumerate() {
             if *byte == b'\n' {
-                let result = json::parse(&self.pending, self.limits)
-                    .and_then(|v| normalize::records(&v, &self.attempt, self.limits));
+                let result = json::parse(&self.pending, self.limits).and_then(|v| {
+                    normalize::records(&v, &self.attempt, self.limits, self.production)
+                });
                 self.pending.clear();
                 return match result {
                     Ok(records) => Feed {

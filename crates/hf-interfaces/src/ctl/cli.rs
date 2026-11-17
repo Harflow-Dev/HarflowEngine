@@ -46,6 +46,14 @@ pub struct PageArgs {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Parsed {
+    Run {
+        json: bool,
+        request: hf_application::ctl::task_run::RunRequest,
+    },
+    Cancel {
+        json: bool,
+        task_id: String,
+    },
     StateRecover {
         json: bool,
         operation_id: String,
@@ -298,6 +306,9 @@ fn build(name: &str, program: &str, parsed: &Scan) -> Result<(Parsed, usize), Us
     }
 }
 pub fn parse_ctl(argv: &[String], reads: bool) -> Result<Parsed, UsageError> {
+    if let Some(result) = super::cli_run::parse(argv, reads) {
+        return result;
+    }
     let Some((extras, command, rest)) = split_command(argv)? else {
         return Ok(Parsed::Help(None));
     };
@@ -347,6 +358,8 @@ pub fn help_text(command: Option<&str>) -> String {
         return text;
     }
     match command {
+        Some("run") => "usage: harflow-ctl run --backend claude --freedom unrestricted --repo ABS --prompt TEXT [--json]\n".into(),
+        Some("cancel") => "usage: harflow-ctl cancel TASK [--json]\n".into(),
         Some("state-recover") => "usage: harflow-ctl state-recover [-h] --operation-id OPERATION_ID\n                                 --confirmation-token CONFIRMATION_TOKEN [--json]\n".to_string(),
         Some("version-info") => "usage: harflow-ctl version-info [-h] [--json]\n".to_string(),
         Some("list") => "usage: harflow-ctl list [-h] [--since SINCE] [--json]\n".to_string(),

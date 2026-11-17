@@ -49,6 +49,7 @@ pub struct RetainedOwnedChild {
     pipe_setup_error: Option<String>,
     initialization: SpawnInitialization,
     capture_transferred: bool,
+    stdin_written: u64,
 }
 impl RetainedOwnedChild {
     /// OS spawn/probe calls are nonpreemptible. A late result retains ownership.
@@ -120,6 +121,7 @@ impl RetainedOwnedChild {
             pipe_setup_error: setup.err().map(|e| e.to_string()),
             initialization,
             capture_transferred: false,
+            stdin_written: 0,
         })
     }
     pub fn initialization(&self) -> SpawnInitialization {
@@ -251,7 +253,11 @@ impl RetainedOwnedChild {
             {
                 Ok(0)
             }
-            result => result,
+            Ok(count) => {
+                self.stdin_written = self.stdin_written.saturating_add(count as u64);
+                Ok(count)
+            }
+            Err(error) => Err(error),
         }
     }
     pub fn try_wait(&mut self) -> io::Result<ProcessExit> {
@@ -276,6 +282,35 @@ impl RetainedOwnedChild {
             Err(error) => return Err(error.into()),
         }
         Ok(self.exit)
+    }
+    pub(crate) fn settlement_state(&self) -> Option<(ProcessIdentity, ProcessExit, u64)> {
+        if !self.reaped
+            || self.authority_unknown
+            || self.wait_authority_lost
+            || self.stdin.is_some()
+            || !self.capture_transferred
+        {
+            return None;
+        }
+        Some((self.registered.clone()?, self.exit, self.stdin_written))
+    }
+    pub(crate) fn settled_probe_identity(&self) -> Option<(ProcessIdentity, ProcessExit)> {
+        let c = &self.capture;
+        if !self.reaped
+            || self.authority_unknown
+            || self.wait_authority_lost
+            || self.stdin.is_some()
+            || self.capture_transferred
+            || !c.stdout.eof
+            || !c.stderr.eof
+            || c.stdout.error.is_some()
+            || c.stderr.error.is_some()
+            || c.stdout.overflow
+            || c.stderr.overflow
+        {
+            return None;
+        }
+        Some((self.registered.clone()?, self.exit))
     }
     pub fn request_signal(
         &mut self,

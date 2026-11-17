@@ -1,6 +1,8 @@
 //! Normal PATH discovery with a separately retained physical executable identity.
 mod identity;
+mod settlement;
 mod version;
+pub use settlement::SettledVersionProbe;
 
 pub use version::prepare_version_probe;
 
@@ -28,6 +30,8 @@ pub struct PathClaudeDiscovery<H> {
     hash: H,
     environment: Vec<(OsString, OsString)>,
     pending: Option<RetainedOwnedChild>,
+    expected: Option<hf_domain::prepared_launch::BinaryPin>,
+    settled: Option<SettledVersionProbe>,
 }
 impl<H> PathClaudeDiscovery<H> {
     pub fn new(hash: H, environment: Vec<(OsString, OsString)>) -> Self {
@@ -35,7 +39,26 @@ impl<H> PathClaudeDiscovery<H> {
             hash,
             environment,
             pending: None,
+            expected: None,
+            settled: None,
         }
+    }
+    /// Bind effectful discovery to the immutable pre-T0 PATH selection.
+    pub fn new_pinned(
+        hash: H,
+        environment: Vec<(OsString, OsString)>,
+        expected: hf_domain::prepared_launch::BinaryPin,
+    ) -> Self {
+        Self {
+            hash,
+            environment,
+            pending: None,
+            expected: Some(expected),
+            settled: None,
+        }
+    }
+    pub fn settled_probe(&self) -> Option<&SettledVersionProbe> {
+        self.settled.as_ref()
     }
     pub fn pending_probe(&mut self) -> Option<&mut RetainedOwnedChild> {
         self.pending.as_mut()
@@ -55,11 +78,19 @@ impl<H: StreamingDigestFactory> ClaudeDiscoveryPort for PathClaudeDiscovery<H> {
         let physical = std::fs::canonicalize(&logical).map_err(|_| LaunchRefusal::Unavailable)?;
         let mut binary = identity::observe(&physical, &self.hash, deadline)?;
         binary.logical_path = text_path(&logical)?;
+        if self
+            .expected
+            .as_ref()
+            .is_some_and(|expected| expected != &binary)
+        {
+            return Err(LaunchRefusal::IdentityChanged);
+        }
         let version = version::probe(
             &binary,
             &self.environment,
             &self.hash,
             &mut self.pending,
+            &mut self.settled,
             deadline,
         )?;
         if std::fs::canonicalize(&logical).ok().as_ref() != Some(&physical)
@@ -74,6 +105,19 @@ impl<H: StreamingDigestFactory> ClaudeDiscoveryPort for PathClaudeDiscovery<H> {
         timely(deadline)?;
         Ok(DiscoveredClaude { binary, version })
     }
+}
+/// Select and pin normal PATH without executing the candidate. Safe before T0.
+pub fn observe_selection(
+    environment: &[(OsString, OsString)],
+    hash: &impl StreamingDigestFactory,
+    deadline: Instant,
+) -> Result<hf_domain::prepared_launch::BinaryPin, LaunchRefusal> {
+    timely(deadline)?;
+    let logical = path_candidate(environment)?;
+    let physical = std::fs::canonicalize(&logical).map_err(|_| LaunchRefusal::Unavailable)?;
+    let mut pin = identity::observe(&physical, hash, deadline)?;
+    pin.logical_path = text_path(&logical)?;
+    Ok(pin)
 }
 fn path_candidate(environment: &[(OsString, OsString)]) -> Result<PathBuf, LaunchRefusal> {
     if environment.len() > 128 {

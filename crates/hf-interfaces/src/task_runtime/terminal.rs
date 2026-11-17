@@ -34,10 +34,27 @@ pub fn task_finished(f: &TerminalProjectionFacts<'_>, seq: u64) -> Result<Vec<u8
     );
     serde_json::to_vec(&event).map_err(|_| InvalidIntent)
 }
+/// Canonical summary field discloses durable normalized omissions without claiming raw losslessness.
+pub fn task_finished_observed(
+    f: &TerminalProjectionFacts<'_>,
+    seq: u64,
+    observation: &hf_domain::task_lifecycle::ExecutionObservation,
+) -> Result<Vec<u8>, InvalidIntent> {
+    let bytes = task_finished(f, seq)?;
+    if observation.omitted_events == 0 {
+        return Ok(bytes);
+    }
+    let mut value: Value = serde_json::from_slice(&bytes).map_err(|_| InvalidIntent)?;
+    value["summary"] = Value::String(format!(
+        "{} normalized events omitted.",
+        observation.omitted_events
+    ));
+    serde_json::to_vec(&value).map_err(|_| InvalidIntent)
+}
 impl TerminalProjectionValidator for CanonicalTerminalProjection {
     fn validate(
         &self,
-        _: &LifecycleEvidence,
+        evidence: &LifecycleEvidence,
         f: &TerminalProjectionFacts<'_>,
         header: &[u8],
         status: &[u8],
@@ -45,7 +62,10 @@ impl TerminalProjectionValidator for CanonicalTerminalProjection {
         seq: u64,
     ) -> Result<(), InvalidIntent> {
         let (h, s) = terminal_projection(f)?;
-        if h != header || s != status || task_finished(f, seq)? != event_body {
+        if h != header
+            || s != status
+            || task_finished_observed(f, seq, &evidence.observation)? != event_body
+        {
             return Err(InvalidIntent);
         }
         Ok(())

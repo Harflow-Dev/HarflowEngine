@@ -155,6 +155,8 @@ pub(super) fn run_read(parsed: &Parsed, root: &StateRoot, services: &dyn CtlServ
 
 fn command_name(parsed: &Parsed) -> &'static str {
     match parsed {
+        Parsed::Run { .. } => "run",
+        Parsed::Cancel { .. } => "cancel",
         Parsed::List { .. } => "list",
         Parsed::Status { .. } => "status",
         Parsed::StatusBatch { .. } => "status-batch",

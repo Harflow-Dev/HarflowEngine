@@ -15,6 +15,15 @@ use hf_domain::{
 use serde_json::json;
 /// Everything with an effect, supplied by the composition root.
 pub trait CtlServices {
+    fn run_task(
+        &self,
+        _root: &StateRoot,
+        _request: &hf_application::ctl::task_run::RunRequest,
+    ) -> Result<String, hf_application::ctl::task_run::RunFailure> {
+        Err(hf_application::ctl::task_run::RunFailure::Refused(
+            "Execution is unavailable on this platform.".into(),
+        ))
+    }
     fn resolve_state_root(&self) -> Result<StateRoot, InvalidStateRoot>;
     fn host_identity(&self) -> HostIdentity;
     fn recover(
@@ -130,7 +139,10 @@ pub fn dispatch(argv: &[String], services: &dyn CtlServices) -> Outcome {
     }
     let json_requested = json_flagged(argv);
     let help_requested = has_flag(argv, &["--help", "-h"]);
-    if !help_requested && let Err(invalid) = services.resolve_state_root() {
+    if !help_requested
+        && !matches!(argv.first().map(String::as_str), Some("run" | "cancel"))
+        && let Err(invalid) = services.resolve_state_root()
+    {
         let error = UsageError {
             program: cli::PROGRAM.to_string(),
             message: invalid.message.to_string(),
@@ -144,6 +156,8 @@ pub fn dispatch(argv: &[String], services: &dyn CtlServices) -> Outcome {
 }
 fn run(parsed: Parsed, services: &dyn CtlServices, format: &str, json_requested: bool) -> Outcome {
     match parsed {
+        Parsed::Run { json, request } => super::run_dispatch::run(services, &request, json),
+        Parsed::Cancel { json, .. } => super::run_dispatch::cancel(json),
         Parsed::Help(command) => Outcome::ok(cli::help_text(command)),
         Parsed::VersionInfo { json } => version_info(services, json, format, json_requested),
         Parsed::StateInspect { json } => match services.resolve_state_root() {

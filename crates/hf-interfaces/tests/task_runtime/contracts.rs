@@ -1,11 +1,16 @@
 #![allow(clippy::expect_used, clippy::panic, clippy::unwrap_used)]
 
 use super::{initial, task_id};
+use hf_application::task_runtime::TerminalProjectionValidator;
 use hf_application::task_runtime::{InvalidIntent, TerminalProjectionFacts};
-use hf_domain::ownership::Digest;
+use hf_domain::{
+    ownership::{Digest, Id, Phase, PreparedRequest, Snapshot},
+    task_lifecycle::{ExecutionObservation, LifecycleBinding, LifecycleEvidence, ResultWitness},
+};
 use hf_interfaces::task_runtime::{
-    BlobChunk, BlobTransfer, CHUNK_BYTES, FRAME_BYTES, decode_chunk, encode_chunk,
-    encode_live_message, task_finished, terminal_projection,
+    BlobChunk, BlobTransfer, CHUNK_BYTES, CanonicalTerminalSummaryProjection, FRAME_BYTES,
+    decode_chunk, encode_chunk, encode_live_message, successful_result_summary, task_finished,
+    task_finished_observed, terminal_projection, terminal_projection_with_summary,
 };
 
 fn digest() -> Digest {
@@ -86,5 +91,168 @@ fn terminal_projection_requires_drain_and_only_builds_typed_task_finished() {
             ..facts
         })
         .is_err()
+    );
+}
+
+#[test]
+fn terminal_summary_reports_only_the_durable_normalized_omission_count() {
+    let task = task_id();
+    let facts = TerminalProjectionFacts {
+        initial: initial(&task, "completed"),
+        exit_code: 0,
+        finished_at: "2026-01-10T10:05:00+00:00",
+        output_drained: true,
+    };
+    let mut observation = ExecutionObservation::default();
+    let no_omissions = task_finished_observed(&facts, 7, &observation).unwrap();
+    let ordinary = task_finished(&facts, 7).unwrap();
+    assert_eq!(no_omissions, ordinary);
+
+    observation.omitted_events = 3;
+    let disclosed = task_finished_observed(&facts, 7, &observation).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&disclosed).unwrap();
+    assert_eq!(document["summary"], "3 normalized events omitted.");
+    assert_eq!(document["seq"], 7);
+    assert_eq!(document["task_id"], task.as_str());
+}
+
+#[test]
+fn result_summary_accepts_only_bounded_successful_root_text() {
+    let text = "Résumé ☕ — 日本語";
+    let success = serde_json::json!({
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "result": text
+    });
+    assert_eq!(
+        successful_result_summary(&serde_json::to_vec(&success).unwrap()).unwrap(),
+        Some(text.to_owned())
+    );
+
+    let error = serde_json::json!({
+        "type": "result",
+        "subtype": "error",
+        "is_error": true,
+        "result": "partial"
+    });
+    assert_eq!(
+        successful_result_summary(&serde_json::to_vec(&error).unwrap()).unwrap(),
+        None
+    );
+    let child = serde_json::json!({
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "parent_tool_use_id": "toolu_child",
+        "result": "nested"
+    });
+    assert_eq!(
+        successful_result_summary(&serde_json::to_vec(&child).unwrap()).unwrap(),
+        None
+    );
+    let oversized = serde_json::json!({
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "result": "x".repeat(16_385)
+    });
+    assert_eq!(
+        successful_result_summary(&serde_json::to_vec(&oversized).unwrap()).unwrap(),
+        None
+    );
+}
+
+#[test]
+fn oversized_summary_falls_back_to_the_bounded_baseline_projection() {
+    let task = task_id();
+    let facts = TerminalProjectionFacts {
+        initial: initial(&task, "completed"),
+        exit_code: 0,
+        finished_at: "2026-01-10T10:05:00+00:00",
+        output_drained: true,
+    };
+    let baseline = terminal_projection(&facts).unwrap();
+    let (header, status) =
+        terminal_projection_with_summary(&facts, Some(&"x".repeat(14_000))).unwrap();
+    assert_eq!(header, baseline.0);
+    assert_eq!(status, baseline.1);
+    assert!(status.len() <= 16_384);
+    let document: serde_json::Value = serde_json::from_slice(&status).unwrap();
+    assert_eq!(document["summary"], serde_json::Value::Null);
+}
+
+#[test]
+fn canonical_summary_projection_requires_the_committed_success_witness() {
+    let task = task_id();
+    let operation = Id::new("1".repeat(32)).unwrap();
+    let attempt = Id::new("2".repeat(32)).unwrap();
+    let generation = Id::new("3".repeat(32)).unwrap();
+    let request = PreparedRequest {
+        operation: operation.clone(),
+        session: Id::new("4".repeat(32)).unwrap(),
+        reservation: Id::new("5".repeat(32)).unwrap(),
+        attempt: attempt.clone(),
+        generation: generation.clone(),
+        digest: digest(),
+        payload: Vec::new(),
+    };
+    let witness = ResultWitness {
+        turn: attempt.clone(),
+        digest: digest(),
+        source_end: 123,
+        success: true,
+    };
+    let observation = ExecutionObservation {
+        result: Some(witness.clone()),
+        ..ExecutionObservation::default()
+    };
+    let evidence = LifecycleEvidence {
+        binding: LifecycleBinding {
+            task: task.clone(),
+            operation,
+            attempt,
+            generation,
+        },
+        revision: 2,
+        ownership: Snapshot {
+            request,
+            phase: Phase::SpawnObserved,
+            revision: 2,
+            cancelled: false,
+            owner: None,
+            child: None,
+        },
+        cancel: None,
+        observation,
+    };
+    let facts = TerminalProjectionFacts {
+        initial: initial(&task, "completed"),
+        exit_code: 0,
+        finished_at: "2026-01-10T10:05:00+00:00",
+        output_drained: true,
+    };
+    let summary = "Exact result text: café 日本語";
+    let (header, status) = terminal_projection_with_summary(&facts, Some(summary)).unwrap();
+    let event = task_finished_observed(&facts, 7, &evidence.observation).unwrap();
+    let validator = CanonicalTerminalSummaryProjection {
+        summary,
+        result: &witness,
+    };
+    assert_eq!(
+        validator.validate(&evidence, &facts, &header, &status, &event, 7),
+        Ok(())
+    );
+
+    let mut changed_witness = witness;
+    changed_witness.digest = Digest::new("b".repeat(64)).unwrap();
+    let mismatched = CanonicalTerminalSummaryProjection {
+        summary,
+        result: &changed_witness,
+    };
+    assert!(
+        mismatched
+            .validate(&evidence, &facts, &header, &status, &event, 7)
+            .is_err()
     );
 }

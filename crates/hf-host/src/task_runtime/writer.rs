@@ -17,7 +17,7 @@ pub struct Writer {
     // Store/raw must close before the root exclusion; no transport owns this connection.
     store: Store,
     evidence: LifecycleEvidence,
-    hold: HeldRoot,
+    pub(super) hold: HeldRoot,
     poisoned: bool,
 }
 impl Writer {

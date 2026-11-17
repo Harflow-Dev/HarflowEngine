@@ -28,6 +28,11 @@ impl WriterEntry {
         if stdio.observation().process != bootstrap.writer {
             return Err(Error::Refused);
         }
+        if bootstrap.owner.owner != bootstrap.invitation.binding.operation
+            || bootstrap.owner.nonce != bootstrap.invitation.reservation
+        {
+            return Err(Error::Refused);
+        }
         stdio.qualify(
             &bootstrap.owner.process,
             &bootstrap.invitation.ctl,
@@ -106,5 +111,11 @@ impl WriterEntry {
     }
     pub fn channel(&mut self) -> &mut Channel {
         &mut self.channel
+    }
+    pub fn bootstrap(&self) -> &WriterBootstrap {
+        &self.bootstrap
+    }
+    pub fn hold(&self) -> &HeldRoot {
+        &self.writer.hold
     }
 }
