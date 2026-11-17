@@ -28,6 +28,8 @@ pub mod backend_measurement;
 
 pub mod claude_stream;
 
+pub mod claude_ndjson;
+
 pub mod prepared_launch;
 
 pub mod claude_qualification;
