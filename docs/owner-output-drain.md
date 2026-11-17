@@ -26,6 +26,23 @@ later storage mutation, retry, repair or truncation follows. Reader-discarded by
 accepted-but-abandoned bytes, ambiguous raw tails and unknown unread tails remain
 separate. Enqueued bytes are not automatically durable bytes.
 
+Exact typed `OwnerError::Port(Fenced | CommitLost)` refusals differ from ambiguous
+writes. Private HFOR revision 2 carries `StorageRefusal::{Fenced, CommitLost}`;
+older frames are rejected. The coordinator validates the sent command identity,
+deadline, cause and unchanged committed facts before recording permanent storage
+refusal. It applies no projected revision. No later Append, KnownLoss, Finish,
+Close, retry or terminal publication follows; an earlier terminal remains intact.
+An Append's synced raw tail whose index commit was definitely refused is counted
+as known unindexed bytes, separately from uncertain raw tails and abandoned FIFO
+bytes. Raw I/O errors and post-commit gate failures remain Unknown.
+
+After refusal the original reader continues drainage without storage I/O and the
+owner reaps the original child and joins/reconciles the reader. Only then does it
+close the writer input with EOF, without a Close command. The actual writer,
+Store and independent root hold remain resident until that EOF; qualification
+deadlines cannot release them early. Reservations persist. This retention can
+wait indefinitely and grants no child signalling, release or recovery authority.
+
 Terminal publication requires joined immutable reader completion, reconciliation
 of every accepted batch, observed EOF on both streams, no capture loss/error/stop,
 original-child exit and reconciled input. Exit alone and EOF alone are insufficient.
@@ -82,3 +99,12 @@ retention, idle or backend budgets. Real caller/enrollment/grant/outcome semanti
 containment and public integration remain gated; the three R04-B policy proposals
 remain unaccepted. Supported internal D3 mechanics may proceed under the stage
 amendment without turning each suffix into a user handoff.
+
+
+If transmission of the refusal acknowledgement fails, the owner has no validated
+definite outcome and follows the existing Unknown path. That path may close the
+writer and its Store early; it does not provide the stronger Store lifetime of a
+received and validated refusal. The original owner's independent `RootHold` and
+reservations remain retained until the original child is positively reaped and
+the reader is joined and reconciled. No retry or terminal publication follows.
+No additional settlement signal is introduced for failed acknowledgement transport.

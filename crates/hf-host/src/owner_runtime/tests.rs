@@ -1,5 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+#[path = "tests/b8_refusal.rs"]
+pub(super) mod b8_refusal;
 #[path = "../../tests/isolated_owner/support.rs"]
 mod support;
 

@@ -5,7 +5,7 @@ pub(crate) use hf_domain::{
     capture::{CaptureBinding, CaptureProgress, CaptureSnapshot, FileIdentity},
     owner_runtime::{
         AckDisposition, CommandIdentity, RawIdentities, StorageAck, StorageBootstrap,
-        StorageCommand, StorageParticipant, Stream, TrustedDrainEvidence,
+        StorageCommand, StorageParticipant, StorageRefusal, Stream, TrustedDrainEvidence,
     },
     ownership::{Digest, Fence, Id, OwnerClaim, Phase, PreparedRequest, Snapshot},
     process::{ProcessExit, ProcessIdentity},
@@ -97,8 +97,26 @@ pub(crate) fn ack(
     StorageAck {
         identity,
         disposition: AckDisposition::Committed,
+        refusal: None,
         revision: Some(revision),
         snapshot: Some(snapshot),
+        capture,
+        raw_files,
+    }
+}
+pub(crate) fn refused_ack(
+    identity: CommandIdentity,
+    cause: StorageRefusal,
+    snapshot: Option<Snapshot>,
+    capture: Option<CaptureSnapshot>,
+    raw_files: Option<RawIdentities>,
+) -> StorageAck {
+    StorageAck {
+        identity,
+        disposition: AckDisposition::Refused,
+        refusal: Some(cause),
+        revision: None,
+        snapshot,
         capture,
         raw_files,
     }

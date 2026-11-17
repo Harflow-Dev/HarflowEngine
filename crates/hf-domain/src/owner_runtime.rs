@@ -61,10 +61,16 @@ pub enum AckDisposition {
     Refused,
     Unknown,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StorageRefusal {
+    Fenced,
+    CommitLost,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StorageAck {
     pub identity: CommandIdentity,
     pub disposition: AckDisposition,
+    pub refusal: Option<StorageRefusal>,
     pub revision: Option<u64>,
     pub snapshot: Option<Snapshot>,
     pub capture: Option<CaptureSnapshot>,

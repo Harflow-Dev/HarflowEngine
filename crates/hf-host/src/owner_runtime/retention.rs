@@ -10,6 +10,7 @@ pub(super) struct Resources {
     pub(super) reader: Option<PrivateFixtureCaptureReader>,
     pub(super) reader_joined: bool,
     pub(super) reader_fifo_reconciled: bool,
+    pub(super) consumer_known_unindexed: (u64, u64),
     pub(super) consumer_uncertain: (u64, u64),
     pub(super) consumer_abandoned: (u64, u64),
     pub(super) fifo_abandoned: (u64, u64),
@@ -24,6 +25,7 @@ impl Resources {
             reader: None,
             reader_joined: false,
             reader_fifo_reconciled: false,
+            consumer_known_unindexed: (0, 0),
             consumer_uncertain: (0, 0),
             consumer_abandoned: (0, 0),
             fifo_abandoned: (0, 0),
@@ -42,11 +44,16 @@ impl Resources {
     }
     /// Unknown work remains resident until positively reaped and channels drained.
     pub(super) fn retain(&mut self, mut actor: Option<&mut Actor>) {
-        if let Some(a) = actor.as_deref_mut() {
-            a.poison();
-        }
-        if let Some(w) = self.writer.as_mut() {
-            w.close_stdin();
+        let refused = actor
+            .as_deref()
+            .is_some_and(|a| a.coordinator.storage_refusal().is_some());
+        if !refused {
+            if let Some(a) = actor.as_deref_mut() {
+                a.poison();
+            }
+            if let Some(w) = self.writer.as_mut() {
+                w.close_stdin();
+            }
         }
         if let Some(a) = self.agent.as_mut() {
             a.close_stdin();
@@ -55,6 +62,8 @@ impl Resources {
             r.discard_capture();
         }
         loop {
+            #[cfg(test)]
+            super::tests::b8_refusal::observe_retention(self, actor.as_deref());
             if let Some(a) = actor.as_deref_mut() {
                 let _ = a.step();
             } else {
@@ -66,12 +75,24 @@ impl Resources {
                 let _ = a.pump(Instant::now() + Duration::from_millis(1), 4096);
             }
             self.reconcile_reader();
+            if refused && self.refused_child_settled() {
+                if let Some(a) = actor.as_deref_mut() {
+                    a.io.close_input();
+                }
+                if let Some(w) = self.writer.as_mut() {
+                    w.close_stdin();
+                }
+            }
             if self.settled(actor.as_deref()) {
                 return;
             }
             // No blocking joins; fixed short observation backoff after all owner work.
             std::thread::sleep(Duration::from_millis(1));
         }
+    }
+    fn refused_child_settled(&mut self) -> bool {
+        exit(&mut self.agent) != ProcessExit::Unobserved
+            && (self.reader.is_none() || (self.reader_joined && self.reader_fifo_reconciled))
     }
     fn reconcile_reader(&mut self) {
         let Some(r) = self.reader.as_mut() else {

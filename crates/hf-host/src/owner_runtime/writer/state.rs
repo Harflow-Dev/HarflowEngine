@@ -119,6 +119,7 @@ impl Writer {
         StorageAck {
             identity,
             disposition,
+            refusal: None,
             revision: if disposition == AckDisposition::Committed {
                 Some(
                     self.capture

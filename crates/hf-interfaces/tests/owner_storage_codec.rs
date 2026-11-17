@@ -2,7 +2,10 @@
 
 use hf_application::owner_runtime::DigestPort;
 use hf_domain::{
-    owner_runtime::{StorageCommand, Stream, TrustedDrainEvidence},
+    owner_runtime::{
+        AckDisposition, CommandIdentity, StorageAck, StorageCommand, StorageRefusal, Stream,
+        TrustedDrainEvidence,
+    },
     ownership::Digest,
 };
 use hf_interfaces::owner_storage_codec::{CodecError, Message, decode, encode};
@@ -38,6 +41,37 @@ fn sample(payload: Vec<u8>) -> Message {
         bytes: payload,
         drain,
     })
+}
+
+fn refusal_message(cause: StorageRefusal) -> Message {
+    Message::Ack(Box::new(StorageAck {
+        identity: CommandIdentity {
+            sequence: 1,
+            binding_digest: digest('a'),
+            command_digest: digest('b'),
+        },
+        disposition: AckDisposition::Refused,
+        refusal: Some(cause),
+        revision: None,
+        snapshot: None,
+        capture: None,
+        raw_files: None,
+    }))
+}
+
+fn refresh_frame_digest(bytes: &mut [u8]) {
+    let digest = TestDigest.digest_parts(&[&bytes[4..50], &bytes[82..]]);
+    bytes[50..82].copy_from_slice(
+        digest
+            .as_str()
+            .as_bytes()
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
 }
 
 #[test]
@@ -101,4 +135,75 @@ fn frame_decoder_rejects_partial_and_oversized_frames_before_message_use() {
     let mut oversized = bytes;
     oversized[0..4].copy_from_slice(&u32::MAX.to_be_bytes());
     assert_eq!(decode(&oversized, &TestDigest), Err(CodecError::Length));
+}
+
+#[test]
+fn refusal_causes_round_trip_and_v1_unknown_or_contradictory_causes_are_rejected() {
+    for cause in [StorageRefusal::Fenced, StorageRefusal::CommitLost] {
+        let frame = encode(&refusal_message(cause), 1, &digest('a'), &TestDigest).unwrap();
+        assert_eq!(frame[154], 1, "disposition byte");
+        assert_eq!(
+            frame[155],
+            if cause == StorageRefusal::Fenced {
+                1
+            } else {
+                2
+            }
+        );
+        assert_eq!(
+            decode(&frame, &TestDigest).unwrap().message,
+            refusal_message(cause)
+        );
+    }
+
+    let mut old = encode(
+        &refusal_message(StorageRefusal::Fenced),
+        1,
+        &digest('a'),
+        &TestDigest,
+    )
+    .unwrap();
+    old[4..9].copy_from_slice(b"HFOR\x01");
+    refresh_frame_digest(&mut old);
+    assert_eq!(decode(&old, &TestDigest), Err(CodecError::Shape));
+
+    let mut unknown = encode(
+        &refusal_message(StorageRefusal::Fenced),
+        1,
+        &digest('a'),
+        &TestDigest,
+    )
+    .unwrap();
+    unknown[155] = 3;
+    refresh_frame_digest(&mut unknown);
+    assert_eq!(decode(&unknown, &TestDigest), Err(CodecError::Value));
+
+    let Message::Ack(malformed) = refusal_message(StorageRefusal::Fenced) else {
+        panic!("refusal helper must produce an acknowledgement");
+    };
+    let mut malformed = *malformed;
+    malformed.refusal = None;
+    assert_eq!(
+        encode(
+            &Message::Ack(Box::new(malformed)),
+            1,
+            &digest('a'),
+            &TestDigest
+        ),
+        Err(CodecError::Value)
+    );
+    let mut malformed = match refusal_message(StorageRefusal::Fenced) {
+        Message::Ack(ack) => *ack,
+        _ => panic!("refusal helper must produce an acknowledgement"),
+    };
+    malformed.disposition = AckDisposition::Committed;
+    assert_eq!(
+        encode(
+            &Message::Ack(Box::new(malformed)),
+            1,
+            &digest('a'),
+            &TestDigest
+        ),
+        Err(CodecError::Value)
+    );
 }

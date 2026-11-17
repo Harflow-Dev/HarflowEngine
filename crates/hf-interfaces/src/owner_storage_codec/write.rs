@@ -14,6 +14,14 @@ impl Writer {
                     AckDisposition::Refused => 1,
                     AckDisposition::Unknown => 2,
                 });
+                if (a.disposition == AckDisposition::Refused) != a.refusal.is_some() {
+                    return Err(CodecError::Value);
+                }
+                self.byte(match a.refusal {
+                    None => 0,
+                    Some(StorageRefusal::Fenced) => 1,
+                    Some(StorageRefusal::CommitLost) => 2,
+                });
                 self.byte(u8::from(a.revision.is_some()));
                 if let Some(v) = a.revision {
                     self.u64(v);

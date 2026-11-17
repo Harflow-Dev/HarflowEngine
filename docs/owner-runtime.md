@@ -61,13 +61,22 @@ private, single-link participant sidecar binds the learned writer to the origina
 request, source generation, owner and channel. It is deny-only provenance, with no
 recovery or release authority and no schema-5 upgrade.
 
-The private `HFOR1` exchange permits one pending command. It binds sequence,
-participant digest and actual encoded command bytes; full acknowledgments must
-match projected snapshots, capture state and stable raw-file identities. Ambiguous
-send, timeout, malformed/stale reply, refusal or unknown commit poisons future
-mutations permanently. A later reply cannot restore admission. Closing input stops
-future commands but cannot cancel an already admitted syscall. Close is a separate
-healthy command; it must not be interleaved into partially sent command bytes.
+The private `HFOR2` exchange permits one pending command and strictly rejects
+older frames. It binds sequence, participant digest and actual encoded command
+bytes; full committed acknowledgments must match projected snapshots, capture
+state and stable raw-file identities. A validated typed Fenced or CommitLost
+refusal records a permanent storage-refused state without applying projected
+facts. It sends no later command, including Close, while retaining the writer
+and Store until the original child and reader settle. Its known unindexed raw
+tail remains distinct from uncertainty. See [output drainage](owner-output-drain.md)
+and the [B8 receipt](migration-receipts/E2-B8-owner-refusal.md).
+
+Ambiguous send, timeout, malformed/stale reply or unknown commit still poisons
+future mutations permanently. A later reply cannot restore admission. Closing
+input stops future commands but cannot cancel an already admitted syscall. Close
+is a separate healthy command; it must not be interleaved into partially sent
+command bytes. Failed refusal-acknowledgment transport remains Unknown, with
+original root ownership retained through settlement as described in the drain guide.
 
 The owner incrementally transports at most 4096 bytes per direction and writer
 stderr per step, with one poll of at most 20 ms. Full frames are capped at 24576

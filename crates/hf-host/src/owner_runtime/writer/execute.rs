@@ -1,6 +1,34 @@
 use super::*;
+use hf_application::owner::OwnerError;
+pub(super) enum ExecuteError {
+    Owner(OwnerError<hf_storage::Error>),
+    Other,
+}
+impl From<String> for ExecuteError {
+    fn from(_: String) -> Self {
+        Self::Other
+    }
+}
+impl From<&str> for ExecuteError {
+    fn from(_: &str) -> Self {
+        Self::Other
+    }
+}
+impl ExecuteError {
+    pub(super) fn refusal(&self) -> Option<StorageRefusal> {
+        match self {
+            Self::Owner(OwnerError::Port(hf_storage::Error::Fenced)) => {
+                Some(StorageRefusal::Fenced)
+            }
+            Self::Owner(OwnerError::Port(hf_storage::Error::CommitLost)) => {
+                Some(StorageRefusal::CommitLost)
+            }
+            _ => None,
+        }
+    }
+}
 impl Writer {
-    pub(super) fn execute(&mut self, command: &StorageCommand) -> Result<(), String> {
+    pub(super) fn execute(&mut self, command: &StorageCommand) -> Result<(), ExecuteError> {
         match command {
             StorageCommand::Bootstrap(_) => return Err("duplicate bootstrap".into()),
             StorageCommand::Claim => {
@@ -8,7 +36,7 @@ impl Writer {
                     .as_mut()
                     .ok_or("closed storage")?
                     .claim(self.until)
-                    .map_err(error)?;
+                    .map_err(ExecuteError::Owner)?;
                 self.refresh();
                 self.gate(Stage::OwnerAfterClaim)?;
             }
@@ -17,7 +45,7 @@ impl Writer {
                     .as_mut()
                     .ok_or("closed storage")?
                     .record_child(child, self.until)
-                    .map_err(error)?;
+                    .map_err(ExecuteError::Owner)?;
                 self.refresh();
                 self.gate(Stage::OwnerAfterObserved)?;
             }
@@ -37,7 +65,7 @@ impl Writer {
                 .as_mut()
                 .ok_or("closed storage")?
                 .accept(self.until)
-                .map_err(error)?,
+                .map_err(ExecuteError::Owner)?,
             StorageCommand::CaptureBegin(binding) => {
                 let raw = self.raw.as_mut().ok_or("raw absent")?;
                 raw.validate(0, 0, self.until).map_err(error)?;
@@ -48,7 +76,7 @@ impl Writer {
                     .as_mut()
                     .ok_or("closed storage")?
                     .begin_capture(binding, self.until)
-                    .map_err(error)?;
+                    .map_err(ExecuteError::Owner)?;
             }
             StorageCommand::Append {
                 stream,
@@ -68,7 +96,7 @@ impl Writer {
                     .as_mut()
                     .ok_or("closed storage")?
                     .publish_capture(&next, self.until)
-                    .map_err(error)?;
+                    .map_err(ExecuteError::Owner)?;
             }
             StorageCommand::Finish(exit) => self.finish(*exit)?,
             StorageCommand::Close => {
@@ -78,9 +106,9 @@ impl Writer {
             }
         }
         self.refresh();
-        self.gate(Stage::OwnerBeforeAck)
+        self.gate(Stage::OwnerBeforeAck).map_err(Into::into)
     }
-    fn finish(&mut self, exit: hf_domain::process::ProcessExit) -> Result<(), String> {
+    fn finish(&mut self, exit: hf_domain::process::ProcessExit) -> Result<(), ExecuteError> {
         self.gate(Stage::CaptureBeforeTerminal)?;
         let p = &self.capture.as_ref().ok_or("capture absent")?.progress;
         self.raw
@@ -92,7 +120,7 @@ impl Writer {
             .as_mut()
             .ok_or("closed storage")?
             .finish_capture(exit, self.until)
-            .map_err(error)?;
+            .map_err(ExecuteError::Owner)?;
         self.refresh();
         self.gate(Stage::CaptureAfterTerminal)?;
         Ok(())
@@ -102,7 +130,7 @@ impl Writer {
         stream: Stream,
         bytes: &[u8],
         drain: Option<&TrustedDrainEvidence>,
-    ) -> Result<(), String> {
+    ) -> Result<(), ExecuteError> {
         let mut next = self
             .capture
             .as_ref()
@@ -136,8 +164,8 @@ impl Writer {
             .as_mut()
             .ok_or("closed storage")?
             .publish_capture(&next, self.until)
-            .map_err(error)?;
+            .map_err(ExecuteError::Owner)?;
         self.refresh();
-        self.gate(Stage::CaptureAfterPublish)
+        self.gate(Stage::CaptureAfterPublish).map_err(Into::into)
     }
 }

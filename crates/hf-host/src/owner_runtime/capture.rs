@@ -20,6 +20,7 @@ pub(super) struct Capture {
     acknowledged: (u64, u64),
     abandoned: (u64, u64),
     uncertain: (u64, u64),
+    known_unindexed: (u64, u64),
     pub(super) final_value: Option<ReaderFinal>,
     fifo_empty: bool,
     pub(super) eof_sent: bool,
@@ -48,6 +49,7 @@ impl Capture {
             || self.loss_sent
             || self.abandoned != (0, 0)
             || self.uncertain != (0, 0)
+            || self.known_unindexed != (0, 0)
             || !self.eof_sent
         {
             return Err("capture commitment incomplete".into());
@@ -57,6 +59,20 @@ impl Capture {
             stdout.finish().map_err(error)?,
             stderr.finish().map_err(error)?,
         ))
+    }
+    pub(super) fn refuse_storage(&mut self) -> ((u64, u64), (u64, u64)) {
+        // Append raw bytes have synced before the definitely refused index commit.
+        if let Some((stream, count)) = self.awaiting.take() {
+            match stream {
+                Stream::Stdout => self.known_unindexed.0 += count as u64,
+                Stream::Stderr => self.known_unindexed.1 += count as u64,
+            }
+        }
+        if let Some(batch) = self.batch.take() {
+            self.abandoned.0 += batch.stdout.len() as u64;
+            self.abandoned.1 += batch.stderr.len() as u64;
+        }
+        (self.known_unindexed, self.abandoned)
     }
     pub(super) fn abandon_unknown(&mut self, pending_append: bool) -> ((u64, u64), (u64, u64)) {
         if let Some((stream, count)) = self.awaiting.take() {

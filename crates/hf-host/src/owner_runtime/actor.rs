@@ -7,6 +7,7 @@ use hf_storage::Sha256Digest;
 use std::time::{Duration, Instant};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Ack {
+    Refused(StorageRefusal),
     Bootstrap,
     Claim,
     RecordChild,
@@ -68,6 +69,9 @@ impl Actor {
         Ok(())
     }
     pub(super) fn poison(&mut self) {
+        if self.coordinator.storage_refusal().is_some() {
+            return;
+        }
         self.coordinator.poison();
         self.io.close_input();
     }
@@ -87,7 +91,7 @@ impl Actor {
         self.io
             .step(now + Duration::from_millis(20))
             .map_err(error)?;
-        if self.coordinator.is_poisoned() {
+        if self.coordinator.is_poisoned() || self.coordinator.storage_refusal().is_some() {
             self.io.take_frame();
             return Ok(None);
         }
@@ -113,6 +117,10 @@ impl Actor {
         self.coordinator
             .acknowledge(*ack, Instant::now())
             .map_err(error)?;
+        if let Some(refusal) = self.coordinator.storage_refusal() {
+            self.kind = None;
+            return Ok(Some(Ack::Refused(refusal)));
+        }
         let kind = self.kind.take();
         if kind == Some(Ack::Close) {
             self.io.close_input();

@@ -141,6 +141,9 @@ impl OwnerLoop {
         }
     }
     fn poison(&mut self) {
+        if self.actor.coordinator.storage_refusal().is_some() {
+            return;
+        }
         self.actor.poison();
         let pending_append = self
             .actor
@@ -152,6 +155,15 @@ impl OwnerLoop {
         self.resources.consumer_abandoned = abandoned;
     }
     fn ack(&mut self, ack: Ack) -> Result<(), String> {
+        if let Ack::Refused(cause) = ack {
+            let (unindexed, abandoned) = self.capture.refuse_storage();
+            self.resources.consumer_known_unindexed = unindexed;
+            self.resources.consumer_abandoned = abandoned;
+            self.input = None;
+            // Settle original child/reader before EOF lets the writer drop its Store.
+            self.resources.retain(Some(&mut self.actor));
+            return Err(format!("storage definitely refused: {cause:?}"));
+        }
         self.capture.ack(ack)?;
         match ack {
             Ack::Bootstrap => self.actor.submit(StorageCommand::Claim)?,

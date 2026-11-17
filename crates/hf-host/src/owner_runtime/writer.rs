@@ -54,8 +54,16 @@ pub(super) fn run(qualification: bool) -> Result<(), String> {
         .acknowledge(ack.clone(), Instant::now())
         .map_err(error)?;
     send(&channel, &ack)?;
+    run_commands(&channel, &mut writer, &mut coordinator, until)
+}
+fn run_commands(
+    channel: &PrivateIo,
+    writer: &mut Writer,
+    coordinator: &mut StorageCoordinator,
+    until: Instant,
+) -> Result<(), String> {
     loop {
-        let frame = receive(&channel)?;
+        let frame = receive(channel)?;
         let Message::Command(command) = frame.message else {
             return Err("storage command required".into());
         };
@@ -79,16 +87,25 @@ pub(super) fn run(qualification: bool) -> Result<(), String> {
             .pending()
             .ok_or("missing pending storage command")?;
         let close = matches!(pending.command, StorageCommand::Close);
-        if writer.execute(&pending.command).is_err() {
+        if let Err(failure) = writer.execute(&pending.command) {
+            if let Some(refusal) = failure.refusal() {
+                let mut ack = writer.ack(frame.identity, AckDisposition::Refused);
+                ack.refusal = Some(refusal);
+                send(channel, &ack)?;
+                // Keep the actual session and root hold resident without further storage I/O.
+                // Owner closes input only after its original child and reader settle.
+                retain_until_eof();
+                return Ok(());
+            }
             let ack = writer.ack(frame.identity, AckDisposition::Unknown);
-            let _ = send(&channel, &ack);
+            let _ = send(channel, &ack);
             return Err("storage mutation uncertain".into());
         }
         let ack = writer.ack(frame.identity, AckDisposition::Committed);
         coordinator
             .acknowledge(ack.clone(), Instant::now())
             .map_err(error)?;
-        send(&channel, &ack)?;
+        send(channel, &ack)?;
         if close {
             channel.expect_eof().map_err(error)?;
             return Ok(());
@@ -111,4 +128,16 @@ fn send(channel: &PrivateIo, ack: &StorageAck) -> Result<(), String> {
 }
 fn error<E: std::fmt::Debug>(e: E) -> String {
     format!("private storage: {e:?}")
+}
+
+/// No mutation, command decoding or deadline-based release after definite refusal.
+fn retain_until_eof() {
+    loop {
+        let channel = PrivateIo::stdio(Instant::now() + Duration::from_millis(20));
+        if channel.expect_eof().is_ok() {
+            return;
+        }
+        // Unexpected input and transport errors cannot authorize early Store release.
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }

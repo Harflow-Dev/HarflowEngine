@@ -7,6 +7,7 @@ pub use crate::digest::DigestPort;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CoordinatorError {
     Poisoned,
+    StorageRefused,
     Pending,
     InvalidState,
     InvalidAck,
@@ -29,6 +30,7 @@ pub struct StorageCoordinator {
     bootstrapped: bool,
     raw_files: Option<RawIdentities>,
     closed: bool,
+    storage_refused: Option<StorageRefusal>,
 }
 impl StorageCoordinator {
     /// Only a fresh prepared request can enter; a stored row cannot construct this state.
@@ -41,6 +43,7 @@ impl StorageCoordinator {
             bootstrapped: false,
             raw_files: None,
             closed: false,
+            storage_refused: None,
         }
     }
     pub fn next_sequence(&self) -> u64 {
@@ -64,6 +67,9 @@ impl StorageCoordinator {
     pub fn is_poisoned(&self) -> bool {
         self.state.poisoned
     }
+    pub fn storage_refusal(&self) -> Option<StorageRefusal> {
+        self.storage_refused
+    }
     pub fn poison(&mut self) {
         self.state.poisoned = true;
     }
@@ -74,6 +80,9 @@ impl StorageCoordinator {
         deadline: Instant,
         now: Instant,
     ) -> Result<&PendingCommand, CoordinatorError> {
+        if self.storage_refused.is_some() {
+            return Err(CoordinatorError::StorageRefused);
+        }
         if self.state.poisoned {
             return Err(CoordinatorError::Poisoned);
         }
@@ -105,6 +114,9 @@ impl StorageCoordinator {
         identity: &CommandIdentity,
         now: Instant,
     ) -> Result<(), CoordinatorError> {
+        if self.storage_refused.is_some() {
+            return Err(CoordinatorError::StorageRefused);
+        }
         if self.state.poisoned {
             return Err(CoordinatorError::Poisoned);
         }
@@ -124,6 +136,9 @@ impl StorageCoordinator {
             self.poison();
             return Err(CoordinatorError::Expired);
         }
+        if self.storage_refused.is_some() {
+            return Err(CoordinatorError::StorageRefused);
+        }
         if self.state.poisoned {
             Err(CoordinatorError::Poisoned)
         } else {
@@ -136,6 +151,31 @@ impl StorageCoordinator {
             self.poison();
             return Err(CoordinatorError::InvalidAck);
         };
+        if ack.disposition == AckDisposition::Refused {
+            if !matches!(
+                p.command,
+                StorageCommand::Claim
+                    | StorageCommand::RecordChild(_)
+                    | StorageCommand::Accept
+                    | StorageCommand::CaptureBegin(_)
+                    | StorageCommand::Append { .. }
+                    | StorageCommand::KnownLoss
+                    | StorageCommand::Finish(_)
+            ) || !p.sent
+                || ack.identity != p.identity
+                || ack.refusal.is_none()
+                || ack.revision.is_some()
+                || ack.snapshot != self.state.snapshot
+                || ack.capture != self.state.capture
+                || ack.raw_files != self.raw_files
+            {
+                self.poison();
+                return Err(CoordinatorError::InvalidAck);
+            }
+            self.storage_refused = ack.refusal;
+            self.pending = None;
+            return Ok(());
+        }
         let revision = p
             .expected_capture
             .as_ref()
@@ -143,6 +183,7 @@ impl StorageCoordinator {
             .or_else(|| p.expected_snapshot.as_ref().map(|s| s.revision));
         if !p.sent
             || ack.identity != p.identity
+            || ack.refusal.is_some()
             || ack.disposition != AckDisposition::Committed
             || ack.snapshot != p.expected_snapshot
             || ack.capture != p.expected_capture

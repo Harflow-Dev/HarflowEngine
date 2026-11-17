@@ -184,6 +184,15 @@ impl<'a> Reader<'a> {
                     2 => AckDisposition::Unknown,
                     _ => return Err(CodecError::Value),
                 };
+                let refusal = match self.byte()? {
+                    0 => None,
+                    1 => Some(StorageRefusal::Fenced),
+                    2 => Some(StorageRefusal::CommitLost),
+                    _ => return Err(CodecError::Value),
+                };
+                if (disposition == AckDisposition::Refused) != refusal.is_some() {
+                    return Err(CodecError::Value);
+                }
                 let revision = if self.boolean()? {
                     Some(self.u64()?)
                 } else {
@@ -217,6 +226,7 @@ impl<'a> Reader<'a> {
                 Ok(Message::Ack(Box::new(StorageAck {
                     identity,
                     disposition,
+                    refusal,
                     revision,
                     snapshot,
                     capture,

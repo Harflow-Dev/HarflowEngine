@@ -42,7 +42,7 @@ pub fn encode(
     }
     let mut w = write::Writer(Vec::with_capacity(MAX_FRAME));
     w.0.extend_from_slice(&[0; HEADER]);
-    w.0[4..9].copy_from_slice(b"HFOR\x01");
+    w.0[4..9].copy_from_slice(b"HFOR\x02");
     w.0[9] = match message {
         Message::Command(_) => 1,
         Message::Ack(_) => 2,
@@ -67,7 +67,7 @@ pub fn decode(bytes: &[u8], hash: &impl DigestPort) -> Result<Frame, CodecError>
     if r.u32()? as usize != bytes.len() - 4 {
         return Err(CodecError::Length);
     }
-    if r.take(5)? != b"HFOR\x01" {
+    if r.take(5)? != b"HFOR\x02" {
         return Err(CodecError::Shape);
     }
     let tag = r.byte()?;
@@ -124,7 +124,7 @@ pub fn encoded_identity(
     if r.u32()? as usize != bytes.len() - 4 {
         return Err(CodecError::Length);
     }
-    if r.take(5)? != b"HFOR\x01" || !matches!(r.byte()?, 1 | 2) {
+    if r.take(5)? != b"HFOR\x02" || !matches!(r.byte()?, 1 | 2) {
         return Err(CodecError::Shape);
     }
     let sequence = r.u64()?;
