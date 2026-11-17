@@ -374,13 +374,13 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 
 | refusal | E1 actor | E2 actor |
 | --- | --- | --- |
-| `-wal` missing (including a non-engine client closing last) | none; unreachable at E1 except by fixtures or out-of-protocol clients; the seed tool never leaves a root without `-wal` | maintenance actor: contract `state-recover` archiving, then explicit accept-lost-WAL recover (Part 2); backup/restore must emit an empty `-wal` |
+| `-wal` missing (including a non-engine client closing last) | none; unreachable at E1 except by fixtures or out-of-protocol clients; the seed tool never leaves a root without `-wal` | eligible explicit `state-recover` archive/reset only (Q2(a)); in-place accept-lost-WAL B9 is deferred to E8; no restore/import operation |
 | cannot create `-shm` (read-only directory), read-only `store.lock` | operator fixes permissions | same; any writer-role open also creates `-shm` |
 | `state_busy` (lease, deadline, SQLite busy) | retry; exclusive holders at E1 are `initialize_fixture` and `recover`, both short and test-only | retry |
 | persistent deadline overrun (very large WAL) | none; unreachable except by fixtures | a checkpoint by a writer role |
 | nonempty rollback journal | none (WAL-only primitive, unchanged) | unchanged |
 | marker, identity mismatch, `Replaced` | none | contract `state-recover` |
-| SQLite corruption error | none; there is no backup operation in Rust | contract `state-recover` archiving; the public remedy |
+| SQLite corruption error | none; there is no backup operation in Rust | eligible `state-recover` archive/reset; unreadable or unqualifiable owner evidence still refuses |
 
 ## Applied storage-protocol.md amendments (E1, read session only)
 
@@ -408,7 +408,7 @@ P7 row stands: `caller_undecidable`. No row grants anything beyond the reads.
 | Nonempty journal refuses | Preserved |
 | Kill leaves scratch remnants | Improved for the read session (none; the existing path left one in 21 to 28 of 30); a reader that created `-shm` and is killed leaves it, confirmed |
 | Readers do not disturb the single writer | Read session: 0 writer failures in 3 x 4 windows; existing path: 95 to 98 percent |
-| Damage a read does not touch | Not detected by the read session (the E1 path's open-time `quick_check` would have; since E2-A slice A1a `open` does not run it either, only `recover` and `probe` do). Since E2-A slice A6 the storage verifier (`Store::verify_in_place`, cadence `verify_if_due`) fences a store whose `quick_check` fails, and the read session then refuses it; nothing runs the cadence until the E2-B maintenance actor |
+| Damage a read does not touch | Not detected by the read session (the E1 path's open-time `quick_check` would have; since E2-A slice A1a `open` does not run it either, only `recover` and `probe` do). Since E2-A slice A6 the storage verifier (`Store::verify_in_place`, cadence `verify_if_due`) fences a store whose `quick_check` fails, and the read session then refuses it; no production cadence trigger exists yet (E2-D) |
 | Payload damage | Returned as data (7 of 20 flipped-byte trials) by the read session; `quick_check` does not detect it on either path; an owner decision (open question 3) |
 | Silent history loss on WAL damage | Not prevented; unchanged; owner accepted this only for E1 (D20). Watermark/generation sequence/recovery signal remain E2 work, not an E1-exit acceptance |
 
@@ -471,7 +471,8 @@ generation-bound acceptance record in state `pending`, then qualifies, then mark
 it `accepted` on success or `failed` on failure. Readers and openers treat
 `pending` and `failed` as the missing-`-wal` refusal even when an empty `-wal`
 now exists. Acceptance becomes durable only at `accepted`. The record format, reader
-and precheck hook are implemented (A1b); the maintenance writer arrives in E2-B.
+and precheck hook are implemented (A1b). The in-place maintenance writer (B9)
+is deferred to E8 under accepted Q2(a); E2-B supplies archive-and-reset only.
 
 ## Maintenance actor
 
@@ -510,20 +511,22 @@ shows in the health signal.
 `quick_check` runs on explicit verify, once inside recover before mutation, and at
 a recorded per-generation cadence (for example once per generation per 24 hours,
 due time in a small generation-bound file, reset after a successful recover),
-started off the launch path by the first owner that finds it due, on a read-only
+planned to be started off the launch path by the first owner that finds it due
+(E2-D; no production cadence trigger is implemented yet), on a read-only
 snapshot without `io.lock`, so it cannot make sibling commits fail `Busy`; a long
 snapshot only delays checkpoints. Launch p95 below 250 ms excludes it; its cost is
 a background cost to be measured at E2 against write p99 below 20 ms.
 
-Outcome of a failed cadence check, to settle at E2: the verifier writes a
+Implemented storage verifier and B8 owner refusal policy (production wiring E2-D): the verifier writes a
 generation-bound fence in state `failed`; readers refuse (`state_incompatible`,
 `infrastructure_unavailable`) and new owners are not admitted. A running owner
-treats the fence like an ambiguous storage write in owner-output-drain.md: it
+treats exact Fenced/CommitLost as definite refusal, as recorded in
+[migration-receipts/E2-B8-owner-refusal.md](migration-receipts/E2-B8-owner-refusal.md): it
 performs no further storage mutation and no retry, keeps its reader draining
 (that reader performs no storage I/O), keeps its Store/root lease, and publishes
 no terminal state that requires a storage commit; reservations persist, with no
-release, replacement or adoption. Reconciling the fence's timing with the
-drain's terminal publication is part of the E2 decision.
+release, replacement or adoption. Earlier terminal publication stands. Failed refusal acknowledgement transport
+retains the Unknown path and does not promise the stronger writer lifetime.
 
 ## WAL damage and the commit watermark (E2-exit decision)
 
@@ -559,8 +562,8 @@ Watermark sketch:
   database ahead. Database below file means acknowledged commits were lost:
   refuse. Unacknowledged commits cannot be detected.
 - Generation binding: the file carries the generation; mismatch refuses.
-- Restore of an older backup trips the check by design; maintenance accepts a
-  rollback and rewrites the file.
+- Restore of an older backup trips the check by design. In-place acceptance and
+  watermark rewrite (B9) remain E8; E2-B offers eligible archive/reset only.
 - Cost: one extra durable small write per acknowledged commit against write p99
   below 20 ms. A commit is about 0.09 ms here with plain fsync, but macOS `fsync`
   is not a full flush; the `F_FULLFSYNC` cost is unmeasured and decides it.
@@ -573,9 +576,9 @@ Watermark sketch:
 | --- | --- |
 | 64 MiB cap | Removed for writer open, recover and probe by in-place qualification (implemented, E2-A slice A1a); kept only for `RecoveryReadSession` |
 | Qualify before writable access | Decision A1 preserves it; A2 weakens it; not claimed otherwise |
-| `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover (storage primitives implemented in E2-A slice A6: due record, verifier, fence; the runner and clearing are E2-B) |
-| Lost WAL | Refused by every writer-role opener; acceptance only in maintenance, per Decision B |
-| Silent WAL damage | Loss of acknowledged commits refused through `store.watermark` (E2-A slice A7a) by reads, writer open, recover, probe and every commit; `state-inspect` cannot see it. Reads through a store handle (`Store::task_read`, `Store::event_read`, `read_batch`) are checked at writer open only, and `RecoveryReadSession` checks neither the fence nor the watermark (E2-B: it checks both before the owner runtime uses recovery observation). Unacknowledged commits and payload damage stay undetected; accepting a rollback is E2-B |
+| `quick_check` at every open | A1 keeps it per launch; A2 moves it to cadence, verify and recover (storage primitives implemented in E2-A slice A6: due record, verifier, fence; the runner is E2-D; in-place clearing B9 is deferred to E8) |
+| Lost WAL | Refused by every writer-role opener; eligible archive/reset only at E2-B; in-place acceptance B9 remains E8 |
+| Silent WAL damage | Loss of acknowledged commits refused through `store.watermark` (E2-A slice A7a) by reads, writer open, recover, probe and every commit; `state-inspect` cannot see it. Reads through a store handle (`Store::task_read`, `Store::event_read`, `read_batch`) are checked at writer open only, and `RecoveryReadSession` checks both fence and watermark before copied evidence (B7). Unacknowledged commits and payload damage stay undetected; eligible archive/reset is E2-B, in-place rollback acceptance B9 is deferred to E8 |
 
 # Budget verdict (read session)
 
@@ -597,14 +600,15 @@ unflagged repetitions relied on.
    costs the owner.
 2. Silent WAL rollback was owner-accepted only for E1 (D20). The watermark is
    implemented (E2-A slice A7a) and the `F_FULLFSYNC` default with W1 ordering
-   decided (A7b); still open: the rollback acceptance and recreation path (E2-B),
-   and Decision B's acceptance ordering.
+   decided (A7b); Q2(a) selects archive-only recovery in E2-B. In-place rollback acceptance,
+   watermark recreation and Decision B's writer ordering (B9) remain E8.
 3. Payload damage: single flipped bytes are returned as data (7 of 20 trials) and
    no SQLite mechanism available here (no page checksums in the bundled build)
    detects it on either path. Accept as unchanged, or require a checksum
    mechanism?
-4. Fence semantics and reconciliation with owner-output-drain.md for a failed
-   cadence check.
+4. B8 resolves exact fence/CommitLost owner refusal and drain reconciliation;
+   production adoption and cadence triggering remain E2-D. Refusal acknowledgement
+   transport failure retains Unknown (see the B8 receipt).
 5. Cadence period and where its due time lives; owner thresholds (8 MiB, 16 MiB
    limit) are CI-scale and need S6 confirmation.
 

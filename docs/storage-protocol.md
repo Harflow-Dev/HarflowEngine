@@ -113,8 +113,9 @@ probe, the read session and `state-inspect` check it immediately after `-wal` an
 before any later check; readers never create or write it. Open, recover and probe check
 it before the SQLite open and again at the end of in-place qualification, next to the
 `-wal` identity and marker re-reads; the read session checks it at open, at every read
-entry and at every read exit (`check_files`, with the session's generation). Only the
-maintenance actor writes it (E2-B), in the order `pending`, qualify, `accepted` or `failed`.
+entry and at every read exit (`check_files`, with the session's generation). The future in-place
+maintenance writer would publish `pending`, qualify, then
+`accepted` or `failed`. That writer (B9) is deferred to E8; E2-B is archive-only.
 
 Race handling: the storage reader checks the file with `lstat` and then opens it with
 `O_NOFOLLOW|O_NONBLOCK` on macOS and Linux (since E2-A slice A6, shared with the fence and due
@@ -128,8 +129,9 @@ that race; the marker read is unchanged. `state-inspect` opens it with `O_NOFOLL
 
 Owner decision A2 keeps a cheap identity check on every open and moves the whole-store
 `quick_check` to recover, probe and a per-generation cadence (`crates/hf-storage/src/verify.rs`).
-E2-A ships the storage primitives; the maintenance actor that runs the cadence and clears a fence is
-E2-B.
+E2-A ships the storage primitives. The cadence trigger is deferred to E2-D; no
+production actor runs it yet. E2-B archives eligible fenced roots rather than
+clearing a fence in place; in-place acceptance (B9) is deferred to E8.
 
 The due record `store.verify` holds `harflow-verify-1\n<generation>\n<due_unix_s>\n`, at most 128
 bytes, read with the same `lstat`-first, bounded, device/inode-checked reader as the acceptance
@@ -207,9 +209,34 @@ handle's commits therefore refuse from the first commit after the fence lands; r
 a snapshot finish and are then refused at exit. `state-inspect` reads `store.fence` lease-free,
 bounded and `O_NOFOLLOW`, after the acceptance record, and reports `incompatible` with
 `infrastructure_unavailable` for `failed` or `commit_lost` in the current generation or an
-unreadable fence and `invalid_marker` for anything else. Clearing the fence and the owner runtime's
-behaviour while fenced belong to the maintenance actor and E2-B; the clearing path needs a precheck
-variant, because `recover` and `probe` refuse a fenced root.
+unreadable fence and `invalid_marker` for anything else.
+E2-B8 implements definite owner refusal for exact `Fenced` and `CommitLost`: no
+retry, storage mutation or new terminal publication, with drainage and retained
+leases/reservations as described in the [B8 receipt](migration-receipts/E2-B8-owner-refusal.md).
+Production adoption remains E2-D. In-place clearing (B9) remains E8; `recover` and
+`probe` still refuse a fenced root.
+
+## Explicit archive recovery (E2-B1–B6)
+
+`store.recovery` is a bounded, atomically published record containing
+`harflow-recovery-1\n<operation_id>\n<pending|committed>\n`. Pending gates ordinary
+openers and read sessions as `RecoveryInterrupted` before database access. A
+committed record for the journal's operation establishes the irreversible reset
+commit point even when its journal still has an earlier phase. Historical receipt
+repeats reconcile metadata without reopening SQLite or resetting newly authored data.
+
+Public `state-recover` retains one exclusive MaintenanceSession across bounded
+inventory, lock proof, qualified owner evidence, pending publication, journaled
+no-overwrite sibling archival, staged fresh-store initialization and completion.
+Root inode and stable lock infrastructure remain. Staging ownership and each
+published file identity are journaled; the new store identity is published last,
+then committed recovery state and receipts. Resume uses journaled identities and
+never reopens source SQLite for owner evidence. Unknown additions, substituted or
+duplicate locations refuse without deletion. Layout 2 and Python-state roots are
+refused, with no migration/import/restore. Q1's consistent-earlier-evidence
+relaxation and live-orphan residual are recorded in the
+[exit receipt](migration-receipts/E2-B10-exit.md); it is not a proof that all owners
+are absent. B9 in-place acceptance is deferred to E8.
 
 ## Commit watermark
 
@@ -333,18 +360,19 @@ Residuals, documented rather than closed in E2-A:
   assumes that `F_FULLFSYNC` on the watermark descriptor flushes the whole device cache, including
   WAL frames already handed over (APFS on internal NVMe). If a device persisted the slot write
   without the earlier WAL frames, a power loss could leave slot n without WAL frame n: a false
-  `CommitLost` for an unacknowledged commit, which fails closed and needs E2-B rollback acceptance
-  to clear. Under `FsyncOnly` (fixture seed) neither barrier is a device-cache flush, so the same
+  `CommitLost` for an unacknowledged commit, which fails closed and needs eligible explicit archive recovery
+  (Q2 archive-only; in-place rollback acceptance is deferred to E8). Under `FsyncOnly` (fixture seed) neither barrier is a device-cache flush, so the same
   holds more broadly. Flushing the `-wal` descriptor before the slot write (W2) was measured at A7b
   (about +3 ms p50 and +5 ms p99 per commit, p99 at the 20 ms budget line) and not adopted.
 - A process kill between commit and slot write leaves the database one ahead of the file; the next
   commit catches the file up. That state is legal and readable.
 
-E2-B entry conditions: rewriting the watermark down to the database sequence when a rollback is
-accepted; recreating the file when it is missing or both blocks are invalid; and a precheck variant
-so that `recover` and `probe` can run on a `CommitLost` root (today both refuse, as for the fence
-and the acceptance record); and `RecoveryReadSession` checks the fence and the watermark before the
-owner runtime uses recovery observation.
+E2-B7 makes `RecoveryReadSession` check the recovery gate, fence and watermark
+before copied evidence is read. Watermark rollback/recreation and lost-WAL
+acceptance in place (B9) are deferred to E8. E2-B instead offers explicit
+archive-and-reset for eligible Rust roots; see the [exit receipt](migration-receipts/E2-B10-exit.md)
+for the accepted Q1 evidence relaxation and its orphan residual. Long-lived Store
+read checks and production adoption remain E2-D; the watch seam remains E2-E.
 
 ## Read session
 

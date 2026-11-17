@@ -139,3 +139,13 @@ and descendants, hostile writers, cross-platform qualification, R05 and whole R0
 acceptance remain outstanding. The Python#112 restart uncertainty remains a regression
 obligation, not behavior to copy or an issue closed by this slice. No live root,
 installation, registration, sibling app, public contract or tracker is changed.
+
+## E2-B boundary
+
+B7 is an observation gate, not the public archive actor. Explicit `state-recover`
+uses the original exclusive MaintenanceSession and B1–B6 journal/commit protocol.
+Accepted Q1 permits consistent earlier evidence rows under the lock proof; it
+does not make lost acknowledged claims observable. A live orphan represented
+only by lost commits can still modify archived files. Unreadable or unqualifiable
+rows refuse. Q2 selects archive-only recovery; B9 in-place acceptance remains E8.
+See the [exit receipt](migration-receipts/E2-B10-exit.md).
