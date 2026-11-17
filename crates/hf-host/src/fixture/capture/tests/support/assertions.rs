@@ -61,6 +61,18 @@ pub(in crate::fixture::capture::tests) fn assert_poisoned_publish(
     request: &PreparedRequest,
 ) {
     let report = result.report;
+    let first_published = calls
+        .first_published
+        .lock()
+        .unwrap()
+        .expect("first published capture offsets");
+    eprintln!(
+        "capture publish diagnostic: first_published={first_published:?} uncertain={:?} abandoned={:?} observed_enqueued=({}, {})",
+        report.accounting.uncertain,
+        report.accounting.abandoned,
+        observed.stdout.enqueued,
+        observed.stderr.enqueued,
+    );
     assert!(!report.terminal);
     assert_eq!(result.exit, ProcessExit::Code(0));
     let final_progress = &result.final_observation.as_ref().unwrap().progress;
@@ -71,6 +83,9 @@ pub(in crate::fixture::capture::tests) fn assert_poisoned_publish(
     assert_eq!(calls.publishes.load(Ordering::Relaxed), 1);
     assert_eq!(calls.finishes.load(Ordering::Relaxed), 0);
     assert_eq!(report.accounting.acknowledged, (0, 0));
+    assert_eq!(first_published, (1, 1));
+    assert_eq!(report.accounting.uncertain, first_published);
+    assert_eq!(report.accounting.uncertain, (1, 1));
     assert!(report.accounting.uncertain.0 > 0 && report.accounting.uncertain.1 > 0);
     assert!(report.accounting.abandoned.0 > 0 && report.accounting.abandoned.1 > 0);
     assert_eq!(

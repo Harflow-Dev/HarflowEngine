@@ -23,6 +23,9 @@ use std::{
 #[path = "support/assertions.rs"]
 mod assertions;
 pub(super) use assertions::*;
+#[path = "support/producer.rs"]
+mod producer;
+pub(super) use producer::{primed_child, release_marker, wait_enqueued, wait_marker};
 
 pub(super) const HELPER: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -175,6 +178,7 @@ pub(super) struct CallCounts {
     pub(super) begins: AtomicUsize,
     pub(super) publishes: AtomicUsize,
     pub(super) finishes: AtomicUsize,
+    pub(super) first_published: Mutex<Option<(u64, u64)>>,
 }
 impl GatedStore {
     pub(super) fn new(
@@ -238,6 +242,11 @@ impl OwnerPort for GatedStore {
         until: Instant,
     ) -> Result<CaptureSnapshot, Self::Error> {
         self.calls.publishes.fetch_add(1, Ordering::Relaxed);
+        let mut first = self.calls.first_published.lock().unwrap();
+        if first.is_none() {
+            *first = Some((progress.stdout, progress.stderr));
+        }
+        drop(first);
         let result = self
             .inner
             .capture_publish(binding, revision, progress, until)?;
@@ -278,23 +287,7 @@ pub(super) fn request(store: &Store) -> PreparedRequest {
     }
 }
 pub(super) fn child(witness: &Path) -> RetainedOwnedChild {
-    RetainedOwnedChild::spawn(
-        SpawnSpec {
-            executable: PathBuf::from("/usr/bin/python3"),
-            args: vec![
-                OsString::from("-I"),
-                OsString::from("-S"),
-                OsString::from(HELPER),
-                witness.as_os_str().to_owned(),
-            ],
-            cwd: fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
-            environment: Vec::new(),
-            capture_limit: 1,
-        },
-        &MacIdentity,
-        Instant::now() + Duration::from_secs(3),
-    )
-    .unwrap()
+    producer::spawn(witness, None)
 }
 pub(super) fn wait_progress(view: &hf_platform::process::ReaderView, witness: &Path) {
     let until = Instant::now() + Duration::from_secs(6);

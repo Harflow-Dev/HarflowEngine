@@ -26,24 +26,32 @@ fn lost_publish_reply_poisons_writer_and_never_mutates_after_ambiguous_commit() 
     let mut session = OwnerSession::new(gated_store, request.clone(), owner, 0);
     session.claim(until).unwrap();
     let witness = scratch.0.join("producer.finished");
-    let child = child(&witness);
+    let control = scratch.0.join("producer-control");
+    let child = primed_child(&witness, &control);
     let mut owned = OwnerChild::new(child, until);
     let identity = owned.child.registered_identity().unwrap().clone();
     session.record_child(&identity, until).unwrap();
     let raw = RawCapture::create(&scratch.root(), &request.operation, until).unwrap();
     let origin = CaptureOrigin::from_spawn_observed(session.snapshot().unwrap()).unwrap();
+    wait_marker(&control.join("first.ready"), until);
     owned.reader = Some(
         owned
             .child
             .start_private_fixture_capture_reader(origin.clone(), until)
             .unwrap(),
     );
-    capture_gate.set_view(owned.reader.as_ref().unwrap().view());
+    let view = owned.reader.as_ref().unwrap().view();
+    capture_gate.set_view(view.clone());
+    wait_enqueued(&view, (1, 1), until);
+    release_marker(&control, "next");
+    wait_marker(&control.join("second.ready"), until);
+    wait_enqueued(&view, (2, 2), until);
     session.accept(until).unwrap();
     let binding = accepted_binding(&session, &origin, &raw).unwrap();
     let mut worker = spawn_owner(owned, raw, session, binding, release_tx, until);
 
-    let view = held_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    let _held_view = held_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    release_marker(&control, "bulk");
     wait_progress(&view, &witness);
     let observed = view.snapshot();
     worker.release.send(()).unwrap();
