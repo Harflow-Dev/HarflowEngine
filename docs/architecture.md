@@ -168,3 +168,15 @@ recorded, and no execution capability is promoted. The first normal release fake
 completion attempt refused at caller admission before creating its state root;
 actual task completion, caller-anchor qualification, lifecycle acceptance and
 production adoption remain unproved.
+
+The caller observer now uses one injected evidence-source algorithm for production
+and deterministic ancestry checks. Its shared deadline brackets every boot and
+process-record provider call; a complete 128-link walk and exact re-observation
+uses at most 258 record-provider calls and 516 boot-provider calls, without a
+kernel-syscall count claim. Init remains a distinct root-owned anchor, caller UID
+uses real UID, and root-owned ancestors are permitted. The explicitly selected
+`MacOsArm64Sdk26_5` decoder is a pure 648-byte observational decoder for the
+separately checked SDK 26.5 layout on macOS 26.6.2 arm64. It is not selected by
+production: existing libproc acquisition, including its PID 1 refusal, remains
+unchanged. No socket generation correlation, cancellation authority, runtime
+admission or external reader adoption follows from this seam.
