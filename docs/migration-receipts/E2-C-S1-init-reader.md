@@ -1,7 +1,7 @@
 # E2-C S1: caller kernel-record reader
 
-Date: 2026-11-18. Revision-3 base `7addf2a`; option A base `64d018a`. Status: option A implemented, local checks green;
-Terminal-chain admission and the release manual smoke pending.
+Date: 2026-11-18. Revision-3 base `7addf2a`; option A base `64d018a`. Status: option A implemented (`492f24f`), local checks green;
+Terminal-chain admission observed by the owner on 2026-11-19; the release manual smoke is pending.
 
 ## Option A (current): every ancestry link
 
@@ -36,6 +36,12 @@ non-init processes (EPERM), so Terminal (`login`) and SSH (`sshd`) callers still
   available"), so the live Terminal/SSH-chain admission was not exercised here. Supporting evidence only: root-daemon
   reads and the uniform algorithm. Owner action: run `cargo test -p hf-platform --test caller_system_reader --
   --nocapture` once from Terminal.app and record the printed `D10b branch`.
+- Owner-run evidence (2026-11-19, account `nayandahabertypersonal`, build `492f24f`): `cargo test -p hf-platform --test
+  caller_system_reader -- --nocapture` run from Terminal.app printed `D10b branch: own ancestry has a root-owned
+  non-init link`; all 5 tests passed, including `observe_caller_admits_root_owned_ancestor_when_present` and
+  `kernel_identities_match_libproc_for_ancestry_and_spawned_children`. Admission through a root-owned `login`
+  ancestor is therefore observed, not only supported. A run from the agent shell reported "no root-ancestor chain
+  available", as expected for an ancestry without `login`.
 - Revision-3 deviation (a) (hybrid, PID 1 only) is withdrawn; deviation (b) (qualification key) stands.
 - The pin now names `kernel_reader.rs`. Everything below this section is revision-3 history (PID 1 only), kept as
   evidence; where it says non-init links stay on libproc it is superseded.
