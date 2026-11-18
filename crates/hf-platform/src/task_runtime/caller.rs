@@ -2,7 +2,7 @@
 use hf_domain::process::ProcessIdentity;
 use nix::sys::socket::{audit_token_t, getsockopt, sockopt};
 use std::{io, os::unix::net::UnixStream, time::Instant};
-mod init_reader;
+mod kernel_reader;
 mod observe;
 mod record;
 mod system;
@@ -47,7 +47,7 @@ fn unknown() -> io::Error {
 }
 /// Requires the actual caller UID only; ancestors may belong to root.
 pub fn observe_caller(pid: u32, deadline: Instant) -> io::Result<CallerObservation> {
-    observe_caller_with_source(pid, deadline, &mut system::LibprocSource)
+    observe_caller_with_source(pid, deadline, &mut system::SystemSource)
 }
 pub fn current_caller(deadline: Instant) -> io::Result<CallerObservation> {
     observe_caller(std::process::id(), deadline)

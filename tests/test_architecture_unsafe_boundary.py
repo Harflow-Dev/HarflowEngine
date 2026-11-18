@@ -242,9 +242,9 @@ class UnsafeBoundaryTests(unittest.TestCase):
         toolchain.write_text(accepted_toolchain, encoding="utf-8")
         validate(self.metadata, self.root)
 
-    def test_hf_sys_references_are_limited_to_the_init_reader_and_its_test(self):
+    def test_hf_sys_references_are_limited_to_the_kernel_reader_and_its_test(self):
         self.accepted_edges()
-        reader = "crates/hf-platform/src/task_runtime/caller/init_reader.rs"
+        reader = "crates/hf-platform/src/task_runtime/caller/kernel_reader.rs"
         test = "crates/hf-platform/tests/caller_system_reader.rs"
         for relative in (reader, test):
             self.write(relative, "use hf_sys::read_into;\n// pub use hf_sys::read_into;\n// macro_rules! m {}\n")
@@ -267,7 +267,7 @@ class UnsafeBoundaryTests(unittest.TestCase):
 
     def test_allowed_hf_sys_readers_may_not_reexport_or_define_macros(self):
         self.accepted_edges()
-        allowed = "crates/hf-platform/src/task_runtime/caller/init_reader.rs"
+        allowed = "crates/hf-platform/src/task_runtime/caller/kernel_reader.rs"
         for text, pattern in (
             ("pub use hf_sys::read_into;", "re-exported"),
             ("pub(crate) use hf_sys::read_into;", "re-exported"),
@@ -286,7 +286,7 @@ class UnsafeBoundaryTests(unittest.TestCase):
     def test_hf_platform_redirection_and_inclusion_are_rejected(self):
         self.accepted_edges()
         base = "crates/hf-platform/src/task_runtime"
-        reader_path = "task_runtime/caller/init_reader.rs"
+        reader_path = "task_runtime/caller/kernel_reader.rs"
         for relative, text in (
             ("crates/hf-platform/src/other.rs", '#[path = "../x.rs"]\nmod x;'),
             ("crates/hf-platform/src/other.rs", '#[path = "/abs/x.rs"]\nmod x;'),
@@ -294,15 +294,15 @@ class UnsafeBoundaryTests(unittest.TestCase):
             ("crates/hf-platform/tests/other.rs", '#[path = "../src/x.rs"]\nmod x;'),
             ("crates/hf-platform/tests/other.rs", 'include!("x.rs");'),
             ("crates/hf-platform/src/lib.rs", f'#[path = "{reader_path}"]\nmod r;'),
-            (f"{base}.rs", '#[path = "caller/init_reader.rs"]\nmod r;'),
-            (f"{base}/caller.rs", '#[path = "init_reader.rs"]\nmod r;'),
+            (f"{base}.rs", '#[path = "caller/kernel_reader.rs"]\nmod r;'),
+            (f"{base}/caller.rs", '#[path = "kernel_reader.rs"]\nmod r;'),
             ("crates/hf-platform/src/other.rs", f'#[cfg_attr(all(), path = "{reader_path}")]\nmod r;'),
             ("crates/hf-platform/src/other.rs", f'#[path = r#"{reader_path}"#]\nmod r;'),
             ("crates/hf-platform/src/other.rs", 'mod m { #[path = "tests/caller_system_reader.rs"] mod r; }'),
             ("crates/hf-platform/src/other.rs", '#[cfg_attr(test, path = r"../x.rs")]\nmod x;'),
-            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/./init_reader.rs"]\nmod r;'),
-            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller//init_reader.rs"]\nmod r;'),
-            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/Init_Reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/./kernel_reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller//kernel_reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/Kernel_Reader.rs"]\nmod r;'),
             ("crates/hf-platform/src/lib.rs", '#[path = "\\x2e\\x2e/x.rs"]\nmod r;'),
             ("crates/hf-platform/src/lib.rs", '#[path = "a/b/../../../x.rs"]\nmod r;'),
         ):

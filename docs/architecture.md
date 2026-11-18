@@ -4,7 +4,7 @@ hf-domain owns pure values; hf-application owns ports and use cases and depends 
 
 Target files below 250 substantive lines and functions below 50 code lines. Enforced production maxima are 400 and 80. Changes must preserve constructor injection, explicit errors and bounded work. No compatibility or migration claim follows from a successful build.
 
-hf-sys is the workspace's only `unsafe` boundary. It denies `unsafe_code` instead of forbidding it and carries exactly one `#[expect(unsafe_code)]`, on the `sysctl` call in `read_into`; its only dependency is libc, and only hf-platform depends on it, on macOS only. It exists because the workspace forbids `unsafe` and a caller-buffer `kern.proc.pid` read is needed where libproc fails for PID 1. Its one production caller is the PID 1 caller-evidence reader (`task_runtime/caller/init_reader.rs`), pinned by the architecture guard to that file and its OS-enabled test. On other operating systems the crate is empty, and its sources are still scanned. rustc enforces the boundary: `forbid` in every other crate and `deny` in hf-sys, so a second unsafe block compiles only with another lint override. The guard pins that override, rejects macro definitions in hf-sys and in-repo Cargo or rustc configuration that could lower lint levels (`.cargo/config`, root `cargo-features`, profile `rustflags`, a non-stable or missing `rust-toolchain.toml` pin). Environment `RUSTFLAGS` and the caller's own Cargo home config stay outside the guard. For the pin, raw text under hf-sys/src must hold exactly one `unsafe_code` token, as an outer `#[expect]` directly on one `let ... = unsafe {` statement, and no `#[path]` or `include!`. What that block contains is a human-review responsibility. Outside hf-sys the guard also runs a conservative text screen (comments and string and character literals removed) for `unsafe` forms and `unsafe_code` relaxations; it is defence in depth, not a proof.
+hf-sys is the workspace's only `unsafe` boundary. It denies `unsafe_code` instead of forbidding it and carries exactly one `#[expect(unsafe_code)]`, on the `sysctl` call in `read_into`; its only dependency is libc, and only hf-platform depends on it, on macOS only. It exists because the workspace forbids `unsafe` and a caller-buffer `kern.proc.pid` read is needed where libproc refuses PID 1 and root-owned non-init processes. Its one production caller is the caller kernel-record reader (`task_runtime/caller/kernel_reader.rs`), pinned by the architecture guard to that file and its OS-enabled test. On other operating systems the crate is empty, and its sources are still scanned. rustc enforces the boundary: `forbid` in every other crate and `deny` in hf-sys, so a second unsafe block compiles only with another lint override. The guard pins that override, rejects macro definitions in hf-sys and in-repo Cargo or rustc configuration that could lower lint levels (`.cargo/config`, root `cargo-features`, profile `rustflags`, a non-stable or missing `rust-toolchain.toml` pin). Environment `RUSTFLAGS` and the caller's own Cargo home config stay outside the guard. For the pin, raw text under hf-sys/src must hold exactly one `unsafe_code` token, as an outer `#[expect]` directly on one `let ... = unsafe {` statement, and no `#[path]` or `include!`. What that block contains is a human-review responsibility. Outside hf-sys the guard also runs a conservative text screen (comments and string and character literals removed) for `unsafe` forms and `unsafe_code` relaxations; it is defence in depth, not a proof.
 
 The metadata guard enforces the exact member inventory, approved normal dependency edges (including tooling syn), no dev/build dependencies, inherited workspace lints (hf-sys excepted, as above) and all crates/tools Rust file sizes. Clippy enforces 80 code lines per function.
 
@@ -176,14 +176,18 @@ and deterministic ancestry checks. Its shared deadline brackets every boot and
 process-record provider call; a complete 128-link walk and exact re-observation
 uses at most 258 record-provider calls and 516 boot-provider calls, without a
 kernel-syscall count claim. Init remains a distinct root-owned anchor, caller UID
-uses real UID, and root-owned ancestors are permitted by policy (unreadable via libproc under S1). The explicitly selected
+uses real UID, and root-owned ancestors are permitted. The explicitly selected
 `MacOsArm64Sdk26_5` decoder is a pure 648-byte observational decoder for the
-separately checked SDK 26.5 layout on macOS 26.6.2 arm64. Production selects it
-only for PID 1: the init anchor is read with hf-sys `read_into` on
-`kern.proc.pid` and decoded, on a host whose architecture, `kern.osrelease` and
-`kern.osversion` are in a reviewed allowlist (currently aarch64, 25.6.0, 25G83),
-checked on every init read. Any other host or OS update makes every caller observation refuse until that build is qualified by a reviewed change. Every non-init
-link keeps the libproc `BSDInfo` read, which refuses root-owned non-init
-processes for an unprivileged caller. See the
-[E2-C S1 receipt](migration-receipts/E2-C-S1-init-reader.md). No socket generation correlation, cancellation authority, runtime
+separately checked SDK 26.5 layout on macOS 26.6.2 arm64. Production reads every
+ancestry link, init included, from `kern.proc.pid` through hf-sys `read_into` and
+decodes it, on a host whose architecture, `kern.osrelease` and `kern.osversion` are in
+a reviewed allowlist (currently aarch64, 25.6.0, 25G83), checked on every read (owner
+decision 2026-11-18, coordinator session, option A). Any other host or OS update makes
+every caller observation refuse until that build is qualified by a reviewed change.
+There is no libproc fallback; libproc refuses root-owned non-init processes for an
+unprivileged caller, which would refuse Terminal and SSH sessions. Chain identities are
+compared elsewhere with libproc-derived identities, so the kernel record must equal
+libproc on pid, parent, effective uid and start time wherever libproc can read the
+process; tests sample that invariant. `writer_link`, `owner_entry` and recovery keep
+libproc for their own reads. See the [E2-C S1 receipt](migration-receipts/E2-C-S1-init-reader.md). No socket generation correlation, cancellation authority, runtime
 admission or external reader adoption follows from this seam.

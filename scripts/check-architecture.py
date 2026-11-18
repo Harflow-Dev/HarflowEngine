@@ -77,7 +77,7 @@ UNSAFE_CODE_TOKEN = re.compile(r"\bunsafe_code\b")
 UNSAFE_BLOCK = re.compile(r"\bunsafe\s*\{")
 UNSAFE_OTHER = re.compile(r"\bunsafe\s*(fn\b|impl\b|trait\b|extern\b)|#\s*!?\s*\[\s*unsafe\s*\(")
 UNSAFE_LINT_RELAX = re.compile(r"\b(allow|warn|expect)\s*\([^)]*\bunsafe_code")
-# Textual guard on who names the hf-sys crate: the PID 1 caller-evidence reader and its OS test.
+# Textual guard on who names the hf-sys crate: the caller kernel-record reader and its OS test.
 # Every form of the bare token counts (use, `::hf_sys`, `extern crate hf_sys as x`). The allowed
 # files may not use `pub use`, `pub extern crate` or `macro_rules!`, so nothing they import can be
 # re-exported or aliased outward. In hf-platform, `include!` and any `path =` inside an attribute
@@ -85,7 +85,7 @@ UNSAFE_LINT_RELAX = re.compile(r"\b(allow|warn|expect)\s*\([^)]*\bunsafe_code")
 # allowed file by path suffix are rejected; sibling `#[path]` modules and `include_str!` stay.
 # Text is scanned with comments removed and strings masked. Not a proof over all references.
 SYS_USERS = {
-    "crates/hf-platform/src/task_runtime/caller/init_reader.rs",
+    "crates/hf-platform/src/task_runtime/caller/kernel_reader.rs",
     "crates/hf-platform/tests/caller_system_reader.rs",
 }
 SYS_TOKEN = re.compile(r"\bhf_sys\b")
