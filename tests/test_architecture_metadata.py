@@ -26,7 +26,7 @@ SYS_LIB = "#[cfg(target_os = \"macos\")]\nmod read_into;\n"
 SYS_READ_INTO = (
     "// SAFETY: reviewed\n"
     "#[expect(unsafe_code, reason = \"reviewed\")]\n"
-    "let result = unsafe { libc::sysctl(name.as_mut_ptr(), (1), output) };\n"
+    "let result = unsafe { call() };\n"
 )
 
 

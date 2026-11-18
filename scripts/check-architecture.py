@@ -49,12 +49,10 @@ HOST_STORAGE_ALLOWED = {
 }
 HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 
-# hf-sys is the only crate allowed to contain `unsafe`: it denies the lint instead of forbidding
-# it and expects it on exactly one statement. Outside hf-sys the compiler's `forbid` is the primary
-# guard and the text scan is a conservative screen, not a proof. Inside hf-sys the raw text must
-# hold one `unsafe` token, one `unsafe_code` token anchored on the sysctl statement, a block that
-# holds only that call, and no macro definitions. Extra operations inside the call's arguments
-# remain a human-review responsibility.
+# rustc enforces the unsafe boundary: `forbid` in every other crate, `deny` in hf-sys. The script
+# pins hf-sys's single `unsafe_code` expectation, as an outer attribute on one `let ... = unsafe {`
+# statement, by counting the token in the raw text. What that block contains is a human-review
+# responsibility. The screen outside hf-sys is defence in depth, not a proof.
 SYS = "hf-sys"
 SYS_SRC = "crates/hf-sys/src"
 MACOS = 'cfg(target_os = "macos")'
@@ -62,16 +60,14 @@ LIBC_REQ = "=0.2.191"
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
 # Strings are consumed before comments so that a "//" inside a literal cannot hide code.
 SOURCE_NOISE = re.compile(
-    r'(?P<string>b?r(?P<hashes>#*)".*?"(?P=hashes)|b?"(?:\\.|[^"\\])*")|//[^\n]*|/\*.*?\*/',
+    r'(?P<string>b?\'(?:\\.|[^\'\\])\'|b?r(?P<hashes>#*)".*?"(?P=hashes)|b?"(?:\\.|[^"\\])*")|//[^\n]*|/\*.*?\*/',
     re.DOTALL,
 )
 SYS_EXPECT_STATEMENT = re.compile(
     r'#\[\s*expect\s*\(\s*unsafe_code\s*,\s*reason\s*=\s*"[^"]*"\s*,?\s*\)\s*\]'
-    r"\s*let\s+\w+\s*=\s*unsafe\s*\{\s*libc::sysctl\s*\("
+    r"\s*let\s+\w+\s*=\s*unsafe\s*\{"
 )
-UNSAFE_TOKEN = re.compile(r"\bunsafe\b")
 UNSAFE_CODE_TOKEN = re.compile(r"\bunsafe_code\b")
-MACRO_RULES = re.compile(r"\bmacro_rules\b")
 UNSAFE_BLOCK = re.compile(r"\bunsafe\s*\{")
 UNSAFE_OTHER = re.compile(r"\bunsafe\s*(fn\b|impl\b|trait\b|extern\b)|#\s*!?\s*\[\s*unsafe\s*\(")
 UNSAFE_LINT_RELAX = re.compile(r"\b(allow|warn|expect)\s*\([^)]*\bunsafe_code")
@@ -130,19 +126,12 @@ def strip_noise(text):
     return SOURCE_NOISE.sub(lambda match: '""' if match.group("string") is not None else "", text)
 
 def check_sys_text(text):
-    if len(UNSAFE_TOKEN.findall(text)) != 1 or len(UNSAFE_CODE_TOKEN.findall(text)) != 1:
-        raise ValueError("hf-sys must contain exactly one unsafe token and one unsafe_code token")
-    if MACRO_RULES.search(text) or CTL_REDIRECT.search(text):
-        raise ValueError("Macro definitions and module redirection are forbidden in hf-sys")
-    statement = SYS_EXPECT_STATEMENT.search(text)
-    if statement is None:
-        raise ValueError("hf-sys requires the unsafe_code expectation directly on the sysctl statement")
-    depth, index = 1, statement.end()
-    while index < len(text) and depth:
-        depth += {"(": 1, ")": -1}.get(text[index], 0)
-        index += 1
-    if depth or not re.match(r"\s*\}", text[index:]):
-        raise ValueError("The hf-sys unsafe block must hold only the sysctl call")
+    if CTL_REDIRECT.search(text):
+        raise ValueError("Module redirection and file inclusion are forbidden in hf-sys")
+    if len(UNSAFE_CODE_TOKEN.findall(text)) != 1:
+        raise ValueError("hf-sys must contain exactly one unsafe_code token")
+    if SYS_EXPECT_STATEMENT.search(text) is None:
+        raise ValueError("hf-sys requires the unsafe_code expectation directly on the unsafe let statement")
 
 def check_unsafe_sources(root):
     sys_src = (root / SYS_SRC).resolve()

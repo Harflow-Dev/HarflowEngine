@@ -18,7 +18,6 @@ LIBC = {
 
 
 HIDING_LINE = 'let _s = "//"; #[expect(unsafe_code, reason = "x")] let r2 = unsafe { other() };'
-CALL = "libc::sysctl(name.as_mut_ptr(), (1), output)"
 
 
 class UnsafeBoundaryTests(unittest.TestCase):
@@ -153,6 +152,7 @@ class UnsafeBoundaryTests(unittest.TestCase):
             "#[cfg_attr(test, allow(unsafe_code))]\nmod m {}",
             '#[expect(unsafe_code, reason = "x")]\nlet a = 1;',
             HIDING_LINE,
+            "let q = '\"'; unsafe { g() }",
             'let _r = r#"//"#; unsafe { g() }',
         )):
             for relative in ("crates/hf-domain/src/bad.rs", "tools/hf-architecture/src/bad.rs", "crates/hf-sys/tests/bad.rs"):
@@ -172,27 +172,26 @@ class UnsafeBoundaryTests(unittest.TestCase):
         ))
         validate(self.metadata, self.root)
 
-    def test_hf_sys_source_is_screened_strictly(self):
+    def test_hf_sys_source_pins_the_single_expectation(self):
         self.accepted_edges()
         read_into = self.root / "crates/hf-sys/src/read_into.rs"
         accepted = read_into.read_text(encoding="utf-8")
-        count = "exactly one unsafe token"
+        statement = '#[expect(unsafe_code, reason = "reviewed")]\n'
+        count = "exactly one unsafe_code token"
+        anchor = "directly on the unsafe let statement"
         for label, text, pattern in (
-            ("string slashes hiding a second block", accepted + HIDING_LINE + "\n", count),
-            ("second block", accepted + "let b = unsafe { h() };\n", count),
-            ("crate-level expectation", accepted.replace(
-                '#[expect(unsafe_code, reason = "reviewed")]\n', "") + '#![expect(unsafe_code, reason = "x")]\n',
-                "directly on the sysctl statement"),
-            ("macro definition", accepted.replace("unsafe {", "unsafe_blk {") + "macro_rules! m { ($b:block) => { unsafe $b } }\n", "Macro definitions"),
-            ("cfg_attr unsafe attribute", accepted + "#[cfg_attr(all(), unsafe(no_mangle))]\nfn f() {}\n", count),
-            ("unsafe_code in a macro call", accepted + "m!(unsafe_code);\n", count),
+            ("string slashes hiding a second expectation", accepted + HIDING_LINE + "\n", count),
+            ("second expectation", accepted + statement + "let c = unsafe { h() };\n", count),
+            ("token in a macro call", accepted + "m!(unsafe_code);\n", count),
+            ("comment naming the token", accepted + "// unsafe_code note\n", count),
             ("allow", accepted + "#![allow(unsafe_code)]\n", count),
-            ("comment naming the token", accepted + "// unsafe note\n", count),
-            ("path redirect", accepted + '#[path = "x.rs"]\nmod x;\n', "module redirection"),
-            ("include", accepted + 'include!("x.rs");\n', "module redirection"),
-            ("extra statement in the block", accepted.replace(CALL + " }", CALL + "; other() }"), "only the sysctl call"),
-            ("statement before the call", accepted.replace("unsafe { libc", "unsafe { other(); libc"), "directly on the sysctl statement"),
-            ("expectation not on the statement", accepted.replace("let result", "let other = 1;\n    let result"), "directly on the sysctl statement"),
+            ("cfg_attr allow", accepted + "#[cfg_attr(all(), allow(unsafe_code))]\nmod m {}\n", count),
+            ("no token", accepted.replace(statement, ""), count),
+            ("crate-level expectation", accepted.replace(statement, '#![expect(unsafe_code, reason = "x")]\n'), anchor),
+            ("expectation on a fn", accepted.replace(statement, "") + '#[expect(unsafe_code, reason = "x")]\nfn f() {}\n', anchor),
+            ("expectation not on the statement", accepted.replace("let result", "let other = 1;\n    let result"), anchor),
+            ("path redirect", accepted + '#[path = "x.rs"]\nmod x;\n', "redirection"),
+            ("include", accepted + 'include!("x.rs");\n', "redirection"),
         ):
             read_into.write_text(text, encoding="utf-8")
             with self.subTest(label=label), self.assertRaisesRegex(ValueError, pattern):

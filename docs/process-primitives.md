@@ -112,12 +112,12 @@ adds nix's socket feature for deadline-aware nonblocking fixture gate connection
 its receipt records the additional locked closure and qualification limits.
 
 Workspace source remains unsafe-forbidden, except for the single reviewed
-sysctl call in hf-sys. These wrappers contain dependency
-internal unsafe and are not a proof of whole-program memory safety. Only fixed
-libproc BSDInfo and sysctl boot UUID string access are used; generic value_as<T>
-and custom PIDInfo implementations are excluded. libproc's wrapper accepts any
-positive returned size; field validation does not independently prove the entire
-kernel structure was returned. Observation failures remain unknown.
+sysctl call in hf-sys. These wrappers contain dependency internal unsafe and
+are not a proof of whole-program memory safety. Only fixed libproc BSDInfo and
+sysctl boot UUID string access are used; generic value_as<T> and custom
+PIDInfo implementations are excluded. libproc's wrapper accepts any positive
+returned size; field validation does not independently prove the entire kernel
+structure was returned. Observation failures remain unknown.
 
 The locked closure adds32 packages, including libproc's build-time bindgen0.72.1,
 clang-sys1.9.1/libloading0.8.9, libc0.2.191 and sysctl's enum-as-inner/thiserror
