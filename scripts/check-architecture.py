@@ -10,11 +10,12 @@ EDGES = {
     "hf-domain": [], "hf-application": ["hf-domain"], "hf-contracts": [],
     "hf-storage": ["hf-application", "hf-domain", "rusqlite", "sha2"],
     "hf-backends": ["hf-application", "hf-domain"],
-    "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix", "rustix"],
+    "hf-platform": ["hf-application", "hf-domain", "libproc", "sysctl", "nix", "rustix", "hf-sys"],
     "hf-interfaces": ["hf-application", "hf-domain", "serde_json", "base64"],
     "hf-host": ["hf-application", "hf-domain", "hf-storage", "hf-backends", "hf-platform", "hf-interfaces"],
     "hf-architecture": ["syn"],
     "hf-fixture-seed": ["hf-domain", "hf-application", "hf-storage", "hf-platform", "hf-interfaces"],
+    "hf-sys": ["libc"],
 }
 BINS = {
     "hf-host": {"harflow-engine-scaffold": "src/main.rs", "harflow-ctl": "src/ctl/main.rs"},
@@ -48,6 +49,88 @@ HOST_STORAGE_ALLOWED = {
 }
 HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 
+# hf-sys is the only crate allowed to contain `unsafe`: it denies the lint instead of forbidding
+# it and carries exactly one expectation on one call. Everything else keeps the workspace
+# `forbid`, which the compiler enforces; the text scan below is defence in depth.
+SYS = "hf-sys"
+SYS_SRC = "crates/hf-sys/src"
+MACOS = 'cfg(target_os = "macos")'
+LIBC_REQ = "=0.2.191"
+CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
+COMMENTS = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
+UNSAFE_BLOCK = re.compile(r"\bunsafe\s*\{")
+UNSAFE_OTHER = re.compile(r"\bunsafe\s*(fn\b|impl\b|trait\b|extern\b)|#\s*!?\s*\[\s*unsafe\s*\(")
+UNSAFE_LINT_RELAX = re.compile(r"\b(allow|warn|expect)\s*\([^)]*\bunsafe_code")
+UNSAFE_EXPECT = re.compile(r"\bexpect\s*\([^)]*\bunsafe_code")
+
+def workspace_lints(root):
+    import tomllib
+    lints = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8")).get("workspace", {}).get("lints", {})
+    if lints.get("rust") != {"unsafe_code": "forbid"}:
+        raise ValueError("Workspace lints must forbid unsafe_code")
+    return lints.get("clippy")
+
+def check_sys_dependencies(packages, root):
+    for package in packages:
+        for dependency in package["dependencies"]:
+            if dependency["name"] == "libc" and (
+                package["name"] != SYS
+                or dependency.get("req") != LIBC_REQ
+                or dependency.get("source") != CRATES_IO
+                or "path" in dependency
+                or dependency.get("uses_default_features") is not False
+                or dependency.get("features") != []
+                or dependency.get("optional") is not False
+                or dependency.get("target") != MACOS
+                or dependency.get("rename") is not None
+            ):
+                raise ValueError("libc requires hf-sys-only exact registry macOS policy")
+            if dependency["name"] == SYS and (
+                package["name"] != "hf-platform"
+                or dependency.get("source") is not None
+                or dependency.get("req") != "*"
+                or Path(dependency.get("path", "")).resolve() != (root / SYS_SRC).parent.resolve()
+                or dependency.get("uses_default_features") is not True
+                or dependency.get("features") != []
+                or dependency.get("optional") is not False
+                or dependency.get("target") != MACOS
+                or dependency.get("rename") is not None
+            ):
+                raise ValueError("hf-sys requires platform-only macOS path dependency policy")
+
+def check_sys_package(package, parsed, clippy):
+    if parsed.get("lints") != {"rust": {"unsafe_code": "deny"}, "clippy": clippy}:
+        raise ValueError("hf-sys lint policy drifted from deny unsafe_code plus the workspace clippy table")
+    folder = Path(package["manifest_path"]).parent.resolve()
+    targets = package["targets"]
+    if (
+        len(targets) != 1
+        or targets[0]["kind"] != ["lib"]
+        or targets[0].get("crate_types", ["lib"]) != ["lib"]
+        or Path(targets[0]["src_path"]).resolve() != folder / "src/lib.rs"
+        or (folder / "build.rs").exists()
+    ):
+        raise ValueError("hf-sys permits only the conventional src/lib.rs library target and no build script")
+
+def check_unsafe_sources(root):
+    sys_src = (root / SYS_SRC).resolve()
+    inside = {"block": 0, "expect": 0}
+    for folder in [root / "crates", root / "tools"]:
+        for path in folder.rglob("*.rs"):
+            text = COMMENTS.sub("", path.read_text(encoding="utf-8"))
+            if not path.resolve().is_relative_to(sys_src):
+                if UNSAFE_BLOCK.search(text) or UNSAFE_OTHER.search(text) or UNSAFE_LINT_RELAX.search(text):
+                    raise ValueError(f"unsafe code or an unsafe_code lint relaxation outside hf-sys: {path}")
+                continue
+            if UNSAFE_OTHER.search(text) or CTL_REDIRECT.search(text):
+                raise ValueError(f"Forbidden unsafe form or module redirection in hf-sys: {path}")
+            if re.search(r"\b(allow|warn)\s*\([^)]*\bunsafe_code", text):
+                raise ValueError(f"unsafe_code lint relaxation in hf-sys other than the one expectation: {path}")
+            inside["block"] += len(UNSAFE_BLOCK.findall(text))
+            inside["expect"] += len(UNSAFE_EXPECT.findall(text))
+    if inside != {"block": 1, "expect": 1}:
+        raise ValueError(f"hf-sys must contain exactly one unsafe block and one unsafe_code expectation, found {inside}")
+
 def check_ctl_sources(root):
     files = [root / path for path in CTL_ROOTS if (root / path).is_file()]
     for tree in CTL_TREES:
@@ -71,6 +154,7 @@ def validate(metadata, root):
     packages = [package for package in metadata["packages"] if package["id"] in members]
     if {package["name"] for package in packages} != set(EDGES):
         raise ValueError("Workspace package inventory changed")
+    clippy = workspace_lints(root)
     for package in packages:
         for dependency in package["dependencies"]:
             if dependency["name"] not in EDGES[package["name"]] or dependency["kind"] is not None:
@@ -146,7 +230,9 @@ def validate(metadata, root):
         manifest = manifest_path.read_text(encoding="utf-8")
         import tomllib
         parsed = tomllib.loads(manifest)
-        if parsed.get("lints") != {"workspace": True}:
+        if package["name"] == SYS:
+            check_sys_package(package, parsed, clippy)
+        elif parsed.get("lints") != {"workspace": True}:
             raise ValueError(f"Workspace lint inheritance missing: {package['name']}")
         bins = {
             target["name"]: Path(target["src_path"]).resolve().relative_to(manifest_path.parent.resolve()).as_posix()
@@ -163,6 +249,8 @@ def validate(metadata, root):
             count = sum(bool(line.strip()) and not line.strip().startswith("//") for line in path.read_text(encoding="utf-8").splitlines())
             if count > 400:
                 raise ValueError(f"File exceeds 400 substantive lines: {path}")
+    check_sys_dependencies(packages, root)
+    check_unsafe_sources(root)
     check_ctl_sources(root)
 
 def main():

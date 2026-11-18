@@ -12,19 +12,40 @@ BINS = ARCHITECTURE.BINS
 validate = ARCHITECTURE.validate
 
 
+CLIPPY_LINTS = (
+    'all = { level = "warn", priority = -1 }\nunwrap_used = "deny"\nexpect_used = "deny"\n'
+    'panic = "deny"\ntodo = "deny"\ntoo_many_lines = "deny"\n'
+)
+ROOT_MANIFEST = (
+    '[workspace.lints.rust]\nunsafe_code = "forbid"\n\n[workspace.lints.clippy]\n' + CLIPPY_LINTS
+)
+SYS_MANIFEST = (
+    '[lints.rust]\nunsafe_code = "deny"\n\n[lints.clippy]\n' + CLIPPY_LINTS
+)
+SYS_LIB = "#[cfg(target_os = \"macos\")]\nmod read_into;\n"
+SYS_READ_INTO = (
+    "// SAFETY: reviewed\n"
+    "#[expect(unsafe_code, reason = \"reviewed\")]\n"
+    "let result = unsafe { call() };\n"
+)
+
+
 class ArchitectureMetadataTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
+        (self.root / "Cargo.toml").write_text(ROOT_MANIFEST, encoding="utf-8")
         self.packages = []
         for name in EDGES:
             folder = self.root / ("tools" if name in ("hf-architecture", "hf-fixture-seed") else "crates") / name
             folder.mkdir(parents=True)
             manifest = '[lints]\nworkspace = true\n'
+            if name == "hf-sys":
+                manifest = SYS_MANIFEST
             if name == "hf-host":
                 manifest = '[package]\nautobins = false\ndefault-run = "harflow-ctl"\n\n' + manifest
             (folder / "Cargo.toml").write_text(manifest, encoding="utf-8")
-            targets = [{"kind": ["lib"], "src_path": str(folder / "src/lib.rs")}] if name == "hf-domain" else []
+            targets = [{"kind": ["lib"], "crate_types": ["lib"], "src_path": str(folder / "src/lib.rs")}] if name in ("hf-domain", "hf-sys") else []
             targets += [{"kind": ["bin"], "name": bin_name, "src_path": str(folder / source)} for bin_name, source in BINS.get(name, {}).items()]
             self.packages.append({
                 "id": name,
@@ -36,6 +57,10 @@ class ArchitectureMetadataTests(unittest.TestCase):
         domain = self.root / "crates/hf-domain/src"
         domain.mkdir()
         (domain / "lib.rs").write_text("pub struct Value;\n", encoding="utf-8")
+        sys_src = self.root / "crates/hf-sys/src"
+        sys_src.mkdir()
+        (sys_src / "lib.rs").write_text(SYS_LIB, encoding="utf-8")
+        (sys_src / "read_into.rs").write_text(SYS_READ_INTO, encoding="utf-8")
         self.metadata = {"workspace_members": list(EDGES), "packages": self.packages}
 
     def tearDown(self):

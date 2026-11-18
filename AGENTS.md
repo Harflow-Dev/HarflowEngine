@@ -4,7 +4,7 @@ Read README.md and docs/architecture.md before editing. Preserve layer boundarie
 
 ## Ownership and interfaces
 
-hf-domain owns pure values; hf-application owns ports/use cases; hf-storage, hf-backends and hf-platform own concrete adapters; hf-interfaces owns transport mapping; hf-host owns composition. hf-contracts remains an empty seam while HarflowMCP owns canonical contracts. hf-architecture is build-time policy tooling. Keep platform effects out of domain/application and preserve the explicit Cargo dependency inventory.
+hf-domain owns pure values; hf-application owns ports/use cases; hf-storage, hf-backends and hf-platform own concrete adapters; hf-interfaces owns transport mapping; hf-host owns composition. hf-sys owns the single reviewed `unsafe` sysctl call (macOS only, consumed only by hf-platform). hf-contracts remains an empty seam while HarflowMCP owns canonical contracts. hf-architecture is build-time policy tooling. Keep platform effects out of domain/application and preserve the explicit Cargo dependency inventory.
 
 ## Test ownership
 

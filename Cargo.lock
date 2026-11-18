@@ -270,6 +270,7 @@ version = "0.0.1"
 dependencies = [
  "hf-application",
  "hf-domain",
+ "hf-sys",
  "libproc",
  "nix",
  "rustix",
@@ -284,6 +285,13 @@ dependencies = [
  "hf-domain",
  "rusqlite",
  "sha2",
+]
+
+[[package]]
+name = "hf-sys"
+version = "0.0.1"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

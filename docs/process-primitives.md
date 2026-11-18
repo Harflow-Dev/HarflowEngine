@@ -111,7 +111,7 @@ That table records R03-A's original boundary. [R03-B2](owner-handoff.md) narrowl
 adds nix's socket feature for deadline-aware nonblocking fixture gate connections;
 its receipt records the additional locked closure and qualification limits.
 
-Workspace source remains unsafe-forbidden. These wrappers contain dependency
+Workspace source remains unsafe-forbidden, except for the single reviewed sysctl call in hf-sys. These wrappers contain dependency
 internal unsafe and are not a proof of whole-program memory safety. Only fixed
 libproc BSDInfo and sysctl boot UUID string access are used; generic value_as<T>
 and custom PIDInfo implementations are excluded. libproc's wrapper accepts any

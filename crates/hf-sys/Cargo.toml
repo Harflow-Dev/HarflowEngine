@@ -1,0 +1,22 @@
+[package]
+name = "hf-sys"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+too_many_lines = "deny"
+
+[dependencies]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = { version = "=0.2.191", default-features = false }
