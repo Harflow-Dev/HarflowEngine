@@ -190,6 +190,10 @@ class UnsafeBoundaryTests(unittest.TestCase):
             ("crate-level expectation", accepted.replace(statement, '#![expect(unsafe_code, reason = "x")]\n'), anchor),
             ("expectation on a fn", accepted.replace(statement, "") + '#[expect(unsafe_code, reason = "x")]\nfn f() {}\n', anchor),
             ("expectation not on the statement", accepted.replace("let result", "let other = 1;\n    let result"), anchor),
+            ("macro expansion of the statement", accepted.replace(statement, "").replace(
+                "let result = unsafe { call() };",
+                'macro_rules! raw { ($($t:tt)*) => {{ #[expect(unsafe_code, reason = "x")] let r = unsafe { $($t)* }; r }} }'),
+                "Macro definitions"),
             ("path redirect", accepted + '#[path = "x.rs"]\nmod x;\n', "redirection"),
             ("include", accepted + 'include!("x.rs");\n', "redirection"),
         ):
@@ -197,6 +201,45 @@ class UnsafeBoundaryTests(unittest.TestCase):
             with self.subTest(label=label), self.assertRaisesRegex(ValueError, pattern):
                 validate(self.metadata, self.root)
         read_into.write_text(accepted, encoding="utf-8")
+        validate(self.metadata, self.root)
+
+    def test_rustc_configuration_that_could_lower_lints_is_refused(self):
+        self.accepted_edges()
+        root_manifest = self.root / "Cargo.toml"
+        accepted_manifest = root_manifest.read_text(encoding="utf-8")
+        toolchain = self.root / "rust-toolchain.toml"
+        accepted_toolchain = toolchain.read_text(encoding="utf-8")
+        for name in ("config", "config.toml"):
+            path = self.write(f"tools/hf-architecture/.cargo/{name}", "[build]\n")
+            with self.subTest(cargo=name), self.assertRaisesRegex(ValueError, "In-repo Cargo configuration"):
+                validate(self.metadata, self.root)
+            path.unlink()
+        self.write("target/.cargo/config.toml", "[build]\n")
+        validate(self.metadata, self.root)
+        for label, text, pattern in (
+            ("cargo-features", 'cargo-features = ["x"]\n' + accepted_manifest, "cargo-features"),
+            ("profile rustflags", accepted_manifest + '\n[profile.dev]\nrustflags = ["-A", "unsafe_code"]\n', "rustflags"),
+        ):
+            root_manifest.write_text(text, encoding="utf-8")
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, pattern):
+                validate(self.metadata, self.root)
+        root_manifest.write_text(accepted_manifest, encoding="utf-8")
+        for channel in ("nightly", "stable", "1.99", "nightly-2026-01-01", "1.99.1-beta"):
+            toolchain.write_text(f'[toolchain]\nchannel = "{channel}"\n', encoding="utf-8")
+            with self.subTest(channel=channel), self.assertRaisesRegex(ValueError, "stable numeric channel"):
+                validate(self.metadata, self.root)
+        toolchain.write_text("[toolchain]\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "stable numeric channel"):
+            validate(self.metadata, self.root)
+        toolchain.write_text(accepted_toolchain, encoding="utf-8")
+        legacy = self.write("rust-toolchain", "nightly\n")
+        with self.assertRaisesRegex(ValueError, "legacy rust-toolchain"):
+            validate(self.metadata, self.root)
+        legacy.unlink()
+        toolchain.unlink()
+        with self.assertRaisesRegex(ValueError, "rust-toolchain.toml is required"):
+            validate(self.metadata, self.root)
+        toolchain.write_text(accepted_toolchain, encoding="utf-8")
         validate(self.metadata, self.root)
 
     def test_hf_sys_edge_requires_a_path(self):

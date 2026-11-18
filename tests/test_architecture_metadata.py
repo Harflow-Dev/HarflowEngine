@@ -35,6 +35,7 @@ class ArchitectureMetadataTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         (self.root / "Cargo.toml").write_text(ROOT_MANIFEST, encoding="utf-8")
+        (self.root / "rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.99.1"\n', encoding="utf-8")
         self.packages = []
         for name in EDGES:
             folder = self.root / ("tools" if name in ("hf-architecture", "hf-fixture-seed") else "crates") / name

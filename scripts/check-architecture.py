@@ -51,8 +51,10 @@ HOST_STORAGE_PATH = re.compile(r"\bhf_storage\b(?:\s*::\s*\w+)?")
 
 # rustc enforces the unsafe boundary: `forbid` in every other crate, `deny` in hf-sys. The script
 # pins hf-sys's single `unsafe_code` expectation, as an outer attribute on one `let ... = unsafe {`
-# statement, by counting the token in the raw text. What that block contains is a human-review
-# responsibility. The screen outside hf-sys is defence in depth, not a proof.
+# statement, by counting the token in the raw text, and rejects macro definitions in hf-sys and
+# in-repo Cargo/rustc configuration that could lower lint levels (with a stable toolchain pin).
+# Environment RUSTFLAGS and the caller's own Cargo home config are outside the guard. What the
+# block contains is a human-review responsibility. The screen outside hf-sys is defence in depth.
 SYS = "hf-sys"
 SYS_SRC = "crates/hf-sys/src"
 MACOS = 'cfg(target_os = "macos")'
@@ -67,6 +69,8 @@ SYS_EXPECT_STATEMENT = re.compile(
     r'#\[\s*expect\s*\(\s*unsafe_code\s*,\s*reason\s*=\s*"[^"]*"\s*,?\s*\)\s*\]'
     r"\s*let\s+\w+\s*=\s*unsafe\s*\{"
 )
+MACRO_RULES = re.compile(r"\bmacro_rules\b")
+STABLE_CHANNEL = re.compile(r"\d+\.\d+\.\d+")
 UNSAFE_CODE_TOKEN = re.compile(r"\bunsafe_code\b")
 UNSAFE_BLOCK = re.compile(r"\bunsafe\s*\{")
 UNSAFE_OTHER = re.compile(r"\bunsafe\s*(fn\b|impl\b|trait\b|extern\b)|#\s*!?\s*\[\s*unsafe\s*\(")
@@ -128,10 +132,32 @@ def strip_noise(text):
 def check_sys_text(text):
     if CTL_REDIRECT.search(text):
         raise ValueError("Module redirection and file inclusion are forbidden in hf-sys")
+    if MACRO_RULES.search(text):
+        raise ValueError("Macro definitions are forbidden in hf-sys")
     if len(UNSAFE_CODE_TOKEN.findall(text)) != 1:
         raise ValueError("hf-sys must contain exactly one unsafe_code token")
     if SYS_EXPECT_STATEMENT.search(text) is None:
         raise ValueError("hf-sys requires the unsafe_code expectation directly on the unsafe let statement")
+
+def check_rustc_config(root):
+    import tomllib
+    for name in ("config", "config.toml"):
+        for path in root.rglob(f".cargo/{name}"):
+            if not {"target", ".git"} & set(path.relative_to(root).parts):
+                raise ValueError(f"In-repo Cargo configuration is forbidden: {path}")
+    manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+    if "cargo-features" in manifest:
+        raise ValueError("cargo-features in the root manifest is forbidden")
+    if any("rustflags" in profile for profile in manifest.get("profile", {}).values()):
+        raise ValueError("rustflags in a root manifest profile is forbidden")
+    if (root / "rust-toolchain").exists():
+        raise ValueError("A legacy rust-toolchain file is forbidden")
+    toolchain = root / "rust-toolchain.toml"
+    if not toolchain.is_file():
+        raise ValueError("rust-toolchain.toml is required")
+    channel = tomllib.loads(toolchain.read_text(encoding="utf-8")).get("toolchain", {}).get("channel")
+    if not isinstance(channel, str) or not STABLE_CHANNEL.fullmatch(channel):
+        raise ValueError("rust-toolchain.toml must pin a stable numeric channel")
 
 def check_unsafe_sources(root):
     sys_src = (root / SYS_SRC).resolve()
@@ -266,6 +292,7 @@ def validate(metadata, root):
             if count > 400:
                 raise ValueError(f"File exceeds 400 substantive lines: {path}")
     check_sys_dependencies(packages, root)
+    check_rustc_config(root)
     check_unsafe_sources(root)
     check_ctl_sources(root)
 
