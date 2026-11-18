@@ -1,0 +1,3637 @@
+{
+  "provenance": {
+    "source_commit": "14f0c1fe7e9f4734eb7b9a299b65666e0d4f72b8",
+    "source_path": "src/harflow_mcp/workflow_references.py",
+    "source_sha256": "1fa42ecaf2eaa9534340d470b28ad5d284d3e5e4b5d68a25aa0df63fae4f19ea",
+    "generation": "Python pure functions only; in-memory object with list(); no WorkflowStore or state root",
+    "subtree_order": "Python subtree contents are compared ignoring mapping key order (set-derived); Rust parent-tree insertion order is asserted separately per P13"
+  },
+  "cases": [
+    {
+      "id": "diamond_shallow_first",
+      "root": {
+        "name": "A",
+        "workflow_id": "a",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "to_b",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "b"
+            }
+          },
+          {
+            "id": "to_c",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "c"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "to_b"
+          },
+          {
+            "id": "e1",
+            "source": "to_b",
+            "target": "to_c"
+          },
+          {
+            "id": "e2",
+            "source": "to_c",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "A",
+          "workflow_id": "a",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_b",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "b"
+              },
+              "title": "to_b",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "to_c",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "c"
+              },
+              "title": "to_c",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 860,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_b",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_b",
+              "target": "to_c",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e2",
+              "source": "to_c",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "B",
+          "workflow_id": "b",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "d"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "C",
+          "workflow_id": "c",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "d"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "D",
+          "workflow_id": "d",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": true,
+      "expected": {
+        "tree": {
+          "root_workflow_id": "a",
+          "workflows": [
+            {
+              "id": "a",
+              "name": "A",
+              "revision": 0,
+              "definition_sha256": "44a1ba42de0d786f0ab5dc204d23659c56dff7b8aacd57fadaf463c4404fa3a9",
+              "definition": {
+                "name": "A",
+                "workflow_id": "a",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_b",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "b"
+                    },
+                    "title": "to_b",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "to_c",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "c"
+                    },
+                    "title": "to_c",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 860,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_b",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_b",
+                    "target": "to_c",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e2",
+                    "source": "to_c",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "b",
+              "name": "B",
+              "revision": 0,
+              "definition_sha256": "e814d7758f927d28d567aa17097efe6bd6d58559fa8144834ed02d4adf606015",
+              "definition": {
+                "name": "B",
+                "workflow_id": "b",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "d"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "d",
+              "name": "D",
+              "revision": 0,
+              "definition_sha256": "5b667925fb34556238d658b14c04e29ed209155541876e12fab8aa68264c8b5d",
+              "definition": {
+                "name": "D",
+                "workflow_id": "d",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "c",
+              "name": "C",
+              "revision": 0,
+              "definition_sha256": "5c170c26c425c1f7f034f556f116ebf52553be52da1207b2ba1d134099e5249b",
+              "definition": {
+                "name": "C",
+                "workflow_id": "c",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "d"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": "a",
+              "node_id": "to_b",
+              "to": "b",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "b",
+              "node_id": "to_d",
+              "to": "d",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "a",
+              "node_id": "to_c",
+              "to": "c",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "c",
+              "node_id": "to_d",
+              "to": "d",
+              "orchestrator_mode": "child"
+            }
+          ],
+          "access": [
+            {
+              "id": "a",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 1
+            },
+            {
+              "id": "b",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 2
+            },
+            {
+              "id": "d",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 3
+            },
+            {
+              "id": "c",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "diamond_deep_first",
+      "root": {
+        "name": "A",
+        "workflow_id": "a2",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "to_b",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "b2"
+            }
+          },
+          {
+            "id": "to_d",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "d2"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "to_b"
+          },
+          {
+            "id": "e1",
+            "source": "to_b",
+            "target": "to_d"
+          },
+          {
+            "id": "e2",
+            "source": "to_d",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "A",
+          "workflow_id": "a2",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_b",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "b2"
+              },
+              "title": "to_b",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "d2"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 860,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_b",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_b",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e2",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "B",
+          "workflow_id": "b2",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_c",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "c2"
+              },
+              "title": "to_c",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_c",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_c",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "C",
+          "workflow_id": "c2",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "d2"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "D",
+          "workflow_id": "d2",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": true,
+      "expected": {
+        "tree": {
+          "root_workflow_id": "a2",
+          "workflows": [
+            {
+              "id": "a2",
+              "name": "A",
+              "revision": 0,
+              "definition_sha256": "31f6b136940dff564195a49296b1e385b5888472806d13296c63e6e097490ac6",
+              "definition": {
+                "name": "A",
+                "workflow_id": "a2",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_b",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "b2"
+                    },
+                    "title": "to_b",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "d2"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 860,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_b",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_b",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e2",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "b2",
+              "name": "B",
+              "revision": 0,
+              "definition_sha256": "8e6b200e2dad835650572d2d88e34d2755bca5627a5e8349c858ef3de3fc8501",
+              "definition": {
+                "name": "B",
+                "workflow_id": "b2",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_c",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "c2"
+                    },
+                    "title": "to_c",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_c",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_c",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "c2",
+              "name": "C",
+              "revision": 0,
+              "definition_sha256": "2836fa2527f9aa852d73f43afebd4afc0bee6eed05bf2b850c24cf68f4c5e0ed",
+              "definition": {
+                "name": "C",
+                "workflow_id": "c2",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "d2"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "d2",
+              "name": "D",
+              "revision": 0,
+              "definition_sha256": "86fe9a3337b97cf7848925de09d630b2af0abbaa762fd55e21aed41ff7eaa1d0",
+              "definition": {
+                "name": "D",
+                "workflow_id": "d2",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": "a2",
+              "node_id": "to_b",
+              "to": "b2",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "b2",
+              "node_id": "to_c",
+              "to": "c2",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "c2",
+              "node_id": "to_d",
+              "to": "d2",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "a2",
+              "node_id": "to_d",
+              "to": "d2",
+              "orchestrator_mode": "child"
+            }
+          ],
+          "access": [
+            {
+              "id": "a2",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 1
+            },
+            {
+              "id": "b2",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 2
+            },
+            {
+              "id": "c2",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 3
+            },
+            {
+              "id": "d2",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "missing_occurrences_first_error",
+      "root": {
+        "name": "Missing",
+        "workflow_id": "missing",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "first_missing",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "absent"
+            }
+          },
+          {
+            "id": "second_missing",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "absent2"
+            }
+          },
+          {
+            "id": "cycle",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "missing"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "first_missing"
+          },
+          {
+            "id": "e1",
+            "source": "first_missing",
+            "target": "second_missing"
+          },
+          {
+            "id": "e2",
+            "source": "second_missing",
+            "target": "cycle"
+          },
+          {
+            "id": "e3",
+            "source": "cycle",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "Missing",
+          "workflow_id": "missing",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "first_missing",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "absent"
+              },
+              "title": "first_missing",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "second_missing",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "absent2"
+              },
+              "title": "second_missing",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "cycle",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "missing"
+              },
+              "title": "cycle",
+              "position": {
+                "x": 860,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 1120,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "first_missing",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "first_missing",
+              "target": "second_missing",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e2",
+              "source": "second_missing",
+              "target": "cycle",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e3",
+              "source": "cycle",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": false,
+      "expected": {
+        "message": "Unknown workflow reference absent at node first_missing",
+        "missing_references": [
+          {
+            "workflow_id": "missing",
+            "workflow_name": "Missing",
+            "node_id": "first_missing",
+            "node_title": "first_missing",
+            "target_workflow_id": "absent",
+            "dependency_path": [
+              {
+                "workflow_id": "missing",
+                "workflow_name": "Missing",
+                "node_id": "first_missing",
+                "node_title": "first_missing"
+              }
+            ]
+          },
+          {
+            "workflow_id": "missing",
+            "workflow_name": "Missing",
+            "node_id": "second_missing",
+            "node_title": "second_missing",
+            "target_workflow_id": "absent2",
+            "dependency_path": [
+              {
+                "workflow_id": "missing",
+                "workflow_name": "Missing",
+                "node_id": "second_missing",
+                "node_title": "second_missing"
+              }
+            ]
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "cycle",
+      "root": {
+        "name": "Cycle A",
+        "workflow_id": "cycle_a",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "to_b",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "cycle_b"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "to_b"
+          },
+          {
+            "id": "e1",
+            "source": "to_b",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "Cycle A",
+          "workflow_id": "cycle_a",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_b",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "cycle_b"
+              },
+              "title": "to_b",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_b",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_b",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "Cycle B",
+          "workflow_id": "cycle_b",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_a",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "cycle_a"
+              },
+              "title": "to_a",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_a",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_a",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": false,
+      "expected": {
+        "message": "Workflow reference cycle: Cycle A > Cycle B > Cycle A",
+        "missing_references": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "depth_five",
+      "root": {
+        "name": "A",
+        "workflow_id": "depth0",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "to_1",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "depth1"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "to_1"
+          },
+          {
+            "id": "e1",
+            "source": "to_1",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "A",
+          "workflow_id": "depth0",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_1",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "depth1"
+              },
+              "title": "to_1",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_1",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_1",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "B",
+          "workflow_id": "depth1",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_2",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "depth2"
+              },
+              "title": "to_2",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_2",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_2",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "C",
+          "workflow_id": "depth2",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_3",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "depth3"
+              },
+              "title": "to_3",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_3",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_3",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "D",
+          "workflow_id": "depth3",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_4",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "depth4"
+              },
+              "title": "to_4",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_4",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_4",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "E",
+          "workflow_id": "depth4",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": false,
+      "expected": {
+        "message": "Workflow nesting exceeds 4 levels: A > B > C > D > depth4 > E",
+        "missing_references": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "depth_five_revisiting_pinned_child",
+      "root": {
+        "name": "Root",
+        "workflow_id": "revisit_root",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "shallow_e",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "revisit_e"
+            }
+          },
+          {
+            "id": "to_b",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "revisit_b"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "shallow_e"
+          },
+          {
+            "id": "e1",
+            "source": "shallow_e",
+            "target": "to_b"
+          },
+          {
+            "id": "e2",
+            "source": "to_b",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "Root",
+          "workflow_id": "revisit_root",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "shallow_e",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "revisit_e"
+              },
+              "title": "shallow_e",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "to_b",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "revisit_b"
+              },
+              "title": "to_b",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 860,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "shallow_e",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "shallow_e",
+              "target": "to_b",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e2",
+              "source": "to_b",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "E",
+          "workflow_id": "revisit_e",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "B",
+          "workflow_id": "revisit_b",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_c",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "revisit_c"
+              },
+              "title": "to_c",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_c",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_c",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "C",
+          "workflow_id": "revisit_c",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "revisit_d"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "D",
+          "workflow_id": "revisit_d",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_e",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "revisit_e"
+              },
+              "title": "to_e",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_e",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_e",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": false,
+      "expected": {
+        "message": "Workflow nesting exceeds 4 levels: Root > B > C > D > E > E",
+        "missing_references": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "subtree_parent_order",
+      "root": {
+        "name": "Subtree Root",
+        "workflow_id": "subroot",
+        "routing_mode": "explicit",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "to_b",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "subb"
+            }
+          },
+          {
+            "id": "to_c",
+            "type": "workflow",
+            "workflow_ref": {
+              "workflow_id": "subc"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "e0",
+            "source": "start",
+            "target": "to_b"
+          },
+          {
+            "id": "e1",
+            "source": "to_b",
+            "target": "to_c"
+          },
+          {
+            "id": "e2",
+            "source": "to_c",
+            "target": "end"
+          }
+        ]
+      },
+      "catalog": [
+        {
+          "name": "Subtree Root",
+          "workflow_id": "subroot",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_b",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "subb"
+              },
+              "title": "to_b",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "to_c",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "subc"
+              },
+              "title": "to_c",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 860,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_b",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_b",
+              "target": "to_c",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e2",
+              "source": "to_c",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "B",
+          "workflow_id": "subb",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "subd"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "C",
+          "workflow_id": "subc",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "to_d",
+              "type": "workflow",
+              "workflow_ref": {
+                "workflow_id": "subd"
+              },
+              "title": "to_d",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one",
+              "workflow_name": "",
+              "orchestrator_mode": "child",
+              "child_session_policy": "agent_decides",
+              "instructions": "",
+              "optional": false,
+              "max_attempts": 3
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 600,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "to_d",
+              "condition": "",
+              "default": false,
+              "backward": false
+            },
+            {
+              "id": "e1",
+              "source": "to_d",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        },
+        {
+          "name": "D",
+          "workflow_id": "subd",
+          "routing_mode": "explicit",
+          "nodes": [
+            {
+              "id": "start",
+              "type": "start",
+              "title": "start",
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            },
+            {
+              "id": "end",
+              "type": "end",
+              "title": "end",
+              "position": {
+                "x": 340,
+                "y": 80
+              },
+              "branch_mode": "choose_one"
+            }
+          ],
+          "connections": [
+            {
+              "id": "e0",
+              "source": "start",
+              "target": "end",
+              "condition": "",
+              "default": false,
+              "backward": false
+            }
+          ],
+          "orchestrator": {
+            "backend": "codex",
+            "caller_approvals": false,
+            "fallbacks": [],
+            "instructions": ""
+          },
+          "on_demand_nodes": [],
+          "max_on_demand_calls": 5,
+          "schema_version": 1,
+          "description": "",
+          "max_parallel": 4,
+          "max_transitions": 100,
+          "max_decision_attempts": 3,
+          "max_inspections": 20
+        }
+      ],
+      "ok": true,
+      "expected": {
+        "tree": {
+          "root_workflow_id": "subroot",
+          "workflows": [
+            {
+              "id": "subroot",
+              "name": "Subtree Root",
+              "revision": 0,
+              "definition_sha256": "1efb03c580049ae5d616eee8efdf8fd9c6002e96b0d31a1cfc04a5bf1728a2e4",
+              "definition": {
+                "name": "Subtree Root",
+                "workflow_id": "subroot",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_b",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "subb"
+                    },
+                    "title": "to_b",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "to_c",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "subc"
+                    },
+                    "title": "to_c",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 860,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_b",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_b",
+                    "target": "to_c",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e2",
+                    "source": "to_c",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "subb",
+              "name": "B",
+              "revision": 0,
+              "definition_sha256": "40fe98cf0376e7e8a8d76e3fba13eba7ceb3007faab0e662e3d4ecdbd81fc30d",
+              "definition": {
+                "name": "B",
+                "workflow_id": "subb",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "subd"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "subd",
+              "name": "D",
+              "revision": 0,
+              "definition_sha256": "dcd4f55a8f2fb20956960ef04fe565cbd5d4fad3c34cc5d399445baacd7ef500",
+              "definition": {
+                "name": "D",
+                "workflow_id": "subd",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            },
+            {
+              "id": "subc",
+              "name": "C",
+              "revision": 0,
+              "definition_sha256": "4ae707621b73228336d70c2f8e0db1ab7408a27a0d6632f85627137963f63a2a",
+              "definition": {
+                "name": "C",
+                "workflow_id": "subc",
+                "routing_mode": "explicit",
+                "nodes": [
+                  {
+                    "id": "start",
+                    "type": "start",
+                    "title": "start",
+                    "position": {
+                      "x": 80,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  },
+                  {
+                    "id": "to_d",
+                    "type": "workflow",
+                    "workflow_ref": {
+                      "workflow_id": "subd"
+                    },
+                    "title": "to_d",
+                    "position": {
+                      "x": 340,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one",
+                    "workflow_name": "",
+                    "orchestrator_mode": "child",
+                    "child_session_policy": "agent_decides",
+                    "instructions": "",
+                    "optional": false,
+                    "max_attempts": 3
+                  },
+                  {
+                    "id": "end",
+                    "type": "end",
+                    "title": "end",
+                    "position": {
+                      "x": 600,
+                      "y": 80
+                    },
+                    "branch_mode": "choose_one"
+                  }
+                ],
+                "connections": [
+                  {
+                    "id": "e0",
+                    "source": "start",
+                    "target": "to_d",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  },
+                  {
+                    "id": "e1",
+                    "source": "to_d",
+                    "target": "end",
+                    "condition": "",
+                    "default": false,
+                    "backward": false
+                  }
+                ],
+                "orchestrator": {
+                  "backend": "codex",
+                  "caller_approvals": false,
+                  "fallbacks": [],
+                  "instructions": ""
+                },
+                "on_demand_nodes": [],
+                "max_on_demand_calls": 5,
+                "schema_version": 1,
+                "description": "",
+                "max_parallel": 4,
+                "max_transitions": 100,
+                "max_decision_attempts": 3,
+                "max_inspections": 20
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": "subroot",
+              "node_id": "to_b",
+              "to": "subb",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "subb",
+              "node_id": "to_d",
+              "to": "subd",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "subroot",
+              "node_id": "to_c",
+              "to": "subc",
+              "orchestrator_mode": "child"
+            },
+            {
+              "from": "subc",
+              "node_id": "to_d",
+              "to": "subd",
+              "orchestrator_mode": "child"
+            }
+          ],
+          "access": [
+            {
+              "id": "subroot",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 1
+            },
+            {
+              "id": "subb",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 2
+            },
+            {
+              "id": "subd",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 3
+            },
+            {
+              "id": "subc",
+              "max_freedom": "read_only",
+              "network": false,
+              "backends": [
+                "codex"
+              ],
+              "depth": 2
+            }
+          ]
+        },
+        "subtree_target": "subb",
+        "subtree_workflow_ids": [
+          "subb",
+          "subd"
+        ],
+        "subtree_access_ids": [
+          "subb",
+          "subd"
+        ],
+        "subtree_parent_order": [
+          "subb",
+          "subd"
+        ],
+        "subtree_access_parent_order": [
+          "subb",
+          "subd"
+        ],
+        "subtree_edges": [
+          {
+            "from": "subb",
+            "node_id": "to_d",
+            "to": "subd",
+            "orchestrator_mode": "child"
+          }
+        ]
+      }
+    }
+  ]
+}

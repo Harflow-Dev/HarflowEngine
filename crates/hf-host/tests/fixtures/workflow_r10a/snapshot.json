@@ -1,0 +1,887 @@
+{
+  "cases": [
+    {
+      "id": "backend_change_drops_six",
+      "input": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "instructions": "run",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "max_turns": 9
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "work",
+            "type": "agent"
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work"
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end"
+          }
+        ]
+      },
+      "overrides": {
+        "backend": "codex"
+      },
+      "expected": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "codex",
+          "conversation_profile": "native",
+          "caller_approvals": false,
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "optimized_v1",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "definition_sha256": "176441bbbc31050023be3aa08b511fda17675c13af208c1efed290d3e9ffabce",
+      "forced_definition_sha256": "176441bbbc31050023be3aa08b511fda17675c13af208c1efed290d3e9ffabce",
+      "pin_definition": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "codex",
+          "conversation_profile": "native",
+          "caller_approvals": false,
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "legacy",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "pin_definition_sha256": "2a6aee14bbffc3ba7692a52fb64e73effb21975b463ae06a47cff3764ab040b4",
+      "pin_forced_definition_sha256": "176441bbbc31050023be3aa08b511fda17675c13af208c1efed290d3e9ffabce"
+    },
+    {
+      "id": "same_backend_retains_six",
+      "input": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "instructions": "run",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "work",
+            "type": "agent"
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work"
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end"
+          }
+        ]
+      },
+      "overrides": {
+        "backend": "claude",
+        "model": "new-model"
+      },
+      "expected": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "new-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "optimized_v1",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "definition_sha256": "bbb8100a36d184944a16ee3ea538c4269f1adc28af91ddda371920ea87dfb10e",
+      "forced_definition_sha256": "bbb8100a36d184944a16ee3ea538c4269f1adc28af91ddda371920ea87dfb10e",
+      "pin_definition": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "new-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "legacy",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "pin_definition_sha256": "e2db5ab049f60ad87883799cb68a39b45a0d56ff12f2477e4635cb38e2b89d68",
+      "pin_forced_definition_sha256": "bbb8100a36d184944a16ee3ea538c4269f1adc28af91ddda371920ea87dfb10e"
+    },
+    {
+      "id": "absent_overrides",
+      "input": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "instructions": "run",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "work",
+            "type": "agent"
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work"
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end"
+          }
+        ]
+      },
+      "overrides": null,
+      "expected": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "optimized_v1",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae",
+      "forced_definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae",
+      "pin_definition": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "legacy",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "pin_definition_sha256": "ec567a12d55e9f2468c5c5f4d7233efd9442d970c47f8cfce3b54bf6d216eda1",
+      "pin_forced_definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae"
+    },
+    {
+      "id": "empty_overrides",
+      "input": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "instructions": "run",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "work",
+            "type": "agent"
+          },
+          {
+            "id": "end",
+            "type": "end"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work"
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end"
+          }
+        ]
+      },
+      "overrides": {},
+      "expected": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "optimized_v1",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae",
+      "forced_definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae",
+      "pin_definition": {
+        "name": "snapshot launch",
+        "orchestrator": {
+          "backend": "claude",
+          "model": "old-model",
+          "reasoning_effort": "high",
+          "background_idle_seconds": 30.0,
+          "caller_approvals": true,
+          "caller_write_approvals": true,
+          "conversation_profile": "native",
+          "fallbacks": [],
+          "instructions": "run"
+        },
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "title": "start",
+            "position": {
+              "x": 80,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          },
+          {
+            "id": "work",
+            "type": "agent",
+            "title": "work",
+            "position": {
+              "x": 340,
+              "y": 80
+            },
+            "branch_mode": "auto",
+            "optional": false,
+            "role": "task",
+            "agent": {
+              "backend": "codex",
+              "caller_approvals": false,
+              "fallbacks": []
+            },
+            "instructions": "",
+            "freedom": "publish",
+            "execution_mode": "headless",
+            "session_mode": "agent_decides",
+            "max_attempts": 3,
+            "max_context_questions": 10
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "title": "end",
+            "position": {
+              "x": 600,
+              "y": 80
+            },
+            "branch_mode": "auto"
+          }
+        ],
+        "connections": [
+          {
+            "id": "c1",
+            "source": "start",
+            "target": "work",
+            "condition": "",
+            "default": false,
+            "backward": false
+          },
+          {
+            "id": "c2",
+            "source": "work",
+            "target": "end",
+            "condition": "",
+            "default": false,
+            "backward": false
+          }
+        ],
+        "context_delivery": "legacy",
+        "on_demand_nodes": [],
+        "max_on_demand_calls": 5,
+        "schema_version": 1,
+        "description": "",
+        "max_parallel": 4,
+        "max_transitions": 100,
+        "max_decision_attempts": 3,
+        "max_inspections": 20
+      },
+      "pin_definition_sha256": "ec567a12d55e9f2468c5c5f4d7233efd9442d970c47f8cfce3b54bf6d216eda1",
+      "pin_forced_definition_sha256": "ddfc3b612061d2d809fba4da17097fc56a2b12d1bb9ff7fedce89ee0e5b8c8ae"
+    }
+  ],
+  "provenance": {
+    "python_reference_commit": "14f0c1fe7e9f4734eb7b9a299b65666e0d4f72b8",
+    "functions": [
+      "harflow_mcp.workflows.launch_definition",
+      "harflow_mcp.workflow_references.definition_sha256"
+    ],
+    "generation": "Pure in-memory function calls only; no WorkflowStore, start_workflow, providers, or state root.",
+    "purpose": "Launch normalization and original/forced definition digest expectations for R10-A snapshot tests."
+  }
+}

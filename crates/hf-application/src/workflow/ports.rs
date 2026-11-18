@@ -79,6 +79,9 @@ pub struct StoredDefinition {
     pub definition: JsonObject,
 }
 
+/// Adapters must preserve the requested source name, enforce source identity/fencing,
+/// and return document refusals without partial results. Application callers qualify
+/// decoded values before projection, hashing or writing.
 /// Stored definitions. `get` reads one source and takes no lock; `list` is in filename
 /// order and fails as a whole when any source is refused.
 pub trait DefinitionStore {
@@ -92,7 +95,9 @@ pub trait DefinitionStore {
     fn begin(&self, name: &str) -> Result<Self::Txn<'_>, DocumentRefusal>;
 }
 
-/// A locked read-modify-write of one definition.
+/// A locked read-modify-write of one definition. Dropping without replace/remove
+/// leaves storage unchanged. `list` observes the same locked catalog snapshot;
+/// replace/remove enforce the source identity captured by begin.
 pub trait DefinitionTxn {
     fn current(&self) -> Option<&StoredDefinition>;
     fn list(&self) -> Result<Vec<StoredDefinition>, DocumentRefusal>;

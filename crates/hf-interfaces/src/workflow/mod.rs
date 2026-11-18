@@ -9,3 +9,7 @@ pub mod py_float;
 pub mod repr;
 
 pub use messages_graph::reason_message;
+
+pub mod messages_catalog;
+
+pub mod messages_snapshot;

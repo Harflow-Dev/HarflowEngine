@@ -12,7 +12,7 @@ pub const MAX_TEXT_BYTES: usize = 1 << 20;
 /// The deepest nesting of arrays and objects.
 pub const MAX_DEPTH: usize = hf_domain::workflow::vocab::MAX_JSON_DEPTH;
 /// The most digits of an integer, as in Python's `int` conversion limit.
-pub const INT_DIGIT_LIMIT: usize = 4300;
+pub const INT_DIGIT_LIMIT: usize = hf_domain::workflow::vocab::INT_DIGIT_LIMIT;
 
 /// Why text was not read.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

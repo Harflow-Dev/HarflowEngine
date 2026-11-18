@@ -5,7 +5,7 @@ use super::name::is_workflow_name;
 use super::observe::{MAX_STORED, is_absolute};
 use super::refusal::DocumentReason;
 use super::text::is_blank;
-use super::vocab::MAX_JSON_DEPTH;
+use super::vocab::{INT_DIGIT_LIMIT, MAX_JSON_DEPTH};
 
 /// The exact kind of a JSON value, as Python's `type(value)` tells them apart.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -142,18 +142,25 @@ fn shape(value: &JsonObject, table: Shape, path: &str) -> Result<(), DocumentRea
     Ok(())
 }
 
-/// Whether every number is finite, every container reachable from `value` included.
-fn all_finite(value: &Json) -> bool {
+/// Qualify every reachable number for finite, readable JSON serialization.
+fn qualify_numbers(value: &Json) -> Result<(), DocumentReason> {
     let mut pending = Vec::from([value]);
     while let Some(item) = pending.pop() {
         match item {
-            Json::Float(number) if !number.is_finite() => return false,
+            Json::Float(number) if !number.is_finite() => {
+                return Err(DocumentReason::NonFiniteValue);
+            }
+            Json::Int(number) if number.digits().len() > INT_DIGIT_LIMIT => {
+                return Err(DocumentReason::IntegerTooLong {
+                    digits: number.digits().len(),
+                });
+            }
             Json::Array(items) => pending.extend(items.iter()),
             Json::Object(map) => pending.extend(map.iter().map(|(_, entry)| entry)),
             _ => {}
         }
     }
-    true
+    Ok(())
 }
 
 fn object_of(value: &Json) -> Option<&JsonObject> {
@@ -228,8 +235,8 @@ pub fn qualify_stored(
     if definition.nests_beyond(MAX_JSON_DEPTH) {
         return Err(DocumentReason::TooDeep);
     }
-    if !definition.iter().all(|(_, value)| all_finite(value)) {
-        return Err(DocumentReason::NonFiniteValue);
+    for (_, value) in definition.iter() {
+        qualify_numbers(value)?;
     }
     if let Some(source) = source_name {
         check_name(definition, source)?;
