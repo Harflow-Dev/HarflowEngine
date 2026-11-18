@@ -185,6 +185,19 @@ fn invalid_run_policy_and_prompt_are_refused_before_root_resolution() {
 }
 
 #[test]
+fn prompt_of_exactly_one_mebibyte_passes_validation_and_reaches_root_resolution() {
+    let prompt = "x".repeat(1_048_576);
+    let service = Services::new(Ok(TASK.into()));
+    let outcome = dispatch(&run_args(&prompt), &service);
+    assert_eq!(outcome.code, 0);
+    assert_eq!(outcome.stdout, format!("{TASK}\n"));
+    assert_eq!(service.root_calls.get(), 1);
+    assert_eq!(service.run_calls.get(), 1);
+    let request = service.request.borrow().clone().unwrap();
+    assert_eq!(request.prompt.len(), 1_048_576);
+}
+
+#[test]
 fn unknown_backend_outcome_uses_unknown_envelope_and_exit_code() {
     let service = Services::new(Err(RunFailure::Unknown(
         "state changed during dispatch".into(),
