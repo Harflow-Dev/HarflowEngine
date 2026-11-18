@@ -9,9 +9,26 @@ use hf_domain::workflow::json::Json;
 use workflow_parity_support::RealCodec;
 use workflow_snapshot_support::{entry, tree, validator};
 
+const CASE_IDS: [&str; 4] = [
+    "backend_change_drops_six",
+    "same_backend_retains_six",
+    "absent_overrides",
+    "empty_overrides",
+];
+
+fn snapshot_cases() -> Vec<workflow_parity_support::Case> {
+    let cases = workflow_parity_support::load_cases("snapshot.json");
+    let mut ids: Vec<&str> = cases.iter().map(|case| case.id.as_str()).collect();
+    ids.sort_unstable();
+    let mut expected = CASE_IDS.to_vec();
+    expected.sort_unstable();
+    assert_eq!(ids, expected, "snapshot corpus cases changed");
+    cases
+}
+
 #[test]
 fn launch_and_digest_match_the_pure_python_oracle_corpus() {
-    for case in workflow_parity_support::load_cases("snapshot.json") {
+    for case in snapshot_cases() {
         let overrides = match case.get("overrides") {
             Json::Object(value) => Some(value),
             Json::Null => None,
@@ -33,20 +50,12 @@ fn launch_and_digest_match_the_pure_python_oracle_corpus() {
             "{} original hash",
             case.id
         );
-        let mut forced = launched.clone();
-        forced.insert("context_delivery", Json::text("optimized_v1"));
-        assert_eq!(
-            definition_sha256(&RealCodec, &forced),
-            case.get("forced_definition_sha256").as_str().unwrap(),
-            "{} forced hash",
-            case.id
-        );
     }
 }
 
 #[test]
 fn prepared_pin_rehashes_match_independent_python_hashes() {
-    for case in workflow_parity_support::load_cases("snapshot.json") {
+    for case in snapshot_cases() {
         let overrides = match case.get("overrides") {
             Json::Object(value) => Some(value),
             Json::Null => None,

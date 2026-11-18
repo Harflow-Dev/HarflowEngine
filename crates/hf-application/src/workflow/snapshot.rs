@@ -39,7 +39,8 @@ fn too_deep() -> SnapshotFailure {
 /// Copies the root, forces bounded context and applies orchestrator overrides before
 /// validation. A backend change discards exactly the six backend-specific settings.
 /// With nonempty overrides, the source must be a normalized stored root with an
-/// object orchestrator. Malformed raw roots are not a supported Python parity path.
+/// object orchestrator, otherwise the launch is refused. Malformed raw roots are not a
+/// supported Python parity path.
 pub fn launch_definition(
     validator: &Validator<'_>,
     definition: &JsonObject,
@@ -50,28 +51,32 @@ pub fn launch_definition(
     launched.insert("context_delivery", Json::text("optimized_v1"));
     if let Some(overrides) = overrides.filter(|value| !value.is_empty()) {
         depth_guard(overrides)?;
-        if let Some(orchestrator) = launched
+        // Dropping the overrides silently would launch a different configuration than asked.
+        let Some(orchestrator) = launched
             .get_mut("orchestrator")
             .and_then(Json::as_object_mut)
+        else {
+            return Err(SnapshotFailure::Validation(WorkflowFailure::Refused(
+                Refusal::new(DefinitionRule::OrchestratorNotObject),
+            )));
+        };
+        if overrides
+            .get("backend")
+            .is_some_and(|backend| Some(backend) != orchestrator.get("backend"))
         {
-            if overrides
-                .get("backend")
-                .is_some_and(|backend| Some(backend) != orchestrator.get("backend"))
-            {
-                for setting in [
-                    "model",
-                    "reasoning_effort",
-                    "max_turns",
-                    "background_idle_seconds",
-                    "caller_approvals",
-                    "caller_write_approvals",
-                ] {
-                    orchestrator.remove(setting);
-                }
+            for setting in [
+                "model",
+                "reasoning_effort",
+                "max_turns",
+                "background_idle_seconds",
+                "caller_approvals",
+                "caller_write_approvals",
+            ] {
+                orchestrator.remove(setting);
             }
-            for (key, value) in overrides.iter() {
-                orchestrator.insert(key, value.clone());
-            }
+        }
+        for (key, value) in overrides.iter() {
+            orchestrator.insert(key, value.clone());
         }
     }
     validator

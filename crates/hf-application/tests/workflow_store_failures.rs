@@ -2,9 +2,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod workflow_save_support;
 
-use hf_application::workflow::ports::{DefinitionStore, DefinitionTxn};
+use hf_application::workflow::catalog::{CatalogFailure, delete_definition};
+use hf_application::workflow::ports::DefinitionStore;
 use hf_application::workflow::save::SaveExpectations;
-use workflow_save_support::{Allow, MemStore, SeqIds, StoreOperation, definition, refusal, save};
+use workflow_save_support::{
+    Allow, FakeCodec, MemStore, SeqIds, StoreOperation, definition, refusal, save,
+};
 
 #[test]
 fn list_failure_stops_save_before_any_write() {
@@ -97,17 +100,26 @@ fn begin_failure_stops_before_listing() {
 }
 
 #[test]
-fn remove_failure_keeps_source() {
+fn delete_use_case_remove_failure_keeps_source() {
     let store = MemStore::new();
-    store.insert("flow", hf_domain::workflow::json::JsonObject::new());
+    save(
+        &store,
+        &definition("flow"),
+        &SaveExpectations::default(),
+        &Allow,
+        &SeqIds::default(),
+    )
+    .unwrap();
     store.fail_next(
         StoreOperation::Remove {
             name: "flow".to_string(),
         },
         refusal("flow"),
     );
-    let txn = store.begin("flow").unwrap();
-    assert!(txn.remove().is_err());
+    let result = delete_definition(&store, &FakeCodec, "flow");
+    assert_eq!(
+        result.unwrap_err(),
+        CatalogFailure::Document(refusal("flow"))
+    );
     assert!(store.get("flow").unwrap().is_some());
-    assert_eq!(store.calls().len(), 1);
 }
