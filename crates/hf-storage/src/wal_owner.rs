@@ -1,12 +1,23 @@
 //! Writer-side WAL ownership: checkpoint policy and post-commit maintenance.
 //!
-//! `Owner` bounds the `-wal` file: `journal_size_limit` 16 MiB, an open-time PASSIVE
-//! checkpoint, and a PASSIVE checkpoint after a commit once the live log passes 8 MiB. It keeps
-//! both SQLite checkpoint suppressions (`wal_autocheckpoint=0`, no checkpoint on close),
-//! never uses TRUNCATE (only `recover` does) and never RESTART, so `-wal` always survives.
-//! `Suppressed` is the behaviour of the fixture seed, the host fixture modes and the
-//! watch seam: nothing checkpoints, so seeded roots keep their nonempty `-wal`.
-use crate::{Error, Result, Store, checkpoint::checkpoint, connection, write_tx::Publish};
+//! `Owner` bounds the `-wal` file: `journal_size_limit` 16 MiB and PASSIVE checkpoints. It
+//! keeps both SQLite checkpoint suppressions (`wal_autocheckpoint=0`, no checkpoint on
+//! close), never uses TRUNCATE (only `recover` does) and never RESTART, so `-wal` always
+//! survives. `Suppressed` is the behaviour of the fixture seed, the host fixture modes and
+//! the watch seam: nothing checkpoints, so seeded roots keep their nonempty `-wal`.
+//!
+//! Two maintenance modes exist under `Owner`. `Maintenance::AfterCommit` (`owner()`) runs an
+//! unbounded open-time PASSIVE and a PASSIVE after a commit once the live log passes 8 MiB.
+//! `Maintenance::Idle` (`owner_idle()`, the task writer) is driven by the holder's idle loop
+//! through `maintain_wal`, copies on a transient connection bounded by a watchdog
+//! (`wal_idle.rs`) and falls back to the commit path only above `HARD_LIVE_LOG`.
+use crate::{
+    Error, Result, Store,
+    checkpoint::checkpoint,
+    connection,
+    wal_idle::{LogState, Origin},
+    write_tx::Publish,
+};
 use hf_application::durability::FlushPort;
 use std::{
     fs::{self, File},
@@ -22,6 +33,12 @@ pub const PASSIVE_AFTER: u64 = 8 * 1024 * 1024;
 /// Upper bound on the maintenance budget after a commit. It bounds admission, `io.lock`
 /// and SQLite busy waits, not the PASSIVE copy itself, which runs to completion.
 pub const MAINTENANCE_BUDGET: Duration = Duration::from_millis(100);
+/// `Idle` mode only: a commit that leaves a live log longer than this (and an uncheckpointed
+/// backlog above `PASSIVE_AFTER`) runs one bounded PASSIVE on the commit path.
+pub const HARD_LIVE_LOG: u64 = 2 * JOURNAL_SIZE_LIMIT;
+/// `Idle` mode only: default and cap of `WriterOptions::passive_budget`, the time one PASSIVE
+/// copy may run after `io.lock` is held. A third of the owner's 5 s acknowledgement deadline.
+pub const PASSIVE_COPY_BUDGET: Duration = Duration::from_millis(1500);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointPolicy {
@@ -31,13 +48,36 @@ pub enum CheckpointPolicy {
     Suppressed,
 }
 
+/// Where `Owner` maintenance runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Maintenance {
+    /// After each commit, plus an open-time PASSIVE (`owner()`).
+    AfterCommit,
+    /// From the holder's idle loop through `Store::maintain_wal`; the commit path only
+    /// falls back above `HARD_LIVE_LOG` (`owner_idle()`).
+    Idle,
+}
+
+/// How a commit takes `io.lock`. Set only by the constructors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum IoWait {
+    /// One attempt: a held lock is `Busy` at once.
+    Immediate,
+    /// Retry a busy lock before any effect until `IO_RESERVE` before the deadline.
+    PollUntilDeadline,
+}
+
 /// Chosen by the caller of `Store::open_with`; `Store::open` is `WriterOptions::suppressed()`.
 /// `flush` makes the commit watermark durable: it runs twice per commit, before the slot
-/// write and after it.
+/// write and after it. `maintenance` and `passive_budget` apply to `Owner` only;
+/// `passive_budget` is capped at `PASSIVE_COPY_BUDGET` and applies to `Idle`.
 #[derive(Debug, Clone)]
 pub struct WriterOptions {
     pub checkpoint: CheckpointPolicy,
     pub flush: Arc<dyn FlushPort>,
+    pub maintenance: Maintenance,
+    pub passive_budget: Duration,
+    pub(crate) io_wait: IoWait,
 }
 
 /// Default flush of this crate: `sync_all` on the open file. On Apple platforms std
@@ -77,12 +117,24 @@ impl WriterOptions {
         Self {
             checkpoint: CheckpointPolicy::Suppressed,
             flush: default_flush(),
+            maintenance: Maintenance::AfterCommit,
+            passive_budget: PASSIVE_COPY_BUDGET,
+            io_wait: IoWait::Immediate,
         }
     }
     pub fn owner() -> Self {
         Self {
             checkpoint: CheckpointPolicy::Owner,
-            flush: default_flush(),
+            ..Self::suppressed()
+        }
+    }
+    /// `Owner` for the long-lived task writer: maintenance from its idle loop, no open-time
+    /// PASSIVE, and a commit that waits out a busy `io.lock` before any effect.
+    pub fn owner_idle() -> Self {
+        Self {
+            maintenance: Maintenance::Idle,
+            io_wait: IoWait::PollUntilDeadline,
+            ..Self::owner()
         }
     }
     /// The same policy with `flush` as the watermark flush.
@@ -99,6 +151,10 @@ pub enum WalMaintenance {
     /// The connection, `io.lock` or checkpoint lock was busy, or the budget ran out;
     /// nothing was changed.
     Skipped,
+    /// `Idle` mode: the copy was interrupted at its budget. Completion is not established
+    /// and main-file pages may have been written; `nBackfill` is not published, so no
+    /// durable progress is claimed.
+    Interrupted,
     /// A PASSIVE checkpoint ran. `shrink_commit_landed` says a sequence-bump maintenance
     /// commit followed it; it does not claim the file shrank.
     Checkpointed {
@@ -118,7 +174,7 @@ pub(crate) fn wal_len(root: &Path) -> Result<u64> {
 
 /// Lock, connection and SQLite busy results, an expired budget and a fenced store:
 /// maintenance skips. A `CommitLost` found by the maintenance commit is reported.
-fn skippable(error: &Error) -> bool {
+pub(crate) fn skippable(error: &Error) -> bool {
     match error {
         Error::Busy | Error::DeadlineExceeded | Error::Fenced => true,
         Error::Sqlite(rusqlite::Error::SqliteFailure(failure, _)) => matches!(
@@ -127,26 +183,6 @@ fn skippable(error: &Error) -> bool {
         ),
         _ => false,
     }
-}
-
-/// Bytes of the live log (frames since the last restart), read with a NOOP checkpoint:
-/// no checkpoint lock, no copy, no file change, though reading the WAL-index header can
-/// run WAL-index recovery under its own locks. A busy result or an unknown log size
-/// (`busy` = 1 or a negative frame count) is `Busy`, so maintenance skips. The `-wal`
-/// file length is not the log size: after a restart the file keeps its length while the
-/// log refills from the start.
-fn log_bytes(connection: &rusqlite::Connection) -> Result<u64> {
-    let (busy, frames): (i64, i64) =
-        connection.query_row("PRAGMA wal_checkpoint(NOOP)", [], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })?;
-    if busy != 0 || frames < 0 {
-        return Err(Error::Busy);
-    }
-    let page: i64 = connection.pragma_query_value(None, "page_size", |row| row.get(0))?;
-    let frames = u64::try_from(frames).map_err(|_| Error::Incompatible)?;
-    let page = u64::try_from(page).map_err(|_| Error::Incompatible)?;
-    Ok(32 + frames * (page + 24))
 }
 
 impl Store {
@@ -166,20 +202,43 @@ impl Store {
         }
     }
 
-    /// Runs after a commit's `io.lock` is released (`Store::write` calls it with the
-    /// earlier of its own deadline and `MAINTENANCE_BUDGET`). Under `Owner`: reads the
-    /// live log size with a NOOP checkpoint; past `PASSIVE_AFTER` it re-takes `io.lock`
+    /// Under `AfterCommit`, runs after a commit's `io.lock` is released (`Store::write` calls
+    /// it with the earlier of its own deadline and `MAINTENANCE_BUDGET`). Under `Owner`: reads
+    /// the live log size with a NOOP checkpoint; past `PASSIVE_AFTER` it re-takes `io.lock`
     /// within `deadline` and runs PASSIVE; when that checkpoint completed with the `-wal`
     /// file still over `JOURNAL_SIZE_LIMIT` (a reader had pinned it), one maintenance
     /// commit follows. That commit only advances `commit_sequence`, but it writes a frame,
     /// which restarts the log, and SQLite cuts the file to the limit at that write. Busy,
     /// an expired budget or a fence of either state (checked under `io.lock` before
     /// PASSIVE) is a skip, never an error. `deadline` bounds admission, `io.lock`
-    /// and busy waits, not the PASSIVE copy itself.
+    /// and busy waits, not the PASSIVE copy itself. Under `Idle` this is the holder's tick
+    /// (`wal_idle.rs`): the copy is bounded by `passive_budget`.
     pub fn maintain_wal(&self, deadline: Instant) -> Result<WalMaintenance> {
+        self.maintain_wal_with(deadline, self.options.passive_budget)
+    }
+
+    /// As `maintain_wal`, with `copy_budget` as the `Idle` copy budget (capped at
+    /// `PASSIVE_COPY_BUDGET`). Under `Idle`, `deadline` bounds admission and the `io.lock`
+    /// wait only; the copy has its own budget, counted from the moment `io.lock` is held.
+    pub fn maintain_wal_with(
+        &self,
+        deadline: Instant,
+        copy_budget: Duration,
+    ) -> Result<WalMaintenance> {
         if self.options.checkpoint != CheckpointPolicy::Owner {
             return Ok(WalMaintenance::Idle);
         }
+        if self.options.maintenance == Maintenance::Idle {
+            return self.maintain_idle(
+                Origin::Tick,
+                deadline,
+                copy_budget.min(PASSIVE_COPY_BUDGET),
+            );
+        }
+        self.maintain_after_commit_mode(deadline)
+    }
+
+    fn maintain_after_commit_mode(&self, deadline: Instant) -> Result<WalMaintenance> {
         let done = match self.passive_if_due(deadline) {
             Ok(Some(done)) => done,
             Ok(None) => return Ok(WalMaintenance::Idle),
@@ -202,7 +261,7 @@ impl Store {
     /// `None` while the log is at most `PASSIVE_AFTER`; otherwise one PASSIVE under `io.lock`.
     fn passive_if_due(&self, deadline: Instant) -> Result<Option<crate::Checkpoint>> {
         let connection = self.admit(deadline)?;
-        if log_bytes(&connection)? <= PASSIVE_AFTER {
+        if LogState::read(&connection)?.live_bytes() <= PASSIVE_AFTER {
             return Ok(None);
         }
         let _io = self.binding.io(deadline)?;
@@ -219,11 +278,17 @@ impl Store {
     }
 
     /// Best effort: any maintenance result, including an error, leaves the commit's
-    /// result unchanged.
-    pub(crate) fn maintain_after_commit(&self, deadline: Instant) {
-        if self.options.checkpoint == CheckpointPolicy::Owner {
-            let budget = deadline.min(Instant::now() + MAINTENANCE_BUDGET);
-            let _ = self.maintain_wal(budget);
+    /// result unchanged. `waited` says the commit had to wait for `io.lock`.
+    pub(crate) fn maintain_after_commit(&self, deadline: Instant, waited: bool) {
+        if self.options.checkpoint != CheckpointPolicy::Owner {
+            return;
+        }
+        match self.options.maintenance {
+            Maintenance::AfterCommit => {
+                let budget = deadline.min(Instant::now() + MAINTENANCE_BUDGET);
+                let _ = self.maintain_wal(budget);
+            }
+            Maintenance::Idle => self.maintain_fallback(deadline, waited),
         }
     }
 }

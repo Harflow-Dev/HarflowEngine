@@ -1,5 +1,5 @@
 //! Sole-writer transaction spine. Errors poison permanently; handles remain retained.
-use super::{Error, HeldRoot};
+use super::{Error, HeldRoot, idle_maintenance};
 use hf_application::{
     task_lifecycle::DurableCaptureAdmission,
     task_runtime::{AcceptanceAdmission, InitialIntentValidator, PreAgentRefusalAdmission},
@@ -10,7 +10,9 @@ use hf_domain::{
     task_lifecycle::{LifecycleDelta, LifecycleEvidence},
     task_runtime::AcceptanceReadiness,
 };
-use hf_storage::{LifecycleEventPublication, Store, TaskCreate, TerminalPublication};
+use hf_storage::{
+    LifecycleEventPublication, MAINTENANCE_BUDGET, Store, TaskCreate, TerminalPublication,
+};
 use std::time::Instant;
 
 pub struct Writer {
@@ -19,6 +21,7 @@ pub struct Writer {
     evidence: LifecycleEvidence,
     pub(super) hold: HeldRoot,
     poisoned: bool,
+    idle: idle_maintenance::Cadence,
 }
 impl Writer {
     /// A new writer validates the immutable prepared bytes and actual direct owner.
@@ -45,7 +48,7 @@ impl Writer {
         {
             return Err(Error::Refused);
         }
-        let store = hold.open_store(deadline)?;
+        let store = hold.open_writer_store(deadline)?;
         super::owner_entry::validate_dispatcher(&store, request, &invitation, deadline)?;
         let intent = store
             .read_launch_intent(&invitation.binding, deadline)?
@@ -77,6 +80,7 @@ impl Writer {
             evidence,
             hold,
             poisoned: false,
+            idle: idle_maintenance::Cadence::new(),
         })
     }
     pub fn evidence(&self) -> &LifecycleEvidence {
@@ -87,6 +91,30 @@ impl Writer {
     }
     pub fn poison(&mut self) {
         self.poisoned = true;
+    }
+    /// One idle WAL maintenance call when its cadence is due; a no-op on a poisoned writer.
+    /// A failure that leaves the writer's own state uncertain is returned so that the
+    /// caller discards the writer; any other outcome is recorded by the store and paced.
+    pub(super) fn maintain_idle(&mut self, now: Instant) -> Result<(), Error> {
+        if self.poisoned {
+            return Ok(());
+        }
+        let store = &self.store;
+        idle_maintenance::step(&mut self.idle, now, || {
+            store.maintain_wal(Instant::now() + MAINTENANCE_BUDGET)
+        })
+    }
+    /// The call after the terminal acknowledgement. Its outcome never changes the exit
+    /// code; a poisoning failure is recorded on the writer, not escalated.
+    pub(super) fn maintain_final(&mut self) {
+        if !self.poisoned && idle_maintenance::finish(&self.store) {
+            self.poisoned = true;
+        }
+    }
+    /// The store has recorded that copies were interrupted often enough to enter the long
+    /// backoff (the supported envelope was exceeded).
+    pub fn wal_envelope_exceeded(&self) -> bool {
+        self.store.wal_envelope_exceeded()
     }
     fn begin(&mut self) -> Result<(), Error> {
         if self.poisoned {

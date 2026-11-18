@@ -328,8 +328,10 @@ budget holds only once E2-D's WAL maintenance bounds `-wal`. One writer sustains
 non-waiting `io.lock` with 5 ms `Busy` polling. E2-D entry conditions: a waiting or queued
 `io.lock` hand-off replaces the polling, the capture-publication commit is coalesced into the
 event append commit, and commit-lag p99 is below 100 ms for the r06/r07 four-task burst and the
-4 x 42 lines/s sustained profile under `FullFlush`; idle-loop WAL maintenance bounds `-wal`
-growth before the owner runtime uses the store.
+4 x 42 lines/s sustained profile under `FullFlush`. Idle-loop WAL maintenance bounds `-wal`
+growth of the task writer (E2-C S5, [Idle maintenance](#idle-maintenance)); a commit of that
+writer also waits out a busy `io.lock` before any effect, a narrow pre-effect wait that is not
+the hand-off above.
 
 Readers hold no `io.lock`. They read each block with its own positioned read; when neither is valid
 they retry the pair up to three more times, 1 ms apart (a reader can see one block before a commit
@@ -407,20 +409,24 @@ indicator is not proof that all frames were checkpointed. Exclusive recovery use
 TRUNCATE only after other lifecycle holders are gone; incomplete/busy results are
 observable, never permission to delete WAL or force reader release. Disabling auto
 checkpoint requires a scheduling/WAL-growth policy. The checkpoint owner below implements
-one, but no production handle opts into it yet: every production opener uses `Suppressed`,
-so production WAL growth stays unbounded until the slice that wires `Owner` into the owner
-runtime (E2-D).
+one. The task writer opts into `Owner` with idle maintenance (`owner_idle()`); every other
+production opener (the dispatcher, the owner's validation open, readers, watchers) uses
+`Suppressed`, so nothing else checkpoints.
 
 ### Checkpoint owner
 
-`WriterOptions { checkpoint, flush }` picks the policy per handle: `Store::open_with`
-takes it explicitly and `Store::open` is `WriterOptions::suppressed()`. `Suppressed` is the
-behaviour above (no checkpoint of any kind) and is what the fixture seed, the host fixture
-modes, the owner runtime writer and the watch seam use, so seeded roots keep a nonempty
-`-wal`. `Owner` keeps both suppressions (`wal_autocheckpoint=0`, no checkpoint on close)
-and checkpoints only through explicit PASSIVE: `PRAGMA journal_size_limit` 16 MiB
-(`JOURNAL_SIZE_LIMIT`) is set in `open_source`; one PASSIVE runs at open under `io.lock`
-after qualification (a busy result is ignored); `Store::write` calls `maintain_wal` after
+`WriterOptions { checkpoint, flush, maintenance, passive_budget }` picks the policy per
+handle: `Store::open_with` takes it explicitly and `Store::open` is
+`WriterOptions::suppressed()`. `Suppressed` is the behaviour above (no checkpoint of any kind)
+and is what the fixture seed, the host fixture modes, the dispatcher, the owner's validation
+open and the watch seam use, so seeded roots keep a nonempty `-wal`. `Owner` keeps both
+suppressions (`wal_autocheckpoint=0`, no checkpoint on close) and checkpoints only through
+explicit PASSIVE: `PRAGMA journal_size_limit` 16 MiB (`JOURNAL_SIZE_LIMIT`) is set in
+`open_source`. It has two maintenance modes: `Maintenance::AfterCommit` (`owner()`, below) and
+`Maintenance::Idle` (`owner_idle()`, [Idle maintenance](#idle-maintenance)).
+
+With `AfterCommit`, one PASSIVE runs at open under `io.lock` after qualification (a busy
+result is ignored; the copy itself is unbounded); `Store::write` calls `maintain_wal` after
 the commit's `io.lock` is released, before the write returns, and any maintenance result,
 including an error, leaves the committed result unchanged. `maintain_wal` reads the live
 log size with `PRAGMA wal_checkpoint(NOOP)`, which copies nothing and takes no checkpoint
@@ -441,6 +447,95 @@ TRUNCATE stays in `recover` only and RESTART is never used, so `-wal` always sur
 (see [Commit watermark](#commit-watermark)); `suppressed()` and `owner()` default it to
 `SyncAllFlush` (a no-op in hf-storage's own unit-test build) and `with_flush` replaces it. Production handles pass the platform port for
 `DEFAULT_DURABILITY`.
+
+#### Idle maintenance
+
+`owner_idle()` is the task writer's policy: the only long-lived writer of a task keeps `-wal`
+bounded from its idle loop, and the commit path copies only above a hard bound. The dispatcher,
+the owner's transient validation open, readers, watchers, fixtures and the B8 qualification stay
+`Suppressed`.
+
+- **Open.** No open-time PASSIVE: open validates only, and the first idle tick maintains.
+  (`owner()` keeps its unbounded open-time PASSIVE.)
+- **Tick.** The holder calls `Store::maintain_wal(deadline)` from its idle loop; the task writer
+  does so on a pending receive, at most every 250 ms, doubling to 4 s after an interrupted,
+  skipped or incomplete outcome and resetting after a complete one (`hf-host`). `deadline`
+  bounds admission and the `io.lock` wait (`MAINTENANCE_BUDGET`, 100 ms, polled every
+  `IO_POLL`); the copy has its own budget. `maintain_wal_with(deadline, budget)` sets that
+  budget for one call (the writer's final call after its terminal acknowledgement uses 100 ms;
+  it never changes the exit code and delays owner settlement by at most that budget plus the
+  fsyncs and the shrink commit).
+- **Due.** A PASSIVE is due when the uncheckpointed backlog (the NOOP log minus checkpointed
+  frames) exceeds `PASSIVE_AFTER`. A shrink is due, independent of the backlog, when `-wal` is
+  over `JOURNAL_SIZE_LIMIT` and nothing is left to copy (a skipped shrink after a completed
+  PASSIVE, or a `Suppressed` restart that did not cut the file); the tick retries it. A
+  reader-pinned, fully copied log is therefore not copied again until its backlog grows.
+- **Copy.** PASSIVE runs on a transient connection with the source connection's protections
+  (read-write, no create, identity and sequence validation, both suppressions,
+  `synchronous=FULL`, binding re-check after the operation), opened before `io.lock` is taken.
+  The copy budget (`WriterOptions::passive_budget`, default and cap `PASSIVE_COPY_BUDGET`,
+  1.5 s, a third of the owner's 5 s acknowledgement deadline) starts when `io.lock` is held and
+  runs under the scan watchdog (`scan::bounded_late`), which is joined before the transient
+  connection is dropped. SQLite polls the interrupt once per frame of the copy loop and
+  publishes `nBackfill` only after the whole copy and the database sync succeed, so an
+  interrupted PASSIVE makes no durable progress (it may still have written main-file pages). A
+  completion that lands just after the deadline is reported as complete.
+- **Outcomes.** `Skipped` keeps its meaning: nothing changed (lock busy, fence, a deadline before
+  the start). `Interrupted` is new: completion is not established and main-file pages may have
+  been written. `Checkpointed { complete: false, .. }` is a copy that a reader kept from
+  finishing.
+- **Cooperative bound.** The deadline cannot cut the WAL fsync before the copy, connection
+  setup, the database sync after a completed copy, or the shrink commit (which runs under a
+  fresh `MAINTENANCE_BUDGET`). One acknowledgement window therefore costs at most the 100 ms
+  admission, the 1.5 s copy and those uninterruptible steps, and at most one copy.
+- **Backoff.** The store keeps one state behind a mutex, shared by the tick and the commit-path
+  fallback: the start of the last attempt (a PASSIVE that took `io.lock`), the count of
+  consecutive interrupted copies and a backoff deadline. After three consecutive `Interrupted`
+  outcomes maintenance backs off for 60 s and `Store::wal_envelope_exceeded()` reports the
+  condition until a complete checkpoint, which resets the state. The supported envelope: with
+  no pinned reader, a backlog up to about 1.5 s of copy (roughly 350 MiB at the measured
+  rate) completes; beyond it, or while a reader pins the log, `-wal` stays above the bound and
+  each outcome is reported truthfully. Only an explicit `recover` bounds `-wal` beyond that.
+- **Fallback.** A commit leaves the holder to maintain unless the live log passes
+  `HARD_LIVE_LOG` (32 MiB) with a backlog above `PASSIVE_AFTER`. The fallback is skipped inside
+  the 60 s backoff, within 5 s of any attempt's start, and after a commit that waited for
+  `io.lock`; otherwise its copy budget is the smaller of `passive_budget` and a third of the
+  commit's remaining deadline.
+- **Wait for `io.lock`.** A commit of an `owner_idle()` handle that finds `io.lock` busy retries
+  the acquisition every `IO_POLL` (5 ms) until `IO_RESERVE` (1 s) before its deadline, before
+  any transaction starts. The first attempt always happens, under the operation deadline; the
+  retry cutoff is checked before each sleep and again before each further attempt. When the
+  budget is spent the last error is returned unchanged (`Busy`) and the commit has had no
+  effect. Nothing else is retried: not the connection-mutex `Busy` of admission, not identity,
+  sidecar or fence errors, not SQLite `BUSY` inside the transaction, nothing after the
+  transaction starts; a poisoned handle never waits. `IO_RESERVE` is a heuristic allowance for
+  the transaction, the action, the closing checks, the watermark flush and the acknowledgement's
+  transit, not a completion bound. The task writer is single-threaded, so holding the
+  connection mutex while polling only makes other users of the same `Store` see `Busy`.
+  `Suppressed` and `owner()` keep the single attempt. Residuals: `fcntl` locks have no
+  queueing or fairness, and the maintenance state is per `Store`, so several siblings' holds can
+  fall in one window; an exhausted budget still fails the command, and the runtime writer then
+  discards as before. Store open (`writer_open.rs`), `checkpoint.rs` and `recovery.rs` still take
+  `io.lock` with a single attempt, so the dispatcher's T0, the owner's validation open and the
+  task writer's own `Writer::open` can see `Busy` while a sibling holds the lock for a copy
+  (up to about 1.6 s); they are unchanged and recorded here as a residual.
+  The in-process wait test uses a raw `flock` descriptor as the holder rather than a second
+  binding, so the lease registry's in-process `Busy` paths are not exercised; the retry is
+  generic on `Busy`.
+- **Registry contention.** Within one process, the platform lease adapter takes its
+  process-wide registry with `try_lock` and reports contention as `Busy` even for unrelated
+  roots (`hf-platform` `lease/darwin.rs`). `Immediate` callers can see such a spurious `Busy`;
+  `PollUntilDeadline` writers absorb it in the `io.lock` wait. Production processes hold one
+  root, so the contention does not arise there. (hf-storage's own tests use a `flock`
+  adapter without that registry; their spawned-child tests are serialized because a
+  forked child briefly inherits descriptors, and so held `flock` locks, of concurrent tests.)
+- **Reporting.** The envelope-exceeded flag (`wal_envelope_exceeded`) and the writer's record of
+  a poisoning failure in its final maintenance call live in memory only. S5 keeps them; S6 and
+  E2-D surface them, and no new channel is added now.
+- **Backoff counting.** Only an interruption at the handle's full copy budget
+  (`passive_budget`, capped at `PASSIVE_COPY_BUDGET`) counts toward the long backoff; a shorter
+  fallback or final-call budget that is interrupted is reported as `Interrupted` but counts
+  like a skip.
 
 SQLite references: [WAL behavior](https://www.sqlite.org/wal.html),
 [checkpoint modes](https://www.sqlite.org/c3ref/wal_checkpoint_v2.html), and

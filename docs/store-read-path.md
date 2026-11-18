@@ -489,8 +489,11 @@ passive checkpoint does not shrink the file; with the limit it shrinks at the ne
 write after a complete checkpoint. RESTART is not part of the design (no
 experiment ran it). The open-time checkpoint step and the shrink
 path for a WAL pinned by readers are implemented (A2, `wal_owner.rs`, policy `Owner`;
-`Suppressed` keeps today's behaviour for seeds, fixture modes and the watch seam). No production
-handle opts into `Owner` yet; E2-D wires it into the owner runtime.
+`Suppressed` keeps today's behaviour for seeds, fixture modes and the watch seam). The task
+writer opts into `Owner` with idle maintenance (`owner_idle()`, E2-C S5; see the storage
+protocol's Idle maintenance section): `-wal` is bounded from its idle loop, with a bounded copy
+on a transient connection and no open-time PASSIVE. The dispatcher, the owner's validation
+open, readers and watchers stay `Suppressed`.
 The post-commit trigger is the live log size (`PRAGMA wal_checkpoint(NOOP)`), not the
 file length. Measured on macOS arm64 (release build, load about 5): the first Owner open
 with 1, 4 and 7 MiB of unbackfilled WAL took 6-7, 13-22 and 24-32 ms against 2, 3 and 4 ms

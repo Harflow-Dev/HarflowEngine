@@ -134,6 +134,8 @@ fn replace_io_lock(root: &std::path::Path) {
 
 #[test]
 fn a_non_skippable_maintenance_failure_never_fails_the_committed_write() {
+    // A child spawned meanwhile would inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     use std::io::{BufRead, BufReader, Write};
     let (scratch, store) = reopened("maintenance-failure", WriterOptions::suppressed());
     drop(store);

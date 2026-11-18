@@ -6,7 +6,8 @@
 //! the state-recovery gate (`recovery_gate.rs`). `open` and `recover` record a `CommitLost`
 //! they find as the `commit_lost` fence; `probe` never writes one.
 use crate::{
-    Checkpoint, CheckpointPolicy, Error, Identity, Limits, Result, Store, WriterOptions,
+    Checkpoint, CheckpointPolicy, Error, Identity, Limits, Maintenance, Result, Store,
+    WriterOptions,
     binding::Binding,
     checkpoint::checkpoint,
     connection::{self, open_source},
@@ -33,8 +34,10 @@ impl Store {
         Self::open_with(root, limits, deadline, leases, WriterOptions::suppressed())
     }
     /// Opens a writer handle with an explicit checkpoint policy. Under `Owner`, the
-    /// connection gets `journal_size_limit` and one PASSIVE checkpoint runs under
-    /// `io.lock` after qualification; `Store::write` then calls `maintain_wal`.
+    /// connection gets `journal_size_limit`. Under `Maintenance::AfterCommit` one PASSIVE
+    /// checkpoint runs under `io.lock` after qualification and `Store::write` then calls
+    /// `maintain_wal`; under `Maintenance::Idle` open performs validation only and the
+    /// holder's idle loop maintains (`wal_idle.rs`).
     pub fn open_with(
         root: impl AsRef<Path>,
         limits: Limits,
@@ -53,7 +56,9 @@ impl Store {
         let (identity, wal) = qualify::in_place(&binding, deadline, Scan::Identity)
             .map_err(|error| fence::on_commit_lost(&binding, &expected.generation, error))?;
         let connection = open_source(&binding, &identity, deadline, options.checkpoint)?;
-        if options.checkpoint == CheckpointPolicy::Owner {
+        if options.checkpoint == CheckpointPolicy::Owner
+            && options.maintenance == Maintenance::AfterCommit
+        {
             Self::passive_at_open(&connection, deadline)?;
             binding.check()?;
         }
@@ -65,6 +70,7 @@ impl Store {
             limits,
             options,
             poisoned: std::sync::atomic::AtomicBool::new(false),
+            idle: Mutex::default(),
             _claim: claim,
         })
     }

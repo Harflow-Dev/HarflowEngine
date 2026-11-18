@@ -13,7 +13,7 @@ use hf_domain::{
 use hf_interfaces::task_runtime::*;
 use hf_platform::task_runtime::raw::{PreparedRawCapture, RawCapture};
 use hf_storage::{EventAppend, TaskCreate, TerminalPublication};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 struct Runtime {
     entry: WriterEntry,
     intent: LaunchIntentCreate,
@@ -317,8 +317,13 @@ pub fn run_writer() -> i32 {
         Ok(mut runtime) => loop {
             let result = match runtime.entry.channel().receive_step() {
                 Ok(hf_platform::task_runtime::channel::Receive::Pending) => {
-                    std::thread::sleep(Duration::from_millis(1));
-                    continue;
+                    match runtime.entry.writer().maintain_idle(Instant::now()) {
+                        Ok(()) => {
+                            std::thread::sleep(Duration::from_millis(1));
+                            continue;
+                        }
+                        Err(error) => Err(error),
+                    }
                 }
                 Ok(hf_platform::task_runtime::channel::Receive::Frame(frame)) => {
                     decode_writer_command(io::payload(&frame).unwrap_or(&[]))
@@ -339,6 +344,7 @@ pub fn run_writer() -> i32 {
                 }
             }
             if runtime.terminal || runtime.not_started {
+                runtime.entry.writer().maintain_final();
                 return 0;
             }
         },

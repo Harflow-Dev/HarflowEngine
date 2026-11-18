@@ -175,6 +175,24 @@ impl Binding {
         self.check()?;
         Ok(guard)
     }
+    /// `io()` retried while it is `Busy`, every `poll`, until `cutoff`; with `None` the
+    /// cutoff is `deadline` and the retry has the verifier's original semantics (no check
+    /// after a sleep); see `io_wait::poll_until`. The flag says a `Busy` was seen first.
+    pub(crate) fn io_polling(
+        &self,
+        deadline: Instant,
+        poll: std::time::Duration,
+        cutoff: Option<Instant>,
+    ) -> Result<(Box<dyn LeaseGuard>, bool)> {
+        crate::io_wait::poll_until(
+            || self.io(deadline),
+            Instant::now,
+            std::thread::sleep,
+            poll,
+            cutoff.unwrap_or(deadline),
+            cutoff.is_some(),
+        )
+    }
     pub(crate) fn database(&self) -> PathBuf {
         self.root.join("store.sqlite3")
     }

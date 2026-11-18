@@ -87,7 +87,7 @@ fn validate_prepared(
     invitation: &ProductionInvitation,
     deadline: Instant,
 ) -> Result<(), Error> {
-    let store = hold.open_store(deadline)?;
+    let store = hold.open_validation_store(deadline)?;
     let intent = store
         .read_launch_intent(&invitation.binding, deadline)?
         .ok_or(Error::Refused)?;

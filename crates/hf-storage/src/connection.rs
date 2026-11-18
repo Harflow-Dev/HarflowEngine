@@ -211,3 +211,20 @@ fn limit_journal(connection: &Connection, deadline: Instant) -> Result<()> {
     }
     Ok(())
 }
+
+/// A short-lived read-write connection for one bounded PASSIVE, opened without maintenance
+/// of any kind: the source connection's protections (read-write, no create, identity and
+/// sequence validation, both checkpoint suppressions, `synchronous=FULL`, binding check),
+/// and no journal limit because it never commits. The caller drops it after use.
+pub(crate) fn open_transient(
+    binding: &crate::binding::Binding,
+    identity: &Identity,
+    deadline: Instant,
+) -> Result<Connection> {
+    open_source(
+        binding,
+        identity,
+        deadline,
+        crate::CheckpointPolicy::Suppressed,
+    )
+}

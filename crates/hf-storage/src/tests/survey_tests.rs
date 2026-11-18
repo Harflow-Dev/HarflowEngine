@@ -141,6 +141,8 @@ fn fifo(path: &Path) {
 /// confirms that no later step ran.
 #[test]
 fn precheck_mode_never_opens_later_files_after_a_refusal() {
+    // `mkfifo` is a spawned process: it must not inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     type Damage = fn(&Path);
     let cases: [(&str, Damage, Vec<Check>); 3] = [
         (

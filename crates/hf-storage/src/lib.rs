@@ -43,6 +43,7 @@ mod qualify;
 mod survey;
 pub use maintenance::{LOCK_BUDGET, LOCK_RETRY, MaintenanceSession, SessionRequest};
 pub use maintenance_evidence::EvidenceBounds;
+mod io_wait;
 mod recovery_copy;
 mod scan;
 #[cfg(test)]
@@ -51,10 +52,12 @@ mod task_query_tests;
 mod tests;
 mod wal;
 mod wal_acceptance;
+mod wal_idle;
 mod wal_owner;
+pub use io_wait::{IO_POLL, IO_RESERVE};
 pub use wal_owner::{
-    CheckpointPolicy, JOURNAL_SIZE_LIMIT, MAINTENANCE_BUDGET, PASSIVE_AFTER, SyncAllFlush,
-    WalMaintenance, WriterOptions,
+    CheckpointPolicy, HARD_LIVE_LOG, JOURNAL_SIZE_LIMIT, MAINTENANCE_BUDGET, Maintenance,
+    PASSIVE_AFTER, PASSIVE_COPY_BUDGET, SyncAllFlush, WalMaintenance, WriterOptions,
 };
 mod fence;
 mod recovery_gate;
@@ -211,6 +214,8 @@ pub struct Store {
     options: WriterOptions,
     /// Set when a watermark write or flush failed; every later write refuses.
     poisoned: AtomicBool,
+    /// `Maintenance::Idle` state shared by the idle tick and the commit-path fallback.
+    idle: Mutex<wal_idle::State>,
     _claim: Box<dyn LeaseGuard>,
 }
 impl Store {

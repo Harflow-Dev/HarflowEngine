@@ -64,9 +64,10 @@ impl Store {
         stage: Option<Stage>,
         action: impl FnOnce(&Transaction<'_>) -> Result<T>,
     ) -> Result<T> {
-        let value = self.commit(deadline, publish, stage, action)?;
-        self.maintain_after_commit(deadline);
-        Ok(value)
+        let (value, waited) =
+            self.commit_tracked(deadline, publish, stage, |tx| action(tx).map(Some))?;
+        self.maintain_after_commit(deadline, waited);
+        value.ok_or(Error::Incompatible)
     }
     /// As `write`, but an action returning `None` rolls back: nothing is published, the
     /// sequence does not advance and no maintenance runs.
@@ -77,9 +78,9 @@ impl Store {
         stage: Option<Stage>,
         action: impl FnOnce(&Transaction<'_>) -> Result<Option<T>>,
     ) -> Result<Option<T>> {
-        let value = self.commit_unless(deadline, publish, stage, action)?;
+        let (value, waited) = self.commit_tracked(deadline, publish, stage, action)?;
         if value.is_some() {
-            self.maintain_after_commit(deadline);
+            self.maintain_after_commit(deadline, waited);
         }
         Ok(value)
     }
@@ -91,25 +92,27 @@ impl Store {
         stage: Option<Stage>,
         action: impl FnOnce(&Transaction<'_>) -> Result<T>,
     ) -> Result<T> {
-        // The wrapped action always returns `Some`, so `commit_unless` returns `None` only
+        // The wrapped action always returns `Some`, so `commit_tracked` returns `None` only
         // for an action that asked to roll back, which this one never does.
-        self.commit_unless(deadline, publish, stage, |tx| action(tx).map(Some))?
+        self.commit_tracked(deadline, publish, stage, |tx| action(tx).map(Some))?
+            .0
             .ok_or(Error::Incompatible)
     }
-    fn commit_unless<T>(
+    /// The commit, with whether it had to wait for `io.lock` (at least one `Busy`).
+    fn commit_tracked<T>(
         &self,
         deadline: Instant,
         publish: Publish,
         stage: Option<Stage>,
         action: impl FnOnce(&Transaction<'_>) -> Result<Option<T>>,
-    ) -> Result<Option<T>> {
+    ) -> Result<(Option<T>, bool)> {
         let mut connection = self.admit(deadline)?;
         // A handle whose watermark write or flush failed takes no further write: a flush
         // retried after a failure can report success without the data being durable.
         if self.poisoned.load(Ordering::Acquire) {
             return Err(Error::WatermarkUnrecorded);
         }
-        let _io = self.binding.io(deadline)?;
+        let (_io, waited) = self.acquire_io(deadline)?;
         // A fenced store takes no further commit; the refusal is final, not retried.
         crate::fence::check(self.binding.root(), &self.identity.generation)?;
         let mark = self.open_watermark()?;
@@ -126,7 +129,7 @@ impl Store {
             ));
         }
         let Some(value) = action(&transaction)? else {
-            return Ok(None);
+            return Ok((None, waited));
         };
         publish.apply(&transaction)?;
         let sequence = advance_sequence(&transaction)?;
@@ -143,7 +146,7 @@ impl Store {
             .check()
             .map_err(|_| Error::CommitOutcomeUnknown)?;
         self.record_watermark(&mark, sequence)?;
-        Ok(Some(value))
+        Ok((Some(value), waited))
     }
     /// Opens and decodes the watermark under `io.lock`, then flushes it as it stands
     /// before anything overwrites a slot. A failed flush poisons the handle.

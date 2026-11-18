@@ -45,11 +45,16 @@ impl HeldRoot {
     pub fn source(&self) -> &hf_domain::recovery::SourceStamp {
         self.hold.source_stamp()
     }
-    pub(super) fn open_store(&self, deadline: Instant) -> Result<Store, Error> {
+    /// Dispatcher T0 and the owner's validation open: `Suppressed`, so neither checkpoints.
+    pub(super) fn open_validation_store(&self, deadline: Instant) -> Result<Store, Error> {
+        self.open_store(deadline, super::store_options::suppressed())
+    }
+    /// The task writer's handle, held for the task: `Owner` with idle maintenance.
+    pub(super) fn open_writer_store(&self, deadline: Instant) -> Result<Store, Error> {
+        self.open_store(deadline, super::store_options::writer())
+    }
+    fn open_store(&self, deadline: Instant, options: WriterOptions) -> Result<Store, Error> {
         self.revalidate()?;
-        let options = WriterOptions::suppressed().with_flush(hf_platform::durability::port(
-            hf_platform::durability::DEFAULT_DURABILITY,
-        ));
         let store = Store::open_with(
             &self.root,
             Limits::default(),
@@ -86,7 +91,7 @@ pub fn prepare(
     if &invitation.source != hold.source() {
         return Err(Error::Refused);
     }
-    let store = hold.open_store(deadline)?;
+    let store = hold.open_validation_store(deadline)?;
     let evidence = store.prepare_launch_intent(
         request,
         intent,
@@ -96,3 +101,7 @@ pub fn prepare(
     hold.revalidate()?;
     Ok(evidence)
 }
+
+#[cfg(test)]
+#[path = "bootstrap_tests.rs"]
+mod tests;

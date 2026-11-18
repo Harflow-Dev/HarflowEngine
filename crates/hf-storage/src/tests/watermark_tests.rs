@@ -55,6 +55,8 @@ fn valid(decoded: Decoded) -> u64 {
 /// acknowledged value 1 or a value above it.
 #[test]
 fn a_writer_dying_before_its_flush_is_followed_by_a_pre_flush_of_its_slot() {
+    // A child spawned meanwhile would inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     let (_scratch, root) = root("dee-one", 1);
     let generation = generation(&root);
     let staged = Staged::start(&root, "put", "watermark_before_flush");
@@ -106,6 +108,8 @@ fn a_writer_dying_before_its_flush_is_followed_by_a_pre_flush_of_its_slot() {
 
 #[test]
 fn a_writer_dying_before_its_slot_write_leaves_a_readable_root_the_next_commit_catches_up() {
+    // A child spawned meanwhile would inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     let (_scratch, root) = root("before-write", 1);
     let staged = Staged::start(&root, "put", "watermark_before_write");
     staged.kill();
@@ -135,6 +139,8 @@ fn a_writer_dying_before_its_slot_write_leaves_a_readable_root_the_next_commit_c
 /// write, between write and flush) reads a valid watermark at or below its snapshot.
 #[test]
 fn readers_at_each_stage_after_a_torn_slot_never_see_an_unavailable_watermark() {
+    // A child spawned meanwhile would inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     let (_scratch, root) = root("coherent", 1);
     tear(&root, Slot::A);
     assert_eq!(
@@ -187,6 +193,8 @@ fn readers_at_each_stage_after_a_torn_slot_never_see_an_unavailable_watermark() 
 /// keep working, and the next commit on the same handle publishes normally.
 #[test]
 fn a_binding_lost_after_the_commit_is_unknown_without_poisoning_the_handle() {
+    // A child spawned meanwhile would inherit another test's held `io.lock`.
+    let _guard = crate::tests::fixture_guard();
     let (_scratch, root) = root("binding", 1);
     let mut staged = Staged::start(&root, "binding", AFTER_COMMIT);
     let journal = root.join("store.sqlite3-journal");

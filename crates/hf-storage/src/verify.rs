@@ -157,14 +157,8 @@ impl Store {
     /// lock, so `Busy` is retried after a short pause until the budget runs out.
     fn record_lock(&self) -> Result<Box<dyn hf_application::lease::LeaseGuard>> {
         let budget = Instant::now() + RECORD_BUDGET;
-        loop {
-            match self.binding.io(budget) {
-                Err(Error::Busy) if Instant::now() + RECORD_RETRY < budget => {
-                    std::thread::sleep(RECORD_RETRY);
-                }
-                other => return other,
-            }
-        }
+        let (guard, _) = self.binding.io_polling(budget, RECORD_RETRY, None)?;
+        Ok(guard)
     }
 }
 

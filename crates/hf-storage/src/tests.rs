@@ -46,6 +46,7 @@ mod conversation_tests;
 mod event_seek_tests;
 mod event_snapshot_tests;
 mod initialize_tests;
+mod io_wait_tests;
 mod ownership_atomicity_tests;
 mod ownership_tests;
 mod read_session_deadline_tests;
@@ -57,6 +58,7 @@ mod survey_tests;
 mod task_read_snapshot_tests;
 mod task_watch_atomicity_tests;
 mod task_watch_tests;
+mod wal_idle_tests;
 mod wal_owner_tests;
 mod watermark_tests;
 

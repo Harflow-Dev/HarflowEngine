@@ -7,7 +7,7 @@ use hf_application::{
 use hf_domain::{
     ctl::state_root::StateRoot, ownership::PreparedRequest, task_runtime::LaunchIntentCreate,
 };
-use hf_storage::{Limits, RootHold, Store, WriterOptions};
+use hf_storage::{Limits, RootHold, Store};
 use std::{
     path::Path,
     time::{Duration, Instant},
@@ -27,9 +27,7 @@ pub fn run_for_ctl_exit(root: &StateRoot, request: &RunRequest) -> Result<String
     let admitted = super::dispatch_request::admit(request, deadline).map_err(|_| refused())?;
     let path = Path::new(root.as_str());
     super::dispatch_request::preflight(path, &admitted.repo).map_err(|_| refused())?;
-    let options = WriterOptions::suppressed().with_flush(hf_platform::durability::port(
-        hf_platform::durability::DEFAULT_DURABILITY,
-    ));
+    let options = super::store_options::suppressed();
     let store = match std::fs::symlink_metadata(path) {
         Ok(_) => Store::open_with(
             path,
