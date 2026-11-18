@@ -35,16 +35,7 @@ impl OwnerEntry {
         let identity = stdio.observation().process.clone();
         let hold = HeldRoot::open(root, &invitation, deadline)?;
         stdio.revalidate(deadline)?;
-        let request = PreparedRequest {
-            operation: invitation.binding.operation.clone(),
-            session: invitation.ownership_session.clone(),
-            reservation: invitation.reservation.clone(),
-            attempt: invitation.binding.attempt.clone(),
-            generation: invitation.binding.generation.clone(),
-            digest: hf_storage::Sha256Digest.digest_parts(&[payload]),
-            payload: payload.to_vec(),
-        };
-        validate_prepared(&hold, &request, &invitation, deadline)?;
+        let request = admit_invitation(payload, &invitation, &hold, deadline)?;
         let cwd = std::fs::canonicalize(&invitation.cwd)?;
         if cwd != Path::new(&invitation.cwd) || !cwd.is_dir() {
             return Err(Error::Refused);
@@ -80,6 +71,26 @@ impl OwnerEntry {
     pub fn channel(&mut self) -> &mut Channel {
         &mut self.channel
     }
+}
+/// Builds the prepared request for the invitation payload and validates it against the
+/// stored intent and lifecycle evidence under the held root.
+pub(super) fn admit_invitation(
+    payload: &[u8],
+    invitation: &ProductionInvitation,
+    hold: &HeldRoot,
+    deadline: Instant,
+) -> Result<PreparedRequest, Error> {
+    let request = PreparedRequest {
+        operation: invitation.binding.operation.clone(),
+        session: invitation.ownership_session.clone(),
+        reservation: invitation.reservation.clone(),
+        attempt: invitation.binding.attempt.clone(),
+        generation: invitation.binding.generation.clone(),
+        digest: hf_storage::Sha256Digest.digest_parts(&[payload]),
+        payload: payload.to_vec(),
+    };
+    validate_prepared(hold, &request, invitation, deadline)?;
+    Ok(request)
 }
 fn validate_prepared(
     hold: &HeldRoot,

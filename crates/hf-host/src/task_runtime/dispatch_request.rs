@@ -1,5 +1,8 @@
 //! Immutable pre-effect request, process and binary observations.
-use super::Error;
+use super::{
+    Error,
+    dispatch_policy::{environment, validate_request},
+};
 use hf_application::{
     ctl::{state_inspect::OperationIdPort, task_run::RunRequest},
     owner_runtime::DigestPort,
@@ -14,11 +17,7 @@ use hf_domain::{
     task_runtime::ProductionInvitation,
 };
 use hf_platform::task_runtime::caller::CallerObservation;
-use std::{
-    ffi::OsString,
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::{ffi::OsString, path::PathBuf, time::Instant};
 pub(super) struct Admitted {
     pub repo: PathBuf,
     pub caller: CallerObservation,
@@ -42,6 +41,18 @@ fn fresh() -> Result<String, Error> {
 }
 fn id() -> Result<Id, Error> {
     Id::new(fresh()?).map_err(|_| Error::Refused)
+}
+fn fresh_session() -> Result<CliSessionId, Error> {
+    let raw = fresh()?;
+    let uuid = format!(
+        "{}-{}-4{}-a{}-{}",
+        &raw[..8],
+        &raw[8..12],
+        &raw[13..16],
+        &raw[17..20],
+        &raw[20..]
+    );
+    CliSessionId::new(uuid).map_err(|_| Error::Refused)
 }
 pub(super) fn admit(request: &RunRequest, deadline: Instant) -> Result<Admitted, Error> {
     let repo = validate_request(request)?;
@@ -67,16 +78,7 @@ pub(super) fn admit(request: &RunRequest, deadline: Instant) -> Result<Admitted,
         deadline,
     )
     .map_err(|_| Error::Refused)?;
-    let raw = fresh()?;
-    let uuid = format!(
-        "{}-{}-4{}-a{}-{}",
-        &raw[..8],
-        &raw[8..12],
-        &raw[13..16],
-        &raw[17..20],
-        &raw[20..]
-    );
-    let session = CliSessionId::new(uuid).map_err(|_| Error::Refused)?;
+    let session = fresh_session()?;
     let task = TaskId::new(fresh()?).map_err(|_| Error::Refused)?;
     let metadata = metadata(request, &caller, &task, &session)?;
     Ok(Admitted {
@@ -95,45 +97,6 @@ pub(super) fn admit(request: &RunRequest, deadline: Instant) -> Result<Admitted,
         prompt_digest: hf_storage::Sha256Digest.digest_parts(&[request.prompt.as_bytes()]),
         environment_digest: hf_storage::Sha256Digest.digest_parts(&[&encoded]),
     })
-}
-pub(super) fn preflight(root: &Path, repo: &Path) -> Result<(), Error> {
-    let temporary = std::env::temp_dir();
-    hf_platform::task_runtime::space::preflight(
-        &[root, repo, &temporary],
-        Instant::now() + std::time::Duration::from_secs(2),
-    )?;
-    Ok(())
-}
-pub(super) fn inventory(
-    _root: &Path,
-    store: &hf_storage::Store,
-    caller: &CallerObservation,
-    deadline: Instant,
-) -> Result<(), Error> {
-    let denied = store.runtime_mutation_candidates(
-        &hf_interfaces::task_runtime::CanonicalLaunchValidator,
-        64,
-        deadline,
-    )?;
-    if caller
-        .chain
-        .iter()
-        .any(|link| denied.contains(&link.identity))
-    {
-        return Err(Error::Refused);
-    }
-    let ordinary = store.ordinary_runtime_mutation_candidates(64, deadline)?;
-    if caller
-        .chain
-        .iter()
-        .any(|link| ordinary.contains(&link.identity))
-    {
-        return Err(Error::Refused);
-    }
-    if hf_platform::task_runtime::caller::current_caller(deadline)? != *caller {
-        return Err(Error::Refused);
-    }
-    Ok(())
 }
 pub(super) fn invitation(a: &Admitted, source: SourceStamp) -> Result<ProductionInvitation, Error> {
     Ok(ProductionInvitation {
@@ -160,66 +123,6 @@ pub(super) fn invitation(a: &Admitted, source: SourceStamp) -> Result<Production
         expected_version: hf_backends::backend_launch::CLAUDE_VERSION.into(),
     })
 }
-
-fn validate_request(request: &RunRequest) -> Result<PathBuf, Error> {
-    for key in [
-        "HARFLOW_TASK_ID",
-        "HARFLOW_ROOT_TASK_ID",
-        "HARFLOW_DEPTH",
-        "PB_TASK_ID",
-        "PB_ROOT_TASK_ID",
-        "PB_DEPTH",
-    ] {
-        if std::env::var_os(key).is_some() {
-            return Err(Error::Refused);
-        }
-    }
-    if request.backend != "claude"
-        || request.freedom != "unrestricted"
-        || request.prompt.trim().is_empty()
-        || request.prompt.len() > 1_048_576
-        || request.prompt.contains('\0')
-    {
-        return Err(Error::Refused);
-    }
-    let repo = std::fs::canonicalize(&request.repo)?;
-    if !repo.is_dir()
-        || repo != Path::new(&request.repo)
-        || !repo.is_absolute()
-        || request.repo.len() > 4096
-        || request.repo.chars().any(char::is_control)
-    {
-        return Err(Error::Refused);
-    }
-    Ok(repo)
-}
-
-type EncodedEnvironment = (Vec<(String, String)>, Vec<u8>);
-fn environment() -> Result<EncodedEnvironment, Error> {
-    let mut environment: Vec<(String, String)> = std::env::vars_os()
-        .map(|(k, v)| {
-            Ok((
-                k.into_string().map_err(|_| Error::Refused)?,
-                v.into_string().map_err(|_| Error::Refused)?,
-            ))
-        })
-        .collect::<Result<_, Error>>()?;
-    environment.sort();
-    let encoded = hf_interfaces::task_runtime::encode_environment(&environment)
-        .map_err(|_| Error::Refused)?;
-    let args_bound = 4096usize;
-    if environment
-        .iter()
-        .map(|(k, v)| k.len() + v.len())
-        .sum::<usize>()
-        + args_bound
-        > 65536
-    {
-        return Err(Error::Refused);
-    }
-    Ok((environment, encoded))
-}
-
 fn metadata(
     request: &RunRequest,
     caller: &CallerObservation,

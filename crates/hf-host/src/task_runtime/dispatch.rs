@@ -1,5 +1,5 @@
 //! Public admission and a single private T0; no backend is executed here.
-use super::HeldRoot;
+use super::{HeldRoot, dispatch_request::Admitted};
 use hf_application::{
     ctl::task_run::{RunFailure, RunRequest},
     owner_runtime::DigestPort,
@@ -26,7 +26,7 @@ pub fn run_for_ctl_exit(root: &StateRoot, request: &RunRequest) -> Result<String
     let deadline = Instant::now() + Duration::from_secs(15);
     let admitted = super::dispatch_request::admit(request, deadline).map_err(|_| refused())?;
     let path = Path::new(root.as_str());
-    super::dispatch_request::preflight(path, &admitted.repo).map_err(|_| refused())?;
+    super::dispatch_policy::preflight(path, &admitted.repo).map_err(|_| refused())?;
     let options = super::store_options::suppressed();
     let store = match std::fs::symlink_metadata(path) {
         Ok(_) => Store::open_with(
@@ -46,8 +46,18 @@ pub fn run_for_ctl_exit(root: &StateRoot, request: &RunRequest) -> Result<String
         Err(_) => return Err(refused()),
     }
     .map_err(|_| refused())?;
-    super::dispatch_request::inventory(path, &store, &admitted.caller, deadline)
+    super::dispatch_policy::inventory(path, &store, &admitted.caller, deadline)
         .map_err(|_| refused())?;
+    commit_and_launch(path, store, admitted, request, deadline)
+}
+/// Commits the prepared launch intent and hands custody to the original owner.
+fn commit_and_launch(
+    path: &Path,
+    store: Store,
+    admitted: Admitted,
+    request: &RunRequest,
+    deadline: Instant,
+) -> Result<String, RunFailure> {
     let original =
         RootHold::open(path, deadline, hf_platform::lease::shared()).map_err(|_| refused())?;
     let invitation =
@@ -91,10 +101,13 @@ pub fn run_for_ctl_exit(root: &StateRoot, request: &RunRequest) -> Result<String
         admitted.environment,
         deadline,
     )
-    .map_err(|error| match error {
+    .map_err(classify)
+}
+fn classify(error: super::Error) -> RunFailure {
+    match error {
         super::Error::NotStarted(reason) => {
             RunFailure::Refused(format!("Task did not start: {reason}."))
         }
         _ => unknown(),
-    })
+    }
 }

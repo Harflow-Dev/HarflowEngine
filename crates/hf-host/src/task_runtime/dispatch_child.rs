@@ -1,6 +1,9 @@
 //! Original owner custody and a one-shot Started handshake.
 use super::{Error, HeldRoot, IntentSender};
-use hf_domain::task_runtime::{LaunchIntentCreate, ProductionInvitation};
+use hf_domain::{
+    process::ProcessIdentity,
+    task_runtime::{LaunchIntentCreate, ProductionInvitation},
+};
 use hf_platform::{
     process::{MacIdentity, RetainedOwnedChild, SpawnSpec},
     task_runtime::channel::Channel,
@@ -36,61 +39,96 @@ impl Custody {
         self.channel = Some(channel);
         self.error = Some(error);
         let channel = self.channel.as_mut().ok_or(Error::Refused)?;
-        let payload = hf_interfaces::task_runtime::encode_invitation(invitation)
-            .map_err(|_| Error::Refused)?;
-        super::io::send(channel, super::io::frame(payload), deadline)?;
-        let mut sender = IntentSender::new(intent)?;
-        while let Some(frame) = sender.next_frame()? {
-            super::io::send(channel, frame, deadline)?;
-        }
-        super::io::send(
+        let reply = exchange(
             channel,
-            super::io::frame(b"HFTI-END\x01".to_vec()),
+            &identity,
+            invitation,
+            intent,
+            environment,
             deadline,
         )?;
-        let mut sender = super::EnvironmentSender::new(environment)?;
-        while let Some(frame) = sender.next_frame()? {
-            super::io::send(channel, frame, deadline)?;
+        // The root is revalidated after either validated reply, before it is returned.
+        self.hold.revalidate()?;
+        match reply {
+            Reply::Started(task) => Ok(task),
+            Reply::NotStarted(reason) => Err(Error::NotStarted(reason)),
         }
-        let frame = super::io::receive(channel, deadline)?;
-        if let Ok(refusal) =
-            hf_interfaces::task_runtime::decode_not_started(super::io::payload(&frame)?)
-        {
-            let e = &refusal.envelope;
-            if e.binding != invitation.binding
-                || e.owner.process != identity
-                || e.owner.owner != invitation.binding.operation
-                || e.owner.nonce != invitation.reservation
-                || e.revision != 2
-                || e.ownership_revision != 1
-                || e.writer == identity
-                || refusal.proof.backend_digest != invitation.backend.digest
-                || refusal.proof.child == identity
-                || refusal.proof.child == e.writer
-            {
-                return Err(Error::Refused);
-            }
-            self.hold.revalidate()?;
-            return Err(Error::NotStarted(refusal.reason));
-        }
-        let started = hf_interfaces::task_runtime::decode_started(super::io::payload(&frame)?)
-            .map_err(|_| Error::Refused)?;
-        let envelope = &started.envelope;
-        if envelope.binding != invitation.binding
-            || envelope.owner.process != identity
-            || envelope.owner.owner != invitation.binding.operation
-            || envelope.owner.nonce != invitation.reservation
-            || envelope.revision != 2
-            || envelope.ownership_revision != 2
-            || started.child == identity
-            || envelope.writer == identity
-            || started.child == envelope.writer
+    }
+}
+/// A validated reply from the original owner.
+enum Reply {
+    Started(String),
+    NotStarted(String),
+}
+fn send_launch(
+    channel: &mut Channel,
+    invitation: &ProductionInvitation,
+    intent: LaunchIntentCreate,
+    environment: Vec<(String, String)>,
+    deadline: Instant,
+) -> Result<(), Error> {
+    let payload =
+        hf_interfaces::task_runtime::encode_invitation(invitation).map_err(|_| Error::Refused)?;
+    super::io::send(channel, super::io::frame(payload), deadline)?;
+    let mut sender = IntentSender::new(intent)?;
+    while let Some(frame) = sender.next_frame()? {
+        super::io::send(channel, frame, deadline)?;
+    }
+    super::io::send(
+        channel,
+        super::io::frame(b"HFTI-END\x01".to_vec()),
+        deadline,
+    )?;
+    let mut sender = super::EnvironmentSender::new(environment)?;
+    while let Some(frame) = sender.next_frame()? {
+        super::io::send(channel, frame, deadline)?;
+    }
+    Ok(())
+}
+fn exchange(
+    channel: &mut Channel,
+    identity: &ProcessIdentity,
+    invitation: &ProductionInvitation,
+    intent: LaunchIntentCreate,
+    environment: Vec<(String, String)>,
+    deadline: Instant,
+) -> Result<Reply, Error> {
+    send_launch(channel, invitation, intent, environment, deadline)?;
+    let frame = super::io::receive(channel, deadline)?;
+    let payload = super::io::payload(&frame)?;
+    if let Ok(refusal) = hf_interfaces::task_runtime::decode_not_started(payload) {
+        let e = &refusal.envelope;
+        if e.binding != invitation.binding
+            || e.owner.process != *identity
+            || e.owner.owner != invitation.binding.operation
+            || e.owner.nonce != invitation.reservation
+            || e.revision != 2
+            || e.ownership_revision != 1
+            || e.writer == *identity
+            || refusal.proof.backend_digest != invitation.backend.digest
+            || refusal.proof.child == *identity
+            || refusal.proof.child == e.writer
         {
             return Err(Error::Refused);
         }
-        self.hold.revalidate()?;
-        Ok(invitation.binding.task.as_str().into())
+        return Ok(Reply::NotStarted(refusal.reason));
     }
+    let started =
+        hf_interfaces::task_runtime::decode_started(payload).map_err(|_| Error::Refused)?;
+    let envelope = &started.envelope;
+    if envelope.binding != invitation.binding
+        || envelope.owner.process != *identity
+        || envelope.owner.owner != invitation.binding.operation
+        || envelope.owner.nonce != invitation.reservation
+        || envelope.revision != 2
+        || envelope.ownership_revision != 2
+        || started.child == *identity
+        || envelope.writer == *identity
+        || started.child == envelope.writer
+    {
+        return Err(Error::Refused);
+    }
+    Ok(Reply::Started(invitation.binding.task.as_str().into()))
 }
 pub(super) fn launch(
     root: &Path,
