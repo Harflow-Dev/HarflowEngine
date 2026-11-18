@@ -17,6 +17,10 @@ LIBC = {
 }
 
 
+HIDING_LINE = 'let _s = "//"; #[expect(unsafe_code, reason = "x")] let r2 = unsafe { other() };'
+CALL = "libc::sysctl(name.as_mut_ptr(), (1), output)"
+
+
 class UnsafeBoundaryTests(unittest.TestCase):
     setUp = FIXTURE.ArchitectureMetadataTests.setUp
     tearDown = FIXTURE.ArchitectureMetadataTests.tearDown
@@ -148,6 +152,8 @@ class UnsafeBoundaryTests(unittest.TestCase):
             "#![allow(unsafe_code)]",
             "#[cfg_attr(test, allow(unsafe_code))]\nmod m {}",
             '#[expect(unsafe_code, reason = "x")]\nlet a = 1;',
+            HIDING_LINE,
+            'let _r = r#"//"#; unsafe { g() }',
         )):
             for relative in ("crates/hf-domain/src/bad.rs", "tools/hf-architecture/src/bad.rs", "crates/hf-sys/tests/bad.rs"):
                 path = self.write(relative, text)
@@ -166,34 +172,41 @@ class UnsafeBoundaryTests(unittest.TestCase):
         ))
         validate(self.metadata, self.root)
 
-    def test_hf_sys_source_allows_exactly_one_block_and_one_expectation(self):
+    def test_hf_sys_source_is_screened_strictly(self):
         self.accepted_edges()
         read_into = self.root / "crates/hf-sys/src/read_into.rs"
         accepted = read_into.read_text(encoding="utf-8")
-        for label, extra, pattern in (
-            ("second block", "let b = unsafe { h() };\n", "exactly one"),
-            ("second expectation", '#[expect(unsafe_code, reason = "x")]\nlet c = 1;\n', "exactly one"),
-            ("allow", "#![allow(unsafe_code)]\n", "lint relaxation"),
-            ("warn", "#[warn(unsafe_code)]\nmod m {}\n", "lint relaxation"),
-            ("unsafe impl", "unsafe impl Send for X {}\n", "Forbidden unsafe form"),
-            ("unsafe fn", "unsafe fn f() {}\n", "Forbidden unsafe form"),
-            ("unsafe extern", 'unsafe extern "C" { fn g(); }\n', "Forbidden unsafe form"),
-            ("no_mangle", "#[unsafe(no_mangle)]\nfn f() {}\n", "Forbidden unsafe form"),
-            ("path redirect", '#[path = "x.rs"]\nmod x;\n', "module redirection"),
-            ("include", 'include!("x.rs");\n', "module redirection"),
+        count = "exactly one unsafe token"
+        for label, text, pattern in (
+            ("string slashes hiding a second block", accepted + HIDING_LINE + "\n", count),
+            ("second block", accepted + "let b = unsafe { h() };\n", count),
+            ("crate-level expectation", accepted.replace(
+                '#[expect(unsafe_code, reason = "reviewed")]\n', "") + '#![expect(unsafe_code, reason = "x")]\n',
+                "directly on the sysctl statement"),
+            ("macro definition", accepted.replace("unsafe {", "unsafe_blk {") + "macro_rules! m { ($b:block) => { unsafe $b } }\n", "Macro definitions"),
+            ("cfg_attr unsafe attribute", accepted + "#[cfg_attr(all(), unsafe(no_mangle))]\nfn f() {}\n", count),
+            ("unsafe_code in a macro call", accepted + "m!(unsafe_code);\n", count),
+            ("allow", accepted + "#![allow(unsafe_code)]\n", count),
+            ("comment naming the token", accepted + "// unsafe note\n", count),
+            ("path redirect", accepted + '#[path = "x.rs"]\nmod x;\n', "module redirection"),
+            ("include", accepted + 'include!("x.rs");\n', "module redirection"),
+            ("extra statement in the block", accepted.replace(CALL + " }", CALL + "; other() }"), "only the sysctl call"),
+            ("statement before the call", accepted.replace("unsafe { libc", "unsafe { other(); libc"), "directly on the sysctl statement"),
+            ("expectation not on the statement", accepted.replace("let result", "let other = 1;\n    let result"), "directly on the sysctl statement"),
         ):
-            read_into.write_text(accepted + extra, encoding="utf-8")
+            read_into.write_text(text, encoding="utf-8")
             with self.subTest(label=label), self.assertRaisesRegex(ValueError, pattern):
                 validate(self.metadata, self.root)
-        read_into.write_text(accepted.replace("unsafe {", "safe {"), encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "exactly one"):
-            validate(self.metadata, self.root)
-
-    def test_hf_sys_comments_may_mention_unsafe(self):
-        self.accepted_edges()
-        path = self.root / "crates/hf-sys/src/read_into.rs"
-        path.write_text(path.read_text(encoding="utf-8") + "// unsafe { second } allow(unsafe_code)\n", encoding="utf-8")
+        read_into.write_text(accepted, encoding="utf-8")
         validate(self.metadata, self.root)
+
+    def test_hf_sys_edge_requires_a_path(self):
+        self.package("hf-sys")["dependencies"] = [dict(LIBC)]
+        edge = self.sys_edge()
+        del edge["path"]
+        self.package("hf-platform")["dependencies"] = [edge]
+        with self.assertRaisesRegex(ValueError, "hf-sys requires platform-only"):
+            validate(self.metadata, self.root)
 
 
 if __name__ == "__main__":
