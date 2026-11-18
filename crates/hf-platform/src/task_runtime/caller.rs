@@ -2,6 +2,7 @@
 use hf_domain::process::ProcessIdentity;
 use nix::sys::socket::{audit_token_t, getsockopt, sockopt};
 use std::{io, os::unix::net::UnixStream, time::Instant};
+mod init_reader;
 mod observe;
 mod record;
 mod system;
@@ -28,7 +29,7 @@ pub struct InitAnchor {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PeerGeneration {
-    /// The safe available APIs do not correlate opaque audit-token generation to BSDInfo.
+    /// The available APIs do not correlate opaque audit-token generation to a process record.
     Uncorrelated,
 }
 /// Kernel socket credentials plus a separately bookended process observation.

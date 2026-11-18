@@ -114,10 +114,17 @@ its receipt records the additional locked closure and qualification limits.
 Workspace source remains unsafe-forbidden, except for the single reviewed
 sysctl call in hf-sys. These wrappers contain dependency internal unsafe and
 are not a proof of whole-program memory safety. Only fixed libproc BSDInfo and
-sysctl boot UUID string access are used; generic value_as<T> and custom
+sysctl boot UUID string access are used, plus the hf-sys `kern.proc.pid` read for the PID 1 caller anchor (see the [E2-C S1 receipt](migration-receipts/E2-C-S1-init-reader.md)); generic value_as<T> and custom
 PIDInfo implementations are excluded. libproc's wrapper accepts any positive
 returned size; field validation does not independently prove the entire kernel
 structure was returned. Observation failures remain unknown.
+
+Caller evidence is hybrid. Only the PID 1 anchor is read from `kern.proc.pid` through
+hf-sys and decoded, and only on a host whose architecture, `kern.osrelease` and
+`kern.osversion` are in a reviewed allowlist. Any OS or build update therefore makes every
+caller observation refuse until the new build is qualified by a reviewed change. Non-init
+links stay on libproc, which refuses root-owned non-init ancestors (for example `login` or
+`sshd`) for an unprivileged caller, so such callers are refused.
 
 The locked closure adds32 packages, including libproc's build-time bindgen0.72.1,
 clang-sys1.9.1/libloading0.8.9, libc0.2.191 and sysctl's enum-as-inner/thiserror

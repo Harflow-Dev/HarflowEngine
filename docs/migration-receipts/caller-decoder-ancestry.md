@@ -54,6 +54,8 @@ source review cleared the implementation. A pre-existing capture-fixture batchin
 assumption found by the broader run was corrected separately, preserving all
 assertions; see [fixture receipt](capture-fixture-priming.md).
 
+Later work: the init anchor read is covered by the [E2-C S1 receipt](E2-C-S1-init-reader.md); the text below is the evidence as of this receipt's date.
+
 Full live ancestry, boot/runtime compatibility qualification, adoption of an exact
 immutable fork commit and matching lock/policy changes, and normal fake-backed
 task success remain open. No real provider, desktop, publication, installation,

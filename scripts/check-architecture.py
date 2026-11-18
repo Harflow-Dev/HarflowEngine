@@ -1,6 +1,8 @@
 """Enforce workspace inventory, dependency edges, lint inheritance and file size."""
 import json
+import os
 from pathlib import Path
+import posixpath
 import re
 import subprocess
 import sys
@@ -75,6 +77,56 @@ UNSAFE_CODE_TOKEN = re.compile(r"\bunsafe_code\b")
 UNSAFE_BLOCK = re.compile(r"\bunsafe\s*\{")
 UNSAFE_OTHER = re.compile(r"\bunsafe\s*(fn\b|impl\b|trait\b|extern\b)|#\s*!?\s*\[\s*unsafe\s*\(")
 UNSAFE_LINT_RELAX = re.compile(r"\b(allow|warn|expect)\s*\([^)]*\bunsafe_code")
+# Textual guard on who names the hf-sys crate: the PID 1 caller-evidence reader and its OS test.
+# Every form of the bare token counts (use, `::hf_sys`, `extern crate hf_sys as x`). The allowed
+# files may not use `pub use`, `pub extern crate` or `macro_rules!`, so nothing they import can be
+# re-exported or aliased outward. In hf-platform, `include!` and any `path =` inside an attribute
+# (including `cfg_attr`; normal and raw strings) that is absolute, contains `..` or names an
+# allowed file by path suffix are rejected; sibling `#[path]` modules and `include_str!` stay.
+# Text is scanned with comments removed and strings masked. Not a proof over all references.
+SYS_USERS = {
+    "crates/hf-platform/src/task_runtime/caller/init_reader.rs",
+    "crates/hf-platform/tests/caller_system_reader.rs",
+}
+SYS_TOKEN = re.compile(r"\bhf_sys\b")
+SYS_PUB = re.compile(r"\bpub\b(?:\s*\([^)]*\))?\s*(?:use|extern)\b")
+ATTRIBUTE = re.compile(r"#\s*!?\s*\[(?P<body>[^\]]*)\]")
+PATH_VALUE = re.compile(r'\bpath\s*=\s*"\x00(?P<index>\d+)\x00"')
+INCLUDE_CODE = re.compile(r"\binclude\s*!")
+PLATFORM = "crates/hf-platform/"
+
+def mask_noise(text):
+    """Remove comments and replace each string literal with a numbered placeholder."""
+    strings = []
+    def replace(match):
+        if match.group("string") is None:
+            return " "
+        strings.append(match.group(0))
+        return f'"\x00{len(strings) - 1}\x00"'
+    return SOURCE_NOISE.sub(replace, text), strings
+
+def literal_value(literal):
+    return re.sub(r'^b?r?#*"|"#*$', "", literal)
+
+def path_attribute_escapes(text, strings, directory, root):
+    allowed = [user.casefold() for user in SYS_USERS]
+    for attribute in ATTRIBUTE.finditer(text):
+        for found in PATH_VALUE.finditer(attribute.group("body")):
+            target = literal_value(strings[int(found.group("index"))])
+            if "\\" in target:
+                return True
+            normal = posixpath.normpath(target)
+            if normal.startswith("/") or ".." in normal.split("/"):
+                return True
+            folded = normal.casefold()
+            if any(user == folded or user.endswith("/" + folded) for user in allowed):
+                return True
+            resolved = directory / normal
+            if resolved.exists() and any(
+                (root / user).exists() and os.path.samefile(resolved, root / user) for user in SYS_USERS
+            ):
+                return True
+    return False
 
 def workspace_lints(root):
     import tomllib
@@ -172,6 +224,24 @@ def check_unsafe_sources(root):
             if UNSAFE_BLOCK.search(text) or UNSAFE_OTHER.search(text) or UNSAFE_LINT_RELAX.search(text):
                 raise ValueError(f"unsafe code or an unsafe_code lint relaxation outside hf-sys: {path}")
     check_sys_text(sys_text)
+
+def check_sys_references(root):
+    sys_crate = (root / SYS_SRC).resolve().parent
+    for folder in [root / "crates", root / "tools"]:
+        for path in folder.rglob("*.rs"):
+            if path.resolve().is_relative_to(sys_crate):
+                continue
+            relative = path.relative_to(root).as_posix()
+            text, strings = mask_noise(path.read_text(encoding="utf-8"))
+            if SYS_TOKEN.search(text) and relative not in SYS_USERS:
+                raise ValueError(f"hf_sys is referenced outside its allowed readers: {path}")
+            if relative in SYS_USERS:
+                if SYS_PUB.search(text):
+                    raise ValueError(f"hf_sys must not be re-exported (no pub use or pub extern crate): {path}")
+                if MACRO_RULES.search(text):
+                    raise ValueError(f"Macro definitions are forbidden in hf_sys readers: {path}")
+            if relative.startswith(PLATFORM) and (INCLUDE_CODE.search(text) or path_attribute_escapes(text, strings, path.parent, root)):
+                raise ValueError(f"Module redirection leaving its folder or code inclusion in hf-platform: {path}")
 
 def check_ctl_sources(root):
     files = [root / path for path in CTL_ROOTS if (root / path).is_file()]
@@ -294,6 +364,7 @@ def validate(metadata, root):
     check_sys_dependencies(packages, root)
     check_rustc_config(root)
     check_unsafe_sources(root)
+    check_sys_references(root)
     check_ctl_sources(root)
 
 def main():

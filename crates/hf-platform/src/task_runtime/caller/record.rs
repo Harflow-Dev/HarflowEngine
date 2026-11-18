@@ -1,4 +1,4 @@
-//! Pure observational decoding; selecting a layout does not admit an OS reader.
+//! Pure observational decoding; the layout is selected only by the qualified init reader.
 use super::unknown;
 use std::io;
 

@@ -1,5 +1,6 @@
-//! Existing acquisition adapter; the SDK-layout decoder is deliberately unselected.
-use super::{CallerEvidenceSource, CallerProcessRecord, unknown};
+//! Production evidence source: libproc `BSDInfo` for every non-init process, the qualified
+//! `kern.proc.pid` init reader for PID 1, sysctl boot observations and actual `getuid`.
+use super::{CallerEvidenceSource, CallerProcessRecord, init_reader, unknown};
 use libproc::{bsd_info::BSDInfo, proc_pid::pidinfo};
 use std::{io, time::Instant};
 use sysctl::{Ctl, Sysctl};
@@ -15,6 +16,9 @@ impl CallerEvidenceSource for LibprocSource {
             .map_err(|_| unknown())
     }
     fn record(&mut self, pid: u32) -> io::Result<CallerProcessRecord> {
+        if pid == 1 {
+            return init_reader::read_init();
+        }
         let native = i32::try_from(pid).map_err(|_| unknown())?;
         let info = pidinfo::<BSDInfo>(native, 0).map_err(|_| unknown())?;
         Ok(CallerProcessRecord {

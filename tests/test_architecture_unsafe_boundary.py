@@ -242,6 +242,86 @@ class UnsafeBoundaryTests(unittest.TestCase):
         toolchain.write_text(accepted_toolchain, encoding="utf-8")
         validate(self.metadata, self.root)
 
+    def test_hf_sys_references_are_limited_to_the_init_reader_and_its_test(self):
+        self.accepted_edges()
+        reader = "crates/hf-platform/src/task_runtime/caller/init_reader.rs"
+        test = "crates/hf-platform/tests/caller_system_reader.rs"
+        for relative in (reader, test):
+            self.write(relative, "use hf_sys::read_into;\n// pub use hf_sys::read_into;\n// macro_rules! m {}\n")
+        validate(self.metadata, self.root)
+        others = (
+            "crates/hf-platform/src/other.rs", "crates/hf-host/src/other.rs",
+            "tools/hf-architecture/src/other.rs", "crates/hf-platform/tests/other.rs",
+        )
+        for text in (
+            "use hf_sys::read_into;",
+            "fn f() { ::hf_sys::read_into(&[], &mut []); }",
+            "extern crate hf_sys as sys;",
+            "use hf_sys as sys;",
+        ):
+            for relative in others:
+                path = self.write(relative, text)
+                with self.subTest(text=text, relative=relative), self.assertRaisesRegex(ValueError, "outside its allowed readers"):
+                    validate(self.metadata, self.root)
+                path.unlink()
+
+    def test_allowed_hf_sys_readers_may_not_reexport_or_define_macros(self):
+        self.accepted_edges()
+        allowed = "crates/hf-platform/src/task_runtime/caller/init_reader.rs"
+        for text, pattern in (
+            ("pub use hf_sys::read_into;", "re-exported"),
+            ("pub(crate) use hf_sys::read_into;", "re-exported"),
+            ("pub use {hf_sys as sys};", "re-exported"),
+            ("use hf_sys::read_into;\npub(super) use self::read_into as alias;", "re-exported"),
+            ("pub extern crate hf_sys;", "re-exported"),
+            ("pub(crate) extern crate hf_sys as sys;", "re-exported"),
+            ("use hf_sys::read_into;\nmacro_rules! m { () => {}; }", "Macro definitions"),
+        ):
+            self.write(allowed, text)
+            with self.subTest(text=text), self.assertRaisesRegex(ValueError, pattern):
+                validate(self.metadata, self.root)
+        self.write(allowed, "use hf_sys::read_into;\n")
+        validate(self.metadata, self.root)
+
+    def test_hf_platform_redirection_and_inclusion_are_rejected(self):
+        self.accepted_edges()
+        base = "crates/hf-platform/src/task_runtime"
+        reader_path = "task_runtime/caller/init_reader.rs"
+        for relative, text in (
+            ("crates/hf-platform/src/other.rs", '#[path = "../x.rs"]\nmod x;'),
+            ("crates/hf-platform/src/other.rs", '#[path = "/abs/x.rs"]\nmod x;'),
+            ("crates/hf-platform/src/other.rs", 'include!("x.rs");'),
+            ("crates/hf-platform/tests/other.rs", '#[path = "../src/x.rs"]\nmod x;'),
+            ("crates/hf-platform/tests/other.rs", 'include!("x.rs");'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "{reader_path}"]\nmod r;'),
+            (f"{base}.rs", '#[path = "caller/init_reader.rs"]\nmod r;'),
+            (f"{base}/caller.rs", '#[path = "init_reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/other.rs", f'#[cfg_attr(all(), path = "{reader_path}")]\nmod r;'),
+            ("crates/hf-platform/src/other.rs", f'#[path = r#"{reader_path}"#]\nmod r;'),
+            ("crates/hf-platform/src/other.rs", 'mod m { #[path = "tests/caller_system_reader.rs"] mod r; }'),
+            ("crates/hf-platform/src/other.rs", '#[cfg_attr(test, path = r"../x.rs")]\nmod x;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/./init_reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller//init_reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", f'#[path = "task_runtime/caller/Init_Reader.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", '#[path = "\\x2e\\x2e/x.rs"]\nmod r;'),
+            ("crates/hf-platform/src/lib.rs", '#[path = "a/b/../../../x.rs"]\nmod r;'),
+        ):
+            path = self.write(relative, text)
+            with self.subTest(relative=relative, text=text), self.assertRaisesRegex(ValueError, "hf-platform"):
+                validate(self.metadata, self.root)
+            path.unlink()
+        for relative, text in (
+            ("crates/hf-platform/src/other.rs", '#[path = "other/x.rs"]\nmod x;\nconst T: &str = include_str!("y");'),
+            (
+                "crates/hf-platform/src/more.rs",
+                '// #[path = "../x.rs"]\n/* include!("x.rs") */\n'
+                'const A: &str = "#[path = \\"../x.rs\\"]";\nconst B: &str = "include!(x)";',
+            ),
+            ("crates/hf-platform/tests/other.rs", '#[path = "support/x.rs"]\nmod x;'),
+        ):
+            self.write(relative, text)
+        validate(self.metadata, self.root)
+
     def test_hf_sys_edge_requires_a_path(self):
         self.package("hf-sys")["dependencies"] = [dict(LIBC)]
         edge = self.sys_edge()
