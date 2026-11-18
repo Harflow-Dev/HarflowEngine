@@ -6,12 +6,9 @@ use hf_storage::{CheckpointPolicy, Limits, Maintenance, RootHold, Store};
 use std::{
     fs,
     path::PathBuf,
-    sync::{Mutex, MutexGuard, PoisonError},
+    sync::MutexGuard,
     time::{Duration, Instant},
 };
-
-/// The platform lease state is process-wide and its lock is not waited for: one root at a time.
-static ROOTS: Mutex<()> = Mutex::new(());
 
 struct Scratch(PathBuf);
 impl Drop for Scratch {
@@ -26,7 +23,8 @@ fn deadline() -> Instant {
 
 /// A real root and a retained hold on it, as the task writer has.
 fn held(name: &str) -> (MutexGuard<'static, ()>, Scratch, HeldRoot) {
-    let guard = ROOTS.lock().unwrap_or_else(PoisonError::into_inner);
+    // The platform lease state is process-wide: every in-process root shares one lock.
+    let guard = crate::task_runtime::tests::serial_case();
     let parent = std::env::temp_dir().join(format!("hf-host-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&parent);
     fs::create_dir(&parent).unwrap();

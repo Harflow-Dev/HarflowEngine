@@ -43,6 +43,9 @@ pub struct ReaderProgress {
     pub stdout: ReaderStreamStats,
     pub stderr: ReaderStreamStats,
     pub discard: bool,
+    /// The bounded FIFO was full: batches from then on were counted as discarded. Unlike a
+    /// requested discard, this records a capacity loss and is never set by a request.
+    pub overflowed: bool,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReaderFinal {
@@ -144,6 +147,10 @@ impl CaptureReader {
     }
     pub fn discard_capture(&self) {
         self.shared.discard.store(true, Ordering::Release);
+    }
+    /// Whether a discard was requested through `discard_capture`.
+    pub fn discard_requested(&self) -> bool {
+        self.shared.discard.load(Ordering::Acquire)
     }
     pub fn request_stop(&self) {
         self.shared.stop.store(true, Ordering::Release);

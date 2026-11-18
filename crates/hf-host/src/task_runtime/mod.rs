@@ -10,6 +10,7 @@ pub use binding::{configuration_digest, invocation_arguments, invocation_digest,
 mod environment;
 mod io;
 mod stream;
+mod stream_record;
 #[cfg(test)]
 mod stream_tests;
 mod task_projection;
@@ -26,11 +27,17 @@ mod dispatch_child;
 mod dispatch_policy;
 mod dispatch_request;
 pub use dispatch::run_for_ctl_exit;
+mod caller_evidence;
 mod owner_exchange;
 mod owner_loop;
 mod owner_runtime;
 mod owner_spawn;
 mod owner_start;
+#[cfg(test)]
+mod seams;
+#[cfg(test)]
+mod tests;
+mod writer_slot;
 pub use bootstrap::{HeldRoot, prepare};
 pub use owner_entry::OwnerEntry;
 pub use owner_runtime::run_owner;

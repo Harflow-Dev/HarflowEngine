@@ -158,8 +158,9 @@ impl RawCapture {
         self.poisoned = false;
         self.view(deadline)
     }
-    /// Persist before intentional retention discard. Reader overflow/storage failure instead
-    /// drains immediately and reports in-memory Unknown; this call must never gate drainage.
+    /// Durably records that capture bytes were read but never delivered. The writer calls it
+    /// when a settlement reports a reader queue overflow, before the terminal is published;
+    /// a failure poisons the capture and no terminal follows. It never gates drainage.
     pub fn record_known_loss(&mut self, deadline: Instant) -> io::Result<SyncedCaptureView> {
         if self.poisoned {
             return Err(refused());

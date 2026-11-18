@@ -3,7 +3,7 @@ use super::{Error, WriterEntry, io, writer_service::Runtime};
 use hf_interfaces::task_runtime::*;
 use std::time::{Duration, Instant};
 /// How the service loop ended.
-enum Served {
+pub(super) enum Served {
     Finished,
     Failed,
 }
@@ -12,6 +12,10 @@ pub fn run_writer() -> i32 {
         Ok(entry) => entry,
         Err(_) => return 1,
     };
+    run_entry(entry)
+}
+/// Runs an entered writer: claim, service and, on any failure, permanent retention.
+pub(super) fn run_entry(entry: WriterEntry) -> i32 {
     match start(entry) {
         Ok(mut runtime) => match serve(&mut runtime) {
             Served::Finished => 0,
@@ -21,7 +25,7 @@ pub fn run_writer() -> i32 {
     }
 }
 /// Claims and flushes the entry, then builds the runtime. A failure returns the entry.
-fn start(mut entry: WriterEntry) -> Result<Runtime, Box<WriterEntry>> {
+pub(super) fn start(mut entry: WriterEntry) -> Result<Runtime, Box<WriterEntry>> {
     if entry.claim_and_queue_ready(io::deadline()).is_err() {
         return Err(Box::new(entry));
     }
@@ -35,7 +39,7 @@ fn start(mut entry: WriterEntry) -> Result<Runtime, Box<WriterEntry>> {
     // Entry ownership must survive all construction failures: initialize in-place below.
     Runtime::new(entry).map_err(|failure| Box::new(failure.1))
 }
-fn serve(runtime: &mut Runtime) -> Served {
+pub(super) fn serve(runtime: &mut Runtime) -> Served {
     loop {
         let result = match runtime.entry.channel().receive_step() {
             Ok(hf_platform::task_runtime::channel::Receive::Pending) => {
@@ -70,6 +74,8 @@ fn retain(runtime: &mut Runtime) -> ! {
         raw.poison();
     }
     loop {
+        #[cfg(test)]
+        super::seams::writer_retained(runtime);
         runtime.entry.channel().discard_step();
         std::thread::sleep(Duration::from_millis(1));
     }
@@ -77,6 +83,8 @@ fn retain(runtime: &mut Runtime) -> ! {
 fn retain_entry(mut entry: WriterEntry) -> i32 {
     entry.writer().poison();
     loop {
+        #[cfg(test)]
+        super::seams::entry_retained(&mut entry);
         entry.channel().discard_step();
         std::thread::sleep(Duration::from_millis(1));
     }

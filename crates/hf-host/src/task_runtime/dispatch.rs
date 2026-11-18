@@ -27,28 +27,41 @@ pub fn run_for_ctl_exit(root: &StateRoot, request: &RunRequest) -> Result<String
     let admitted = super::dispatch_request::admit(request, deadline).map_err(|_| refused())?;
     let path = Path::new(root.as_str());
     super::dispatch_policy::preflight(path, &admitted.repo).map_err(|_| refused())?;
-    let options = super::store_options::suppressed();
-    let store = match std::fs::symlink_metadata(path) {
-        Ok(_) => Store::open_with(
-            path,
-            Limits::default(),
-            deadline,
-            hf_platform::lease::shared(),
-            options,
-        ),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Store::initialize_runtime(
-            path,
-            Limits::default(),
-            deadline,
-            hf_platform::lease::shared(),
-            options,
-        ),
-        Err(_) => return Err(refused()),
-    }
-    .map_err(|_| refused())?;
-    super::dispatch_policy::inventory(path, &store, &admitted.caller, deadline)
-        .map_err(|_| refused())?;
+    let store = open_checked(path, &admitted, deadline)?;
     commit_and_launch(path, store, admitted, request, deadline)
+}
+/// Opens the root and applies the caller-policy inventory. An existing root is inventoried
+/// before anything changes. A missing root has no recorded participants, so the caller is
+/// observed once more and only then is the root created; a refusal creates no root.
+fn open_checked(path: &Path, admitted: &Admitted, deadline: Instant) -> Result<Store, RunFailure> {
+    let options = super::store_options::suppressed();
+    match std::fs::symlink_metadata(path) {
+        Ok(_) => {
+            let store = Store::open_with(
+                path,
+                Limits::default(),
+                deadline,
+                hf_platform::lease::shared(),
+                options,
+            )
+            .map_err(|_| refused())?;
+            super::dispatch_policy::inventory(path, &store, &admitted.caller, deadline)
+                .map_err(|_| refused())?;
+            Ok(store)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            super::dispatch_policy::reobserve(&admitted.caller, deadline).map_err(|_| refused())?;
+            Store::initialize_runtime(
+                path,
+                Limits::default(),
+                deadline,
+                hf_platform::lease::shared(),
+                options,
+            )
+            .map_err(|_| refused())
+        }
+        Err(_) => Err(refused()),
+    }
 }
 /// Commits the prepared launch intent and hands custody to the original owner.
 fn commit_and_launch(
@@ -82,17 +95,16 @@ fn commit_and_launch(
         prompt_digest: invitation.prompt_digest.clone(),
     };
     let hold = HeldRoot::open(path, &invitation, deadline).map_err(|_| refused())?;
-    if hf_platform::task_runtime::caller::current_caller(deadline)
-        .ok()
-        .as_ref()
-        != Some(&admitted.caller)
-    {
+    if super::caller_evidence::current(deadline).ok().as_ref() != Some(&admitted.caller) {
         return Err(refused());
     }
     original.revalidate().map_err(|_| refused())?;
     drop(store);
     // Once attempted, a missing transaction acknowledgement is conservatively unknown.
     super::prepare(&hold, &preparation, &intent, deadline).map_err(|_| unknown())?;
+    #[cfg(test)]
+    super::seams::dispatch_hit(super::seams::DispatchPoint::AfterT0, &invitation.binding)
+        .map_err(|_| unknown())?;
     super::dispatch_child::launch(
         path,
         hold,
@@ -103,7 +115,7 @@ fn commit_and_launch(
     )
     .map_err(classify)
 }
-fn classify(error: super::Error) -> RunFailure {
+pub(super) fn classify(error: super::Error) -> RunFailure {
     match error {
         super::Error::NotStarted(reason) => {
             RunFailure::Refused(format!("Task did not start: {reason}."))

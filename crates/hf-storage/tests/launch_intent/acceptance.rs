@@ -106,3 +106,47 @@ fn acceptance_refusal_rolls_back_and_success_records_no_release() {
     );
     assert_eq!(release_proof(&world, &spawned.evidence.binding), None);
 }
+
+#[test]
+fn acceptance_recorded_read_reports_only_the_recorded_task() {
+    let world = world();
+    let spawned = claim_and_spawn(&world, 84);
+    let binding = &spawned.evidence.binding;
+    let recorded = || {
+        let before = world.watch();
+        let value = world
+            .store
+            .launch_acceptance_recorded(binding, later(5))
+            .unwrap();
+        assert_eq!(world.watch(), before, "a read changes no watch state");
+        value
+    };
+    assert!(!recorded());
+    let gate = AcceptanceGate {
+        refuse: false,
+        calls: std::cell::Cell::new(0),
+    };
+    world
+        .store
+        .record_launch_acceptance(
+            binding,
+            &spawned.fence,
+            spawned.evidence.revision,
+            &readiness(&spawned.child),
+            &gate,
+            later(5),
+        )
+        .unwrap();
+    assert!(recorded());
+    // Another task of the same generation has no acceptance.
+    let other = hf_domain::task_lifecycle::LifecycleBinding {
+        task: crate::fixture_support::tid("another-task"),
+        ..binding.clone()
+    };
+    assert!(
+        !world
+            .store
+            .launch_acceptance_recorded(&other, later(5))
+            .unwrap()
+    );
+}

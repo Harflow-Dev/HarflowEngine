@@ -106,3 +106,27 @@ WriterReady is historical T1 evidence, not current liveness or cleanup proof.
 Inherited stdio is cloned; dropping a channel does not close original descriptors
 0/1/2 or prove EOF. No private/public ctl route, complete owner execution loop or
 OS-backed admission qualification is established by these source adapters.
+
+Malformed backend output never poisons the writer. The stream validates a line completely
+before its result, summary or terminal facts reach the observation. The first malformed line
+(undecodable bytes, a boundary or record violation, an oversized line, or a partial last line
+at exit) stops decoding, records an observation gap and closes the agent's input; later bytes
+are still appended raw and committed. A result line accepted earlier, in the same batch or an
+earlier one, stands and storage decides the status; without one the task ends `failed` with
+its real exit code. The summary is never published after malformed output. Local failures
+(timestamps, counters) still poison.
+
+A full reader queue is a capacity loss, not a discard request. The owner closes the agent's
+input once, keeps exchanging the queued batches, and settles with `qualify_with_loss`: every
+ordinary settlement constraint holds except that bytes are accounted per stream as read =
+delivered + discarded, with the committed ends equal to the delivered bytes, and a requested
+discard never qualifies. `Finish` then uses opcode 4 (`capture_loss`). The writer durably
+records the known loss before the terminal; if that fails it is poisoned and no terminal
+follows. The loss is private evidence (`capture_known_loss`, `loss.raw`, the gap); a task with
+a successful result and exit 0 remains publicly `completed`.
+
+Caller-policy order of the dispatcher: admission, preflight, then an existing root is opened
+and inventoried, while a missing root gets one more caller observation equal to the admitted
+one before it is created (it has no recorded participants). A refusal at those steps creates
+no root and writes no T0, probe or spawn. A change seen only at the final observation before
+T0 refuses without T0, probe or spawn, and may leave an initialized empty root.

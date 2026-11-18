@@ -40,8 +40,7 @@ impl Writer {
         if &invitation.source != hold.source() {
             return Err(Error::Refused);
         }
-        let owner_chain =
-            hf_platform::task_runtime::caller::observe_caller(owner.process.pid(), deadline)?;
+        let owner_chain = super::caller_evidence::observe(owner.process.pid(), deadline)?;
         if owner_chain.chain.first().map(|link| &link.identity) != Some(&owner.process)
             || owner_chain.chain.get(1).map(|link| &link.identity) != Some(&invitation.dispatcher)
             || owner_chain.chain.get(2).map(|link| &link.identity) != Some(&invitation.caller)
@@ -70,9 +69,7 @@ impl Writer {
             return Err(Error::Refused);
         }
         hold.revalidate()?;
-        if hf_platform::task_runtime::caller::observe_caller(owner.process.pid(), deadline)?
-            != owner_chain
-        {
+        if super::caller_evidence::observe(owner.process.pid(), deadline)? != owner_chain {
             return Err(Error::Refused);
         }
         Ok(Self {
@@ -101,6 +98,10 @@ impl Writer {
         }
         let store = &self.store;
         idle_maintenance::step(&mut self.idle, now, || {
+            #[cfg(test)]
+            if let Some(outcome) = super::seams::idle_outcome() {
+                return outcome;
+            }
             store.maintain_wal(Instant::now() + MAINTENANCE_BUDGET)
         })
     }

@@ -20,7 +20,11 @@ impl Runtime {
         };
         let child = self.spawn_and_capture(spec)?;
         let envelope = self.publish_spawn(&child)?;
+        #[cfg(test)]
+        super::seams::owner_hit(super::seams::OwnerPoint::AfterT2, self)?;
         self.write_initial_input(&input)?;
+        #[cfg(test)]
+        super::seams::owner_hit(super::seams::OwnerPoint::BeforeStarted, self)?;
         self.send_started(envelope, child)
     }
     fn spawn_and_capture(&mut self, spec: SpawnSpec) -> Result<ProcessIdentity, Error> {
@@ -108,15 +112,10 @@ impl Runtime {
             .ok_or(Error::Refused)?
             .view()
             .snapshot();
-        if progress.discard
+        if (progress.discard && !progress.overflowed)
             || progress.stdout.error.is_some()
             || progress.stderr.error.is_some()
-            || self
-                .writer
-                .as_mut()
-                .ok_or(Error::Refused)?
-                .child()
-                .try_wait()?
+            || self.writer.as_mut().ok_or(Error::Refused)?.try_wait()?
                 != hf_domain::process::ProcessExit::Unobserved
         {
             return Err(Error::Refused);

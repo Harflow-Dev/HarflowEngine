@@ -40,7 +40,11 @@ pub(super) fn inventory(
     {
         return Err(Error::Refused);
     }
-    if hf_platform::task_runtime::caller::current_caller(deadline)? != *caller {
+    reobserve(caller, deadline)
+}
+/// The caller observed again must equal the admitted observation.
+pub(super) fn reobserve(caller: &CallerObservation, deadline: Instant) -> Result<(), Error> {
+    if super::caller_evidence::current(deadline)? != *caller {
         return Err(Error::Refused);
     }
     Ok(())

@@ -1,5 +1,5 @@
 //! Detached original owner: one child waiter, independent reader and original writer.
-use super::{Error, OwnerEntry, WriterLink, io};
+use super::{Error, OwnerEntry, io, writer_slot::WriterSlot};
 use hf_domain::task_runtime::*;
 use hf_platform::{
     backend_launch::PathClaudeDiscovery,
@@ -8,7 +8,7 @@ use hf_platform::{
 use std::{path::PathBuf, time::Duration};
 pub(super) struct Runtime {
     pub(super) entry: OwnerEntry,
-    pub(super) writer: Option<WriterLink>,
+    pub(super) writer: Option<WriterSlot>,
     pub(super) agent: Option<RetainedOwnedChild>,
     pub(super) reader: Option<CaptureReader>,
     pub(super) discovery: Option<PathClaudeDiscovery<hf_storage::Sha256Digest>>,
@@ -22,7 +22,7 @@ pub(super) struct Runtime {
     pub(super) source_binding: Option<hf_domain::ownership::Digest>,
 }
 impl Runtime {
-    fn new(entry: OwnerEntry) -> Self {
+    pub(super) fn new(entry: OwnerEntry) -> Self {
         Self {
             entry,
             writer: None,

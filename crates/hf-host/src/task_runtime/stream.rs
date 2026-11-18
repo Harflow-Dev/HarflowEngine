@@ -1,27 +1,50 @@
 //! Backend observations consume only positively committed original raw bytes.
+//!
+//! A line is validated completely before it changes the observation. Malformed output
+//! never poisons the writer: the stream stops decoding, records a gap and keeps accepting
+//! raw bytes; a result accepted on an earlier line stands.
 use super::Error;
-use hf_application::owner_runtime::DigestPort;
 use hf_domain::{
-    backend::{BackendRecord, RecordKind},
     task_lifecycle::{ExecutionObservation, ResultWitness},
     task_runtime::ProductionInvitation,
 };
-use hf_interfaces::claude_ndjson::{Boundary, Decoder, Limits, Outcome, line_boundary};
+use hf_interfaces::claude_ndjson::{Decoder, Limits, Outcome};
+/// Why a line was not accepted.
+pub(super) enum Fault {
+    /// The agent's output broke the stream contract.
+    Malformed,
+    /// A local failure unrelated to the agent's output; it still poisons the writer.
+    Internal(Error),
+}
+impl From<Error> for Fault {
+    fn from(error: Error) -> Self {
+        Self::Internal(error)
+    }
+}
+/// Result facts of the current line, committed only after the whole line is valid.
+#[derive(Default)]
+pub(super) struct Staged {
+    pub(super) result: Option<ResultWitness>,
+    pub(super) summary: Option<(String, ResultWitness)>,
+    pub(super) terminal: bool,
+}
 pub struct Stream {
     decoder: Decoder,
-    session: String,
-    attempt: hf_domain::ownership::Id,
-    initialized: bool,
-    terminal: bool,
-    tools: Vec<(Option<String>, String)>,
-    seen: Vec<(Option<String>, String)>,
-    offset: u64,
-    line: Vec<u8>,
-    task: hf_domain::task_read::TaskId,
-    next_seq: u64,
-    turn_open: bool,
-    blocks: Vec<u64>,
+    pub(super) session: String,
+    pub(super) attempt: hf_domain::ownership::Id,
+    pub(super) initialized: bool,
+    pub(super) terminal: bool,
+    pub(super) tools: Vec<(Option<String>, String)>,
+    pub(super) seen: Vec<(Option<String>, String)>,
+    pub(super) offset: u64,
+    pub(super) line: Vec<u8>,
+    pub(super) task: hf_domain::task_read::TaskId,
+    pub(super) next_seq: u64,
+    pub(super) turn_open: bool,
+    pub(super) blocks: Vec<u64>,
     summary: Option<(String, ResultWitness)>,
+    malformed: bool,
+    pub(super) staged: Staged,
 }
 impl Stream {
     pub fn new(v: &ProductionInvitation) -> Result<Self, Error> {
@@ -41,188 +64,111 @@ impl Stream {
             turn_open: false,
             blocks: Vec::new(),
             summary: None,
+            malformed: false,
+            staged: Staged::default(),
         })
     }
+    /// Malformed output returns the events of earlier lines and marks the stream; only a
+    /// local failure is an error.
     pub fn consume(
         &mut self,
         bytes: &[u8],
         observation: &mut ExecutionObservation,
     ) -> Result<Vec<hf_storage::EventAppend>, Error> {
+        #[cfg(test)]
+        super::seams::stream_hook(self);
+        let result = self.consume_batch(bytes, observation);
+        #[cfg(test)]
+        super::seams::stream_hook(self);
+        result
+    }
+    fn consume_batch(
+        &mut self,
+        bytes: &[u8],
+        observation: &mut ExecutionObservation,
+    ) -> Result<Vec<hf_storage::EventAppend>, Error> {
         let mut events = Vec::new();
+        if self.malformed {
+            return Ok(events);
+        }
+        match self.feed_all(bytes, observation, &mut events) {
+            Ok(()) => Ok(events),
+            Err(Fault::Malformed) => {
+                self.malformed = true;
+                self.staged = Staged::default();
+                self.line.clear();
+                observation.observation_gap = true;
+                Ok(events)
+            }
+            Err(Fault::Internal(error)) => Err(error),
+        }
+    }
+    fn feed_all(
+        &mut self,
+        bytes: &[u8],
+        observation: &mut ExecutionObservation,
+        events: &mut Vec<hf_storage::EventAppend>,
+    ) -> Result<(), Fault> {
         let mut retention_full = false;
         let mut at = 0;
         while at < bytes.len() {
             let feed = self.decoder.feed(&bytes[at..]);
             if feed.consumed == 0 {
-                return Err(Error::Refused);
+                return Err(Fault::Malformed);
             }
             self.line.extend_from_slice(&bytes[at..at + feed.consumed]);
             if self.line.len() > 1_048_577 {
-                return Err(Error::Refused);
+                return Err(Fault::Malformed);
             }
             at += feed.consumed;
             self.offset += feed.consumed as u64;
             match feed.outcome {
                 Outcome::Event(records) => {
-                    self.boundary()?;
-                    for record in records {
-                        self.record(record, observation)?;
-                    }
-                    let at = super::timestamp()?;
-                    let mut projected_bytes = events
-                        .iter()
-                        .map(|e: &hf_storage::EventAppend| e.raw_len + 1)
-                        .sum::<u64>();
-                    for event in hf_interfaces::task_runtime::backend_events(
-                        &self.line,
-                        &self.task,
-                        self.next_seq,
-                        &at,
-                        self.offset - self.line.len() as u64,
-                    )
-                    .map_err(|_| Error::Refused)?
-                    {
-                        self.retain(
-                            &mut events,
-                            observation,
-                            event,
-                            &mut retention_full,
-                            &mut projected_bytes,
-                        )?;
-                    }
-                    self.line.clear();
+                    self.line_records(records, observation, events, &mut retention_full)?;
                 }
                 Outcome::NeedMore => (),
-                _ => return Err(Error::Refused),
+                _ => return Err(Fault::Malformed),
             }
-        }
-        Ok(events)
-    }
-    fn retain(
-        &mut self,
-        events: &mut Vec<hf_storage::EventAppend>,
-        observation: &mut ExecutionObservation,
-        event: hf_interfaces::task_runtime::NormalizedEvent,
-        retention_full: &mut bool,
-        projected_bytes: &mut u64,
-    ) -> Result<(), Error> {
-        observation.event_projection_truncated |= event.truncated;
-        let bytes = event.body.len() as u64 + 1;
-        if *retention_full
-            || events.len() >= 64
-            || observation
-                .normalized_event_bytes
-                .saturating_add(*projected_bytes)
-                .saturating_add(bytes)
-                > 64 * 1024 * 1024 - 131072
-        {
-            *retention_full = true;
-            observation.omitted_events = observation
-                .omitted_events
-                .checked_add(1)
-                .ok_or(Error::Refused)?;
-            observation.observation_gap = true;
-            observation.event_projection_truncated = true;
-            return Ok(());
-        }
-        *projected_bytes += bytes;
-        events.push(hf_storage::EventAppend {
-            seq: self.next_seq,
-            kind: event.kind,
-            raw_len: event.body.len() as u64,
-            body: event.body,
-        });
-        self.next_seq += 1;
-        Ok(())
-    }
-    fn boundary(&mut self) -> Result<(), Error> {
-        match line_boundary(&self.line).map_err(|_| Error::Refused)? {
-            Boundary::Start if !self.turn_open && self.blocks.is_empty() => self.turn_open = true,
-            Boundary::Stop if self.turn_open && self.blocks.is_empty() => self.turn_open = false,
-            Boundary::BlockStart(index) if self.turn_open && !self.blocks.contains(&index) => {
-                self.blocks.push(index)
-            }
-            Boundary::BlockStop(index) if self.turn_open => {
-                let position = self
-                    .blocks
-                    .iter()
-                    .position(|v| *v == index)
-                    .ok_or(Error::Refused)?;
-                self.blocks.remove(position);
-            }
-            Boundary::Delta(index) if self.turn_open && self.blocks.contains(&index) => (),
-            Boundary::MessageDelta if self.turn_open => (),
-            Boundary::None => (),
-            _ => return Err(Error::Refused),
         }
         Ok(())
     }
     pub fn next_seq(&self) -> u64 {
         self.next_seq
     }
+    /// The successful root summary; never present once the stream is malformed.
     pub fn summary(&self) -> Option<(&str, &ResultWitness)> {
+        if self.malformed {
+            return None;
+        }
         self.summary
             .as_ref()
             .map(|(text, result)| (text.as_str(), result))
     }
-    fn record(&mut self, r: BackendRecord, o: &mut ExecutionObservation) -> Result<(), Error> {
-        if r.cli_session != self.session || r.attempt != self.attempt || self.terminal {
-            return Err(Error::Refused);
+    /// Publishes the staged facts of a fully valid line.
+    pub(super) fn commit(&mut self, observation: &mut ExecutionObservation) {
+        let staged = std::mem::take(&mut self.staged);
+        self.terminal |= staged.terminal;
+        if staged.result.is_some() {
+            observation.result = staged.result;
         }
-        if !self.initialized {
-            if r.kind != RecordKind::Init || r.parent.is_some() {
-                return Err(Error::Refused);
-            }
-            self.initialized = true;
-        } else if r.kind == RecordKind::Init {
-            return Err(Error::Refused);
+        if staged.summary.is_some() {
+            self.summary = staged.summary;
         }
-        match r.kind {
-            RecordKind::ToolUse(id) => {
-                let key = (r.parent, id);
-                if self.seen.len() >= 128 || self.seen.contains(&key) {
-                    return Err(Error::Refused);
-                }
-                self.seen.push(key.clone());
-                self.tools.push(key);
-            }
-            RecordKind::ToolResult { id, is_error: _ } => {
-                let key = (r.parent, id);
-                let pos = self
-                    .tools
-                    .iter()
-                    .position(|x| x == &key)
-                    .ok_or(Error::Refused)?;
-                self.tools.remove(pos);
-            }
-            RecordKind::Terminal { failed } if r.parent.is_none() => {
-                if !self.tools.is_empty() || self.turn_open || !self.blocks.is_empty() {
-                    return Err(Error::Refused);
-                }
-                self.terminal = true;
-                let digest = hf_storage::Sha256Digest.digest_parts(&[&self.line]);
-                o.result = Some(ResultWitness {
-                    turn: self.attempt.clone(),
-                    digest,
-                    source_end: self.offset,
-                    success: !failed,
-                });
-                if !failed
-                    && let Some(text) =
-                        hf_interfaces::task_runtime::successful_result_summary(&self.line)
-                            .map_err(|_| Error::Refused)?
-                {
-                    self.summary = Some((text, o.result.clone().ok_or(Error::Refused)?));
-                }
-            }
-            _ => (),
-        }
-        Ok(())
     }
+    /// Closing the agent's input follows a completed turn or any malformed output.
     pub fn close_input(&self) -> bool {
-        self.terminal && self.tools.is_empty() && !self.turn_open && self.blocks.is_empty()
+        self.malformed
+            || (self.terminal && self.tools.is_empty() && !self.turn_open && self.blocks.is_empty())
     }
-    pub fn finish(&mut self) -> Result<(), Error> {
-        self.decoder.finish().map_err(|_| Error::Refused)
+    pub fn malformed(&self) -> bool {
+        self.malformed
+    }
+    /// A partial last line at exit counts as malformed. Returns whether the stream is
+    /// malformed.
+    pub fn finish(&mut self) -> bool {
+        if !self.malformed && self.decoder.finish().is_err() {
+            self.malformed = true;
+        }
+        self.malformed
     }
 }

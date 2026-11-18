@@ -119,3 +119,20 @@ impl WriterEntry {
         &self.writer.hold
     }
 }
+#[cfg(test)]
+impl WriterEntry {
+    /// An entry over an already opened writer and an injected channel.
+    pub(super) fn for_test(
+        writer: Writer,
+        bootstrap: WriterBootstrap,
+        channel: Channel,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            writer,
+            bootstrap,
+            channel,
+            _error: File::open("/dev/null")?,
+            ready_queued: false,
+        })
+    }
+}

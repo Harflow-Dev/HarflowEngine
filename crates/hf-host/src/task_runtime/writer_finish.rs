@@ -27,11 +27,17 @@ impl Runtime {
         }
         Ok(())
     }
-    /// Validates the settlement and returns the synced capture view it covers.
+    /// Validates the settlement and returns the synced capture view it covers. A capture
+    /// loss is recorded durably first; otherwise the stream must end on a line boundary.
     fn settled_view(&mut self, proof: &SettlementAttestation) -> Result<SyncedCaptureView, Error> {
         self.validate_settlement(proof)?;
-        self.stream.finish()?;
+        if !proof.capture_loss {
+            self.stream.finish();
+        }
         let raw = self.raw.as_mut().ok_or(Error::Refused)?;
+        if proof.capture_loss {
+            raw.record_known_loss(io::deadline())?;
+        }
         if raw.progress().stdout_end != proof.stdout_end
             || raw.progress().stderr_end != proof.stderr_end
         {
@@ -39,15 +45,26 @@ impl Runtime {
         }
         Ok(raw.view(io::deadline())?)
     }
-    pub(super) fn finish(&mut self, proof: SettlementAttestation, at: &str) -> Result<(), Error> {
-        let view = self.settled_view(&proof)?;
-        let exit = proof.exit;
-        let evidence = self.entry.writer().evidence().clone();
-        let mut observation = evidence.observation.clone();
-        observation.exit = exit;
+    fn final_observation(
+        &self,
+        proof: &SettlementAttestation,
+        previous: &ExecutionObservation,
+    ) -> ExecutionObservation {
+        let mut observation = previous.clone();
+        observation.exit = proof.exit;
         observation.drained = true;
         observation.input_closed = true;
-        let code = exit_code(exit)?;
+        if proof.capture_loss {
+            observation.capture_known_loss = true;
+        }
+        observation.observation_gap |= proof.capture_loss || self.stream.malformed();
+        observation
+    }
+    pub(super) fn finish(&mut self, proof: SettlementAttestation, at: &str) -> Result<(), Error> {
+        let view = self.settled_view(&proof)?;
+        let evidence = self.entry.writer().evidence().clone();
+        let observation = self.final_observation(&proof, &evidence.observation);
+        let code = exit_code(proof.exit)?;
         let status = terminal_status(code, &observation);
         let task = self.task.as_mut().ok_or(Error::Refused)?;
         let summary = self.stream.summary().filter(|(_, result)| {

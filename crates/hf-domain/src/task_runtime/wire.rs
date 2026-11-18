@@ -55,6 +55,8 @@ pub struct SettlementAttestation {
     pub stderr_end: u64,
     pub input_bytes: u64,
     pub source_binding: crate::ownership::Digest,
+    /// The reader's bounded queue overflowed: bytes were read but never delivered.
+    pub capture_loss: bool,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WriterCommand {

@@ -56,7 +56,8 @@ impl Custody {
     }
 }
 /// A validated reply from the original owner.
-enum Reply {
+#[cfg_attr(test, derive(Debug))]
+pub(super) enum Reply {
     Started(String),
     NotStarted(String),
 }
@@ -85,7 +86,7 @@ fn send_launch(
     }
     Ok(())
 }
-fn exchange(
+pub(super) fn exchange(
     channel: &mut Channel,
     identity: &ProcessIdentity,
     invitation: &ProductionInvitation,

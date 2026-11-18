@@ -72,6 +72,34 @@ impl OwnerEntry {
         &mut self.channel
     }
 }
+#[cfg(test)]
+impl OwnerEntry {
+    /// An entry over an injected channel and identity. The first frame is the invitation.
+    /// The inherited-descriptor checks, the working-directory change and the session
+    /// change of `enter` are process-global and are not performed; the invitation,
+    /// the root and the stored intent are admitted exactly as `enter` admits them.
+    pub(super) fn for_test(
+        root: &Path,
+        identity: ProcessIdentity,
+        mut channel: Channel,
+        deadline: Instant,
+    ) -> Result<Self, Error> {
+        let frame = super::io::receive(&mut channel, deadline)?;
+        let payload = super::io::payload(&frame)?;
+        let invitation =
+            hf_interfaces::task_runtime::decode_invitation(payload).map_err(|_| Error::Refused)?;
+        let hold = HeldRoot::open(root, &invitation, deadline)?;
+        let request = admit_invitation(payload, &invitation, &hold, deadline)?;
+        Ok(Self {
+            invitation,
+            request,
+            identity,
+            hold,
+            channel,
+            _error: File::open("/dev/null")?,
+        })
+    }
+}
 /// Builds the prepared request for the invitation payload and validates it against the
 /// stored intent and lifecycle evidence under the held root.
 pub(super) fn admit_invitation(
@@ -127,7 +155,7 @@ pub(super) fn validate_dispatcher(
     invitation: &ProductionInvitation,
     deadline: Instant,
 ) -> Result<(), Error> {
-    use hf_platform::task_runtime::caller::observe_caller;
+    use super::caller_evidence::observe as observe_caller;
     let before = observe_caller(invitation.dispatcher.pid(), deadline)?;
     if before.chain.first().map(|link| &link.identity) != Some(&invitation.dispatcher)
         || before.chain.get(1).map(|link| &link.identity) != Some(&invitation.caller)

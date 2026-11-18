@@ -242,3 +242,43 @@ fn failed_root_result_never_produces_a_success_summary() {
     assert!(stream.summary().is_none());
     assert!(!observation.result.as_ref().unwrap().success);
 }
+
+#[test]
+fn a_result_line_that_fails_after_staging_publishes_nothing() {
+    let mut stream = Stream::new(&invitation()).unwrap();
+    let mut observation = ExecutionObservation::default();
+    init(&mut stream, &mut observation);
+    // The result record is valid and is staged; its event projection then refuses, because
+    // the next sequence number is past the storage range. Nothing of the line may stand.
+    stream.next_seq = i64::MAX as u64 + 1;
+    let result = line(format!(
+        r#"{{"type":"result","session_id":"{SESSION}","subtype":"success","is_error":false,"result":"done"}}"#
+    ));
+    stream.consume(&result, &mut observation).unwrap();
+    assert!(stream.malformed() && stream.close_input());
+    assert!(observation.result.is_none(), "no result");
+    assert!(stream.summary().is_none(), "no summary");
+    assert!(!stream.terminal, "no terminal");
+    assert!(observation.observation_gap);
+}
+
+#[test]
+fn a_result_stands_when_malformed_output_follows_it() {
+    let mut stream = Stream::new(&invitation()).unwrap();
+    let mut observation = ExecutionObservation::default();
+    init(&mut stream, &mut observation);
+    let mut bytes = line(format!(
+        r#"{{"type":"result","session_id":"{SESSION}","subtype":"success","is_error":false,"result":"done"}}"#
+    ));
+    bytes.extend(b"not json\n");
+    stream.consume(&bytes, &mut observation).unwrap();
+    assert!(stream.malformed() && observation.observation_gap);
+    assert!(observation.result.is_some(), "the validated result stands");
+    assert!(stream.summary().is_none(), "the summary is suppressed");
+    assert!(
+        stream
+            .consume(b"more\n", &mut observation)
+            .unwrap()
+            .is_empty()
+    );
+}

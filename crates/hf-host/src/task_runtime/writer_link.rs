@@ -77,7 +77,7 @@ impl WriterLink {
             .registered_identity()
             .cloned()
             .ok_or(Error::Refused)?;
-        let chain = hf_platform::task_runtime::caller::observe_caller(writer.pid(), deadline)?;
+        let chain = super::caller_evidence::observe(writer.pid(), deadline)?;
         if chain.chain.first().map(|link| &link.identity) != Some(&writer)
             || chain.chain.get(1).map(|link| &link.identity) != Some(&owner.process)
         {

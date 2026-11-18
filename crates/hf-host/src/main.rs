@@ -8,6 +8,8 @@ mod durability;
 mod fixture;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod owner_runtime;
+#[cfg(test)]
+mod test_lock;
 struct UnsupportedRuntime;
 impl ReadinessPort for UnsupportedRuntime {
     fn readiness(&self) -> Readiness {

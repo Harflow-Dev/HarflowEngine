@@ -102,6 +102,7 @@ fn enqueue(
     }
     if !progress.discard && sender.try_send(batch).is_err() {
         progress.discard = true;
+        progress.overflowed = true;
     }
     if progress.discard {
         progress.stdout.discarded = progress.stdout.discarded.saturating_add(out);

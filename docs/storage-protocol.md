@@ -610,6 +610,11 @@ offsets and unit-test admissions do not establish raw durability. Once admitted,
 offsets, normalized events and watch invalidation commit together.
 Observed result, backend obligations, OS descendant samples and cleanup evidence remain
 independent; no public terminal projection, EOF, settlement or release follows.
+A known capture loss (`capture_known_loss`, bytes read from the agent but never delivered) can be
+part of a terminal publication: `publish_task_terminal` admits it when the capture view
+carries the same flag, the observation gap is set, and the status still follows the storage
+rule (`completed` only for exit 0 with a successful result witness). The loss and the gap are
+monotonic; no public incomplete marker exists.
 Header/status blobs remain the served bytes. Schema7 and older roots refuse as
 `unsupported_layout`, without upgrade or repair; no checked-in database fixture or
 internal root depends on an older schema. Open/recover/probe qualify in place with no size cap; public ctl

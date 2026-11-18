@@ -1,5 +1,5 @@
 //! Original-handle settlement capability. Decoded transport facts cannot construct it.
-use crate::process::{CaptureOrigin, CaptureReader, RetainedOwnedChild};
+use crate::process::{CaptureOrigin, CaptureReader, ReaderStreamStats, RetainedOwnedChild};
 use hf_domain::{
     process::ProcessExit,
     task_runtime::{SettlementAttestation, WriterOperation},
@@ -9,6 +9,7 @@ pub struct OwnerSettlement {
     proof: SettlementAttestation,
 }
 impl OwnerSettlement {
+    /// A settlement with no capture loss: every byte read was delivered.
     pub fn qualify(
         child: &RetainedOwnedChild,
         reader: &CaptureReader,
@@ -16,11 +17,47 @@ impl OwnerSettlement {
         progress: (u64, u64, u64),
         source_binding: hf_domain::ownership::Digest,
     ) -> io::Result<Self> {
+        Self::admit(child, reader, origin, progress, source_binding, false)
+    }
+    /// A settlement after the reader's queue overflowed. Every `qualify` constraint holds
+    /// except that discarded bytes are allowed and accounted: per stream, bytes read equal
+    /// bytes delivered plus bytes discarded, and the committed ends equal those delivered.
+    /// A requested discard never qualifies.
+    pub fn qualify_with_loss(
+        child: &RetainedOwnedChild,
+        reader: &CaptureReader,
+        origin: &CaptureOrigin,
+        progress: (u64, u64, u64),
+        source_binding: hf_domain::ownership::Digest,
+    ) -> io::Result<Self> {
+        Self::admit(child, reader, origin, progress, source_binding, true)
+    }
+    fn admit(
+        child: &RetainedOwnedChild,
+        reader: &CaptureReader,
+        origin: &CaptureOrigin,
+        progress: (u64, u64, u64),
+        source_binding: hf_domain::ownership::Digest,
+        loss: bool,
+    ) -> io::Result<Self> {
         let (out, err, expected_input) = progress;
         let fail = || io::Error::other("original owner settlement refused");
         let (identity, exit, input_bytes) = child.settlement_state().ok_or_else(fail)?;
         let final_value = reader.joined_final().ok_or_else(fail)?;
         let p = &final_value.progress;
+        let discard_ok = if loss {
+            p.overflowed && p.discard && !reader.discard_requested()
+        } else {
+            !p.discard && !p.overflowed
+        };
+        let stream_ok = |stats: &ReaderStreamStats, committed: u64| {
+            let delivered = if loss {
+                stats.enqueued.checked_add(stats.discarded) == Some(stats.read)
+            } else {
+                stats.discarded == 0 && stats.read == committed
+            };
+            stats.eof && stats.error.is_none() && stats.enqueued == committed && delivered
+        };
         if identity != origin.child
             || reader.origin() != origin
             || exit == ProcessExit::Unobserved
@@ -28,17 +65,9 @@ impl OwnerSettlement {
             || input_bytes == 0
             || final_value.stopped
             || final_value.limited
-            || p.discard
-            || !p.stdout.eof
-            || !p.stderr.eof
-            || p.stdout.error.is_some()
-            || p.stderr.error.is_some()
-            || p.stdout.discarded != 0
-            || p.stderr.discarded != 0
-            || p.stdout.read != out
-            || p.stdout.enqueued != out
-            || p.stderr.read != err
-            || p.stderr.enqueued != err
+            || !discard_ok
+            || !stream_ok(&p.stdout, out)
+            || !stream_ok(&p.stderr, err)
             || !matches!(
                 reader.try_recv(),
                 Err(TryRecvError::Empty | TryRecvError::Disconnected)
@@ -54,6 +83,7 @@ impl OwnerSettlement {
                 stderr_end: err,
                 input_bytes,
                 source_binding,
+                capture_loss: loss,
             },
         })
     }

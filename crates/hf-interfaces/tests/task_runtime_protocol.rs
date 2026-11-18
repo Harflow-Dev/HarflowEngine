@@ -75,6 +75,7 @@ fn finish_requires_observed_exit_and_digest_source_binding() {
         stderr_end: 9,
         input_bytes: 44,
         source_binding: Digest::new("a".repeat(64)).unwrap(),
+        capture_loss: false,
     };
     let command = WriterCommand {
         envelope: envelope(),

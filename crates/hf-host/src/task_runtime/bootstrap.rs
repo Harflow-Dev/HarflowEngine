@@ -51,7 +51,10 @@ impl HeldRoot {
     }
     /// The task writer's handle, held for the task: `Owner` with idle maintenance.
     pub(super) fn open_writer_store(&self, deadline: Instant) -> Result<Store, Error> {
-        self.open_store(deadline, super::store_options::writer())
+        let options = super::store_options::writer();
+        #[cfg(test)]
+        let options = super::seams::writer_options(options);
+        self.open_store(deadline, options)
     }
     fn open_store(&self, deadline: Instant, options: WriterOptions) -> Result<Store, Error> {
         self.revalidate()?;

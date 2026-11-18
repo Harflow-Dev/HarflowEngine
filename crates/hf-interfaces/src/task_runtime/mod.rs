@@ -4,12 +4,14 @@ mod event_bounds;
 mod events;
 pub use events::{NormalizedEvent, backend_events};
 mod protocol;
+mod protocol_finish;
+mod protocol_refusal;
 pub use environment::{decode_environment, encode_environment};
-pub use protocol::{decode_not_started, encode_not_started};
 pub use protocol::{
     decode_started, decode_writer_ack, decode_writer_command, encode_started, encode_writer_ack,
     encode_writer_command,
 };
+pub use protocol_refusal::{decode_not_started, encode_not_started};
 mod metadata;
 pub use metadata::{
     CanonicalLaunchValidator, InitialLaunchMetadata, decode_metadata, encode_metadata,

@@ -79,4 +79,23 @@ impl Store {
             },
         )
     }
+    /// Whether acceptance was ever recorded for `binding`'s task. A read-only observation:
+    /// it neither writes nor takes a fence.
+    pub fn launch_acceptance_recorded(
+        &self,
+        binding: &LifecycleBinding,
+        deadline: Instant,
+    ) -> Result<bool> {
+        ownership_write::generation(self, &binding.generation)?;
+        let mut db = self.admit(deadline)?;
+        let tx = db.transaction()?;
+        let recorded = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM lifecycle_acceptance WHERE task=?1)",
+            params![binding.task.as_str()],
+            |row| row.get::<_, bool>(0),
+        )?;
+        self.binding.check()?;
+        crate::connection::check_deadline(deadline)?;
+        Ok(recorded)
+    }
 }

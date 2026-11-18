@@ -56,7 +56,7 @@ fn fresh_session() -> Result<CliSessionId, Error> {
 }
 pub(super) fn admit(request: &RunRequest, deadline: Instant) -> Result<Admitted, Error> {
     let repo = validate_request(request)?;
-    let caller = hf_platform::task_runtime::caller::current_caller(deadline)?;
+    let caller = super::caller_evidence::current(deadline)?;
     if caller.chain.len() < 2 {
         return Err(Error::Refused);
     }
@@ -65,12 +65,14 @@ pub(super) fn admit(request: &RunRequest, deadline: Instant) -> Result<Admitted,
         .iter()
         .map(|(k, v)| (OsString::from(k), OsString::from(v)))
         .collect();
-    let backend = hf_platform::backend_launch::observe_selection(
+    let selection = hf_platform::backend_launch::observe_selection(
         &env_os,
         &hf_storage::Sha256Digest,
         deadline,
-    )
-    .map_err(|_| Error::Refused)?;
+    );
+    #[cfg(test)]
+    let selection = super::seams::backend_pin(selection);
+    let backend = selection.map_err(|_| Error::Refused)?;
     let executable = std::fs::canonicalize(std::env::current_exe()?)?;
     let ctl = hf_platform::backend_launch::observe_binary_pin(
         &executable,

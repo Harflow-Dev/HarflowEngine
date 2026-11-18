@@ -1,12 +1,11 @@
 //! Owner start phase: intent and invitation admission, writer start, launch preparation.
-use super::{Error, IntentReceiver, IntentSender, WriterLink, io, owner_runtime::Runtime};
+use super::{
+    Error, IntentReceiver, IntentSender, io, owner_runtime::Runtime, writer_slot::WriterSlot,
+};
 use hf_application::task_launch::LiveInputCodecPort;
 use hf_domain::{ownership::OwnerClaim, task_launch::*, task_runtime::*};
 use hf_interfaces::task_runtime::*;
-use hf_platform::{
-    backend_launch::PathClaudeDiscovery,
-    process::{MacIdentity, RetainedOwnedChild, SpawnSpec},
-};
+use hf_platform::backend_launch::PathClaudeDiscovery;
 use std::{ffi::OsString, time::Duration};
 struct Codec;
 impl LiveInputCodecPort for Codec {
@@ -17,15 +16,25 @@ impl LiveInputCodecPort for Codec {
 impl Runtime {
     pub(super) fn initialize(&mut self) -> Result<(), Error> {
         let intent = self.receive_intent()?;
-        let v = self.entry.invitation().clone();
         let environment = self.admit_environment()?;
         self.intent = Some(intent.clone());
         self.start_writer(&intent)?;
         // T1 and raw readiness are positively acknowledged before any effectful probe.
+        #[cfg(test)]
+        super::seams::owner_hit(super::seams::OwnerPoint::AfterT1, self)?;
         let environment: Vec<_> = environment
             .into_iter()
             .map(|(k, v)| (OsString::from(k), OsString::from(v)))
             .collect();
+        self.launch_agent(intent, environment)
+    }
+    /// Probes the backend, validates the prepared invocation and spawns the agent.
+    fn launch_agent(
+        &mut self,
+        intent: LaunchIntentCreate,
+        environment: Vec<(OsString, OsString)>,
+    ) -> Result<(), Error> {
+        let v = self.entry.invitation().clone();
         self.discovery = Some(PathClaudeDiscovery::new_pinned(
             hf_storage::Sha256Digest,
             environment.clone(),
@@ -55,8 +64,7 @@ impl Runtime {
         {
             return Err(Error::Refused);
         }
-        self.spawn_agent(prepared, environment)?;
-        Ok(())
+        self.spawn_agent(prepared, environment)
     }
     fn receive_intent(&mut self) -> Result<LaunchIntentCreate, Error> {
         let mut receiver = IntentReceiver::new(self.entry.request())?;
@@ -88,20 +96,7 @@ impl Runtime {
             nonce: v.reservation.clone(),
             process: self.entry.identity().clone(),
         };
-        let spec = SpawnSpec {
-            executable: v.ctl.physical_path.clone().into(),
-            cwd: v.cwd.clone().into(),
-            args: vec!["__task-writer".into()],
-            environment: Vec::new(),
-            capture_limit: 16384,
-        };
-        let child = RetainedOwnedChild::spawn_in_owner_group(spec, &MacIdentity, io::deadline())?;
-        self.writer = Some(WriterLink::attach(
-            &self.entry,
-            claim,
-            child,
-            io::deadline(),
-        ));
+        self.writer = Some(WriterSlot::start(&self.entry, claim)?);
         let deadline = io::deadline();
         let ready = loop {
             if let Some(ready) = self.writer.as_mut().ok_or(Error::Refused)?.step(deadline)? {
