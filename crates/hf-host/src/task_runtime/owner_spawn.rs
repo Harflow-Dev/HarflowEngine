@@ -2,7 +2,9 @@
 use super::{Error, io, owner_runtime::Runtime};
 use hf_domain::{ownership::Fence, process::ProcessIdentity, task_launch::*, task_runtime::*};
 use hf_interfaces::task_runtime::*;
-use hf_platform::process::{CaptureOrigin, MacIdentity, RetainedOwnedChild, SpawnSpec};
+use hf_platform::process::{
+    CaptureOrigin, MacIdentity, ReaderPolicy, RetainedOwnedChild, SpawnSpec,
+};
 use std::{ffi::OsString, time::Duration};
 impl Runtime {
     pub(super) fn spawn_agent(
@@ -53,11 +55,14 @@ impl Runtime {
             },
         };
         self.origin = Some(origin.clone());
+        let policy = ReaderPolicy::production();
+        #[cfg(test)]
+        let policy = super::seams::reader_policy(policy);
         self.reader = Some(
             self.agent
                 .as_mut()
                 .ok_or(Error::Refused)?
-                .start_capture_reader(origin, None)?,
+                .start_capture_reader(origin, policy)?,
         );
         Ok(child)
     }

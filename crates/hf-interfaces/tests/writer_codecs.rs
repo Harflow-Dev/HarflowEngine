@@ -6,7 +6,9 @@ use hf_domain::{
     process::{ProcessExit, ProcessIdentity},
     task_lifecycle::LifecycleBinding,
     task_read::TaskId,
-    task_runtime::{SettlementAttestation, WriterCommand, WriterEnvelope, WriterOperation},
+    task_runtime::{
+        CaptureLoss, SettlementAttestation, WriterCommand, WriterEnvelope, WriterOperation,
+    },
 };
 use hf_interfaces::task_runtime::{decode_writer_command, encode_writer_command};
 
@@ -22,7 +24,7 @@ fn process(pid: u32) -> ProcessIdentity {
     )
     .unwrap()
 }
-fn command(loss: bool, exit: ProcessExit) -> WriterCommand {
+fn command(loss: CaptureLoss, exit: ProcessExit) -> WriterCommand {
     WriterCommand {
         envelope: WriterEnvelope {
             binding: LifecycleBinding {
@@ -66,25 +68,25 @@ fn opcode_index(plain: &[u8], lossy: &[u8]) -> usize {
 
 #[test]
 fn opcode_two_bytes_are_pinned_and_opcode_four_differs_only_in_the_opcode() {
-    let plain = encode_writer_command(&command(false, ProcessExit::Code(0))).unwrap();
-    let lossy = encode_writer_command(&command(true, ProcessExit::Code(0))).unwrap();
+    let plain = encode_writer_command(&command(CaptureLoss::None, ProcessExit::Code(0))).unwrap();
+    let lossy = encode_writer_command(&command(CaptureLoss::Stall, ProcessExit::Code(0))).unwrap();
     let at = opcode_index(&plain, &lossy);
     assert_eq!(plain[at - 7..=at], [0, 0, 0, 0, 0, 0, 0, 2]);
     assert_eq!(lossy[at - 7..=at], [0, 0, 0, 0, 0, 0, 0, 4]);
     assert_eq!(&plain[..5], b"HFTQ\x01");
     assert_eq!(
         decode_writer_command(&plain).unwrap(),
-        command(false, ProcessExit::Code(0))
+        command(CaptureLoss::None, ProcessExit::Code(0))
     );
     assert_eq!(
         decode_writer_command(&lossy).unwrap(),
-        command(true, ProcessExit::Code(0))
+        command(CaptureLoss::Stall, ProcessExit::Code(0))
     );
 }
 
 #[test]
 fn truncated_and_extended_loss_frames_are_refused() {
-    let lossy = encode_writer_command(&command(true, ProcessExit::Code(1))).unwrap();
+    let lossy = encode_writer_command(&command(CaptureLoss::Stall, ProcessExit::Code(1))).unwrap();
     for cut in [1, 8, 40] {
         assert_eq!(
             decode_writer_command(&lossy[..lossy.len() - cut]),
@@ -98,8 +100,8 @@ fn truncated_and_extended_loss_frames_are_refused() {
 
 #[test]
 fn invalid_exit_in_a_loss_frame_is_refused() {
-    let plain = encode_writer_command(&command(false, ProcessExit::Code(0))).unwrap();
-    let lossy = encode_writer_command(&command(true, ProcessExit::Code(0))).unwrap();
+    let plain = encode_writer_command(&command(CaptureLoss::None, ProcessExit::Code(0))).unwrap();
+    let lossy = encode_writer_command(&command(CaptureLoss::Stall, ProcessExit::Code(0))).unwrap();
     let at = opcode_index(&plain, &lossy);
     // After the opcode: pid, seconds, microseconds (8 bytes each), the boot text (4 + 36),
     // then the exit kind and code (8 bytes each).
@@ -114,7 +116,7 @@ fn invalid_exit_in_a_loss_frame_is_refused() {
             "kind {kind}"
         );
     }
-    let mut unobserved = command(true, ProcessExit::Code(0));
+    let mut unobserved = command(CaptureLoss::Stall, ProcessExit::Code(0));
     if let WriterOperation::Finish { proof, .. } = &mut unobserved.operation {
         proof.exit = ProcessExit::Unobserved;
     }
@@ -140,7 +142,42 @@ const GOLDEN_OPCODE_TWO: &str = concat!(
 
 #[test]
 fn opcode_two_golden_vector_is_unchanged() {
-    let bytes = encode_writer_command(&command(false, ProcessExit::Code(0))).unwrap();
+    let bytes = encode_writer_command(&command(CaptureLoss::None, ProcessExit::Code(0))).unwrap();
     let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
     assert_eq!(hex, GOLDEN_OPCODE_TWO);
+}
+
+#[test]
+fn finish_opcode5_golden_roundtrip() {
+    let plain = encode_writer_command(&command(CaptureLoss::None, ProcessExit::Code(0))).unwrap();
+    let stall = encode_writer_command(&command(CaptureLoss::Stall, ProcessExit::Code(0))).unwrap();
+    let disconnect =
+        encode_writer_command(&command(CaptureLoss::Disconnect, ProcessExit::Code(0))).unwrap();
+    let at = opcode_index(&plain, &disconnect);
+    assert_eq!(disconnect[at - 7..=at], [0, 0, 0, 0, 0, 0, 0, 5]);
+    assert_eq!(stall[at], 4);
+    assert_eq!(
+        decode_writer_command(&disconnect).unwrap(),
+        command(CaptureLoss::Disconnect, ProcessExit::Code(0))
+    );
+    assert_eq!(
+        decode_writer_command(&stall).unwrap(),
+        command(CaptureLoss::Stall, ProcessExit::Code(0))
+    );
+}
+
+#[test]
+fn finish_opcode6_refused() {
+    let plain = encode_writer_command(&command(CaptureLoss::None, ProcessExit::Code(0))).unwrap();
+    let lossy = encode_writer_command(&command(CaptureLoss::Stall, ProcessExit::Code(0))).unwrap();
+    let at = opcode_index(&plain, &lossy);
+    for opcode in [3u8, 6, 7] {
+        let mut frame = lossy.clone();
+        frame[at] = opcode;
+        assert_eq!(
+            decode_writer_command(&frame),
+            Err(InvalidIntent),
+            "opcode {opcode}"
+        );
+    }
 }

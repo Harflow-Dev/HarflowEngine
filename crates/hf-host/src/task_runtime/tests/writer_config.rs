@@ -41,6 +41,8 @@ pub(super) struct WriterConfig {
         Option<Arc<dyn Fn() -> Option<hf_storage::Result<WalMaintenance>> + Send + Sync>>,
     pub(super) retained: Option<Retained2>,
     pub(super) stream: Option<StreamFn>,
+    /// A pause before each command the writer answers.
+    pub(super) exchange_delay: Option<std::time::Duration>,
 }
 impl WriterConfig {
     pub(super) fn installer(&self, scripted: Arc<Scripted>, release: Arc<AtomicBool>) -> Install {
@@ -59,6 +61,9 @@ impl WriterConfig {
             }
             if let Some(idle) = config.idle {
                 guards.push(Box::new(seams::install_idle(Rc::new(move || idle()))));
+            }
+            if let Some(delay) = config.exchange_delay {
+                guards.push(Box::new(seams::install_delay(Rc::new(move || Some(delay)))));
             }
             let (flag, retained) = (release.clone(), config.retained);
             guards.push(Box::new(seams::install_writer_retained(Rc::new(

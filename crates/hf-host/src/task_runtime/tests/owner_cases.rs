@@ -131,7 +131,7 @@ fn assert_known_loss_evidence(seed: &super::harness::Seed) {
         .join(b.task.as_str())
         .join(b.attempt.as_str())
         .join("loss.raw");
-    assert_eq!(std::fs::metadata(loss).unwrap().len(), 19);
+    assert_eq!(std::fs::read(loss).unwrap(), b"capture-known-loss stall\n");
 }
 
 #[test]
@@ -149,6 +149,7 @@ fn reader_saturation_is_bounded_and_reported_incomplete() {
     (0..200).for_each(|i| bytes.extend(text_line(i)));
     stream.consume(&bytes, &mut observation).unwrap();
     assert!(!stream.malformed(), "{SESSION}");
+    let _stall = seams::install_stall(Rc::new(|| Some(Duration::from_millis(200))));
     let gates = ctx.cleanup.clone();
     let pause = Act::Pause(Box::new(move |runtime| {
         gates.gates.borrow_mut().open("a");

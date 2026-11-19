@@ -250,7 +250,7 @@ impl Store {
     ) -> Result<Self> {
         connection::check_deadline(deadline)?;
         Binding::validate_parent(root)?;
-        std::fs::create_dir(root).map_err(|error| {
+        initialize::create_private_root(root).map_err(|error| {
             if error.kind() == std::io::ErrorKind::AlreadyExists {
                 Error::InvalidRoot
             } else {

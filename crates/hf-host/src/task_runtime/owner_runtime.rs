@@ -1,5 +1,9 @@
 //! Detached original owner: one child waiter, independent reader and original writer.
-use super::{Error, OwnerEntry, io, writer_slot::WriterSlot};
+use super::{
+    Error, OwnerEntry, io,
+    owner_retain::{Phase, RetainCause},
+    writer_slot::WriterSlot,
+};
 use hf_domain::task_runtime::*;
 use hf_platform::{
     backend_launch::PathClaudeDiscovery,
@@ -20,6 +24,7 @@ pub(super) struct Runtime {
     pub(super) stderr_end: u64,
     pub(super) input_closed: bool,
     pub(super) source_binding: Option<hf_domain::ownership::Digest>,
+    pub(super) cause_attempted: bool,
 }
 impl Runtime {
     pub(super) fn new(entry: OwnerEntry) -> Self {
@@ -37,6 +42,7 @@ impl Runtime {
             stderr_end: 0,
             input_closed: false,
             source_binding: None,
+            cause_attempted: false,
         }
     }
 }
@@ -55,17 +61,17 @@ pub(super) fn drive(runtime: &mut Runtime) -> i32 {
     match runtime.initialize() {
         Ok(()) => (),
         Err(Error::NotStarted(_)) => return 0,
-        Err(_) => runtime.retain_uncertain(),
+        Err(error) => runtime.retain_uncertain(RetainCause::new(Phase::Start, &error)),
     }
     loop {
         match runtime.tick() {
             Ok(true) => break,
             Ok(false) => std::thread::sleep(Duration::from_millis(1)),
-            Err(_) => runtime.retain_uncertain(),
+            Err(error) => runtime.retain_uncertain(RetainCause::new(Phase::Tick, &error)),
         }
     }
-    if runtime.settle_writer().is_err() {
-        runtime.retain_uncertain();
+    if let Err(error) = runtime.settle_writer() {
+        runtime.retain_uncertain(RetainCause::new(Phase::SettleWriter, &error));
     }
     0
 }

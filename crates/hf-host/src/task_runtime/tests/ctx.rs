@@ -23,12 +23,7 @@ use hf_interfaces::task_runtime::{
 use hf_platform::backend_launch::{observe_binary_pin, observe_selection};
 use hf_storage::{Limits, RootHold, Store};
 use std::{
-    cell::RefCell,
-    ffi::OsString,
-    os::unix::{fs::MetadataExt, fs::PermissionsExt},
-    path::PathBuf,
-    rc::Rc,
-    sync::Arc,
+    cell::RefCell, ffi::OsString, os::unix::fs::MetadataExt, path::PathBuf, rc::Rc, sync::Arc,
 };
 
 struct Scratch(PathBuf);
@@ -72,6 +67,10 @@ impl Ctx {
     }
     /// A fresh initialized root and its private T0 for one launch.
     pub(super) fn seed(&self, steps: &str, version: &str) -> Seed {
+        self.seed_prompt(steps, version, "Run the scripted task.")
+    }
+    /// As `seed`, with the prompt the agent is sent.
+    pub(super) fn seed_prompt(&self, steps: &str, version: &str, prompt: &str) -> Seed {
         let root = self.root();
         drop(
             Store::initialize_runtime(
@@ -83,15 +82,12 @@ impl Ctx {
             )
             .unwrap(),
         );
-        // The private raw payload requires an owner-only root, as the state root of a
-        // user is created.
-        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
         let source = RootHold::open(&root, deadline(), leases())
             .unwrap()
             .source_stamp()
             .clone();
         let env = self.fake.environment(steps, version);
-        let seed = self.build(root, source, env);
+        let seed = self.build(root, source, env, prompt.to_owned());
         let hold = HeldRoot::open(&seed.root, &seed.invitation, deadline()).unwrap();
         crate::task_runtime::prepare(&hold, &seed.preparation, &seed.intent, deadline()).unwrap();
         seed
@@ -101,6 +97,7 @@ impl Ctx {
         root: PathBuf,
         source: hf_domain::recovery::SourceStamp,
         env: Vec<(String, String)>,
+        prompt: String,
     ) -> Seed {
         let session = CliSessionId::new("123e4567-e89b-42d3-a456-426614174000".into()).unwrap();
         let task = TaskId::new("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".into()).unwrap();
@@ -111,7 +108,6 @@ impl Ctx {
         let hash = hf_storage::Sha256Digest;
         let backend = observe_selection(&env_os, &hash, deadline()).unwrap();
         let ctl = observe_binary_pin(&self.fake.bin.join("ctl-stub"), &hash, deadline()).unwrap();
-        let prompt = "Run the scripted task.".to_owned();
         let cwd = std::fs::canonicalize(std::env::current_dir().unwrap()).unwrap();
         let metadata = encode_metadata(&InitialLaunchMetadata {
             task: task.clone(),

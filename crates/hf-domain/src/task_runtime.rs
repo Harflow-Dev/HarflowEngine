@@ -2,8 +2,8 @@
 mod wire;
 use crate::{ownership::Digest, task_lifecycle::LifecycleBinding, task_read::TaskId};
 pub use wire::{
-    NotStarted, ProbeAttestation, SettlementAttestation, Started, WriterAcknowledgement,
-    WriterCommand, WriterEnvelope, WriterOperation,
+    CaptureLoss, NotStarted, ProbeAttestation, SettlementAttestation, Started,
+    WriterAcknowledgement, WriterCommand, WriterEnvelope, WriterOperation,
 };
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchIntentCreate {

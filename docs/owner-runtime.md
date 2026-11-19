@@ -85,7 +85,8 @@ and drains at most 1 MiB before becoming unavailable; it is not agent output or
 death proof. Startup root qualification, spawn and identity probes can enter
 nonpreemptible OS calls; the poll limit is not a universal wall-clock bound on
 every setup step. The independent reader has four bounded batches and a sticky discard
-state. The consumer retains a batch until both streams are acknowledged. EOF is
+state (the production task-runtime reader also holds one pending batch and applies bounded
+backpressure; see the task runtime core document). The consumer retains a batch until both streams are acknowledged. EOF is
 published only by an empty append after reader join, FIFO reconciliation and input
 reconciliation; final capture and direct-child wait remain separate.
 

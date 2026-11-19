@@ -1,5 +1,5 @@
 //! Storage-free original-owner observation and uncertainty retention.
-use super::{Error, io, owner_runtime::Runtime};
+use super::{Error, io, owner_retain::RetainCause, owner_runtime::Runtime};
 use hf_domain::{process::ProcessExit, task_runtime::WriterOperation};
 use hf_platform::{process::CaptureReader, task_runtime::settlement::OwnerSettlement};
 use std::time::Duration;
@@ -88,10 +88,11 @@ impl Runtime {
         }
         Ok(true)
     }
-    pub(super) fn retain_uncertain(&mut self) -> ! {
+    pub(super) fn retain_uncertain(&mut self, cause: RetainCause) -> ! {
         if let Some(reader) = &self.reader {
             reader.discard_capture();
         }
+        self.record_retained_cause(cause);
         loop {
             #[cfg(test)]
             super::seams::owner_retained(self);

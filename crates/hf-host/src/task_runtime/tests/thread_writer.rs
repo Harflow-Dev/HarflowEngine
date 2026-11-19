@@ -5,7 +5,8 @@
 //! `Retained` unwind, which its release-aware hooks raise once the release flag is set.
 use super::harness::Retained;
 use crate::task_runtime::{
-    Error, HeldRoot, StderrDrain, Writer, WriterDrain, WriterEntry, io, writer_runtime::run_entry,
+    Error, HeldRoot, StderrDrain, Writer, WriterDrain, WriterEntry, io, seams::install_diag,
+    writer_cause::TagParser, writer_runtime::run_entry,
 };
 use hf_application::owner_runtime::DigestPort;
 use hf_domain::{
@@ -19,8 +20,9 @@ use std::{
     any::Any,
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
     path::PathBuf,
+    rc::Rc,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
     thread::JoinHandle,
@@ -37,6 +39,9 @@ pub(in crate::task_runtime) struct ThreadWriter {
     exit: Option<ProcessExit>,
     expected: WriterBootstrap,
     ready: Option<WriterReady>,
+    /// What the writer thread printed as diagnostics, standing in for its stderr pipe.
+    diag: Arc<Mutex<Vec<u8>>>,
+    cause: TagParser,
 }
 impl ThreadWriter {
     /// Starts the writer thread; `channel` is the thread's end, `owner_end` the owner's.
@@ -48,9 +53,11 @@ impl ThreadWriter {
         install: Install,
     ) -> std::io::Result<Self> {
         let expected = bootstrap.clone();
+        let diag = Arc::new(Mutex::new(Vec::new()));
+        let sink = diag.clone();
         let handle = std::thread::Builder::new()
             .name("task-writer-thread".into())
-            .spawn(move || body(&root, bootstrap, writer_end, install))?;
+            .spawn(move || body(&root, bootstrap, writer_end, install, sink))?;
         Ok(Self {
             channel: Some(owner_end),
             handle: Some(handle),
@@ -58,7 +65,15 @@ impl ThreadWriter {
             exit: None,
             expected,
             ready: None,
+            diag,
+            cause: TagParser::default(),
         })
+    }
+    /// The source tag the writer thread printed, as the owner's stderr collection reads it.
+    pub(in crate::task_runtime) fn collect_stderr(&mut self) -> Option<&'static str> {
+        let bytes = std::mem::take(&mut *self.diag.lock().unwrap());
+        self.cause.feed(&bytes);
+        self.cause.tag()
     }
     /// One bounded receive of the ready frame, validated as the link validates it.
     pub(in crate::task_runtime) fn step(
@@ -163,7 +178,11 @@ fn body(
     bootstrap: WriterBootstrap,
     channel: Channel,
     install: Install,
+    sink: Arc<Mutex<Vec<u8>>>,
 ) -> Option<i32> {
+    let _diag = install_diag(Rc::new(move |line| {
+        sink.lock().unwrap().extend_from_slice(line);
+    }));
     let _guards = install();
     let run = catch_unwind(AssertUnwindSafe(|| {
         let entry = open_entry(root, bootstrap, channel);

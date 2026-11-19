@@ -2,6 +2,7 @@
 pub mod bootstrap;
 pub mod caller;
 pub mod channel;
+pub mod diag;
 pub mod raw;
 pub mod settlement;
 pub mod space;

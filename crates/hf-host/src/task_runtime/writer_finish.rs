@@ -31,12 +31,12 @@ impl Runtime {
     /// loss is recorded durably first; otherwise the stream must end on a line boundary.
     fn settled_view(&mut self, proof: &SettlementAttestation) -> Result<SyncedCaptureView, Error> {
         self.validate_settlement(proof)?;
-        if !proof.capture_loss {
+        if !proof.capture_loss.is_loss() {
             self.stream.finish();
         }
         let raw = self.raw.as_mut().ok_or(Error::Refused)?;
-        if proof.capture_loss {
-            raw.record_known_loss(io::deadline())?;
+        if proof.capture_loss.is_loss() {
+            raw.record_known_loss(proof.capture_loss, io::deadline())?;
         }
         if raw.progress().stdout_end != proof.stdout_end
             || raw.progress().stderr_end != proof.stderr_end
@@ -54,10 +54,10 @@ impl Runtime {
         observation.exit = proof.exit;
         observation.drained = true;
         observation.input_closed = true;
-        if proof.capture_loss {
+        if proof.capture_loss.is_loss() {
             observation.capture_known_loss = true;
         }
-        observation.observation_gap |= proof.capture_loss || self.stream.malformed();
+        observation.observation_gap |= proof.capture_loss.is_loss() || self.stream.malformed();
         observation
     }
     pub(super) fn finish(&mut self, proof: SettlementAttestation, at: &str) -> Result<(), Error> {

@@ -4,7 +4,7 @@ use hf_domain::process::ProcessIdentity;
 use std::io;
 use std::sync::{
     Arc, Mutex, OnceLock,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
     mpsc::{Receiver, TryRecvError},
 };
 use std::thread::JoinHandle;
@@ -35,17 +35,31 @@ pub struct ReaderStreamStats {
     pub read: u64,
     pub enqueued: u64,
     pub discarded: u64,
+    /// Read and held in the reader's pending batch: neither delivered nor discarded yet.
+    /// While the reader buffers, `read = enqueued + discarded + pending`.
+    pub pending: u64,
     pub eof: bool,
     pub error: Option<String>,
+}
+/// Why the reader stopped delivering bytes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LossCause {
+    /// The queue stayed full with a pending batch for the stall bound.
+    Stall,
+    /// The consumer side of the queue was gone.
+    Disconnect,
 }
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ReaderProgress {
     pub stdout: ReaderStreamStats,
     pub stderr: ReaderStreamStats,
     pub discard: bool,
-    /// The bounded FIFO was full: batches from then on were counted as discarded. Unlike a
-    /// requested discard, this records a capacity loss and is never set by a request.
+    /// Bytes from then on were counted as discarded because the queue stalled or its
+    /// consumer disconnected. Unlike a requested discard, this records a loss and is never
+    /// set by a request.
     pub overflowed: bool,
+    /// The cause of `overflowed`; `None` exactly when it is false.
+    pub overflow_cause: Option<LossCause>,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReaderFinal {
@@ -64,6 +78,8 @@ pub(super) struct Shared {
     pub final_value: OnceLock<ReaderFinal>,
     pub stop: AtomicBool,
     pub discard: AtomicBool,
+    /// Batches taken from the queue by the consumer; the reader's stall timer resets on it.
+    pub dequeued: AtomicU64,
 }
 impl Shared {
     pub fn publish(&self, value: &ReaderProgress) {
@@ -101,7 +117,9 @@ impl CaptureReader {
         &self,
         timeout: Duration,
     ) -> Result<CaptureBatch, std::sync::mpsc::RecvTimeoutError> {
-        self.receiver.recv_timeout(timeout)
+        let batch = self.receiver.recv_timeout(timeout)?;
+        self.shared.dequeued.fetch_add(1, Ordering::AcqRel);
+        Ok(batch)
     }
     /// Join without consuming the FIFO, allowing post-join reconciliation.
     pub fn join_finished(&mut self) -> io::Result<ReaderFinal> {
@@ -143,7 +161,9 @@ impl CaptureReader {
         }
     }
     pub fn try_recv(&self) -> Result<CaptureBatch, TryRecvError> {
-        self.receiver.try_recv()
+        let batch = self.receiver.try_recv()?;
+        self.shared.dequeued.fetch_add(1, Ordering::AcqRel);
+        Ok(batch)
     }
     pub fn discard_capture(&self) {
         self.shared.discard.store(true, Ordering::Release);

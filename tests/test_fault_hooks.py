@@ -32,6 +32,54 @@ class FaultHookGuard(unittest.TestCase):
         self.assertTrue(run({"lib.rs": "#[cfg(test)]\nuse crate::seams as s;\n"}, ["lib.rs"]))
         self.assertTrue(run({"lib.rs": "fn f() { let _ = ThreadWriter; }\n"}, ["lib.rs"]))
 
+    def test_reader_policy_constructors_are_confined(self):
+        virtual = Path("/virtual")
+
+        def policy(files):
+            tree = {virtual / name: text for name, text in files.items()}
+            return guard.policy_check(lambda p: tree.get(p), list(tree), virtual)
+
+        host = "crates/hf-host/src/task_runtime/owner_spawn.rs"
+        platform = "crates/hf-platform/src/process/owned.rs"
+        loop_path = guard.READER_LOOP
+        clean = {
+            host: "fn f() { let p = ReaderPolicy::production(); }\n",
+            guard.HOST_SEAMS: "fn s() { ReaderPolicy::with_stall(d); }\n",
+            "crates/hf-host/tests/x.rs": "fn t() { ReaderPolicy::with_stall(d); ReaderPolicy::fixture(); }\n",
+            "crates/hf-platform/tests/y.rs": "fn t() { ReaderPolicy::with_stall(d); write_retained_cause_capped(a, b, c, d, 1); }\n",
+            "crates/hf-platform/src/task_runtime/raw/cause.rs": "pub fn write_retained_cause_capped() {}\n",
+            "crates/hf-host/src/task_runtime/owner_retain.rs": "fn f() {\n    #[cfg(test)]\n    cause::write_retained_cause_capped(a, b, c, d, 1);\n}\n",
+            guard.READER_QUEUE: "pub struct ReaderPolicy {\n    coalesce: bool,\n}\nfn w() { ReaderPolicy { coalesce: true }; }\n",
+            loop_path: "fn start() { run(ReaderPolicy::fixture()); }\nfn start_production(p: ReaderPolicy) {}\n",
+        }
+        self.assertEqual(policy(clean), [])
+        self.assertEqual(guard.policy_check(lambda p: p.read_text() if p.exists() else None, guard.policy_files()), [], "repository sources")
+        planted = {
+            "alias": {host: "use hf_platform::process::ReaderPolicy as P;\nfn f() { let p = P::with_stall(d); }\n"},
+            "alias fixture": {host: "use hf_platform::process::ReaderPolicy as P;\nfn f() { let p = P::fixture(); }\n"},
+            "helper": {host: "fn helper() -> ReaderPolicy { ReaderPolicy::fixture() }\n"},
+            "literal host": {host: "fn f() { ReaderPolicy { coalesce: false, stall: d }; }\n"},
+            "literal platform": {platform: "fn f() { ReaderPolicy { coalesce: false, stall: d }; }\n"},
+            "stall in host": {host: "fn f() { let p = ReaderPolicy::with_stall(d); }\n"},
+            "stall in platform": {platform: "fn f() { let p = ReaderPolicy::with_stall(d); }\n"},
+            "fixture in production entry": {loop_path: "fn start() {}\nfn start_production() { let p = ReaderPolicy::fixture(); }\n"},
+            "stall in production entry": {loop_path: "fn start_production() { let p = ReaderPolicy::with_stall(d); }\n"},
+            "short write elsewhere": {host: "fn f() { cause::write_retained_cause_capped(a, b, c, d, 1); }\n"},
+            "short write unguarded in the host seam": {
+                "crates/hf-host/src/task_runtime/owner_retain.rs": "fn f() {\n    cause::write_retained_cause_capped(a, b, c, d, 1);\n}\n"
+            },
+            "production in loop": {loop_path: "fn start_production() { let p = ReaderPolicy::production(); }\n"},
+        }
+        for name, files in planted.items():
+            self.assertTrue(policy({**clean, **files}), name)
+        unguarded = {"lib.rs": "pub fn f() {\n    let p = super::seams::reader_policy(base);\n}\n"}
+        self.assertTrue(run(unguarded, ["lib.rs"]), "an unguarded host seam")
+        guarded = {"lib.rs": "pub fn f() {\n    #[cfg(test)]\n    let p = super::seams::reader_policy(base);\n}\n"}
+        self.assertEqual(run(guarded, ["lib.rs"]), [])
+        for seam in ("cause_write_fault()", "exchange_delay()", "diag_hit(line)"):
+            self.assertTrue(run({"lib.rs": f"pub fn f() {{\n    let x = super::seams::{seam};\n}}\n"}, ["lib.rs"]), seam)
+            self.assertEqual(run({"lib.rs": f"pub fn f() {{\n    #[cfg(test)]\n    let x = super::seams::{seam};\n}}\n"}, ["lib.rs"]), [], seam)
+
     def test_reachability_is_modelled_or_rejected(self):
         planted = {
             "lib.rs": "mod task_runtime;\n",

@@ -116,14 +116,65 @@ earlier one, stands and storage decides the status; without one the task ends `f
 its real exit code. The summary is never published after malformed output. Local failures
 (timestamps, counters) still poison.
 
-A full reader queue is a capacity loss, not a discard request. The owner closes the agent's
-input once, keeps exchanging the queued batches, and settles with `qualify_with_loss`: every
+The capture reader holds one pending batch (at most 16384 bytes per stream) in front of its
+four-batch queue. A full queue keeps the batch pending and the reader keeps reading the streams
+that still have room; a stream at its cap leaves the poll set, so its pipe fills and the child
+blocks: that is the backpressure, and a fast child loses nothing, whether it writes unbuffered
+lines or a 1 MiB burst. The reader loses bytes only on a stall, when the queue stays full with a
+pending batch and nothing is dequeued for the stall bound (2 s, a policy bound that is above the
+measured healthy commit gaps and below the 5 s exchange and input deadlines, not proof that the
+writer is unhealthy), or on a disconnect. The discard is then sticky and the pending and later
+bytes count as discarded. A requested discard or a stop also counts the pending bytes as
+discarded but never carries a loss cause and never qualifies. The loop ends only when both
+streams are finished and nothing is pending, so a descendant that holds a pipe keeps the
+reader alive until a real end of file. Per stream, while the reader buffers, read = delivered +
+discarded + pending; a settlement requires nothing pending.
+
+A stall or disconnect is a loss, not a discard request. The owner closes the agent's input
+once, keeps exchanging the queued batches, and settles with `qualify_with_loss`: every
 ordinary settlement constraint holds except that bytes are accounted per stream as read =
 delivered + discarded, with the committed ends equal to the delivered bytes, and a requested
-discard never qualifies. `Finish` then uses opcode 4 (`capture_loss`). The writer durably
-records the known loss before the terminal; if that fails it is poisoned and no terminal
-follows. The loss is private evidence (`capture_known_loss`, `loss.raw`, the gap); a task with
-a successful result and exit 0 remains publicly `completed`.
+discard never qualifies. The `Finish` opcode carries the cause:
+
+| Opcode | Meaning | `loss.raw` |
+| --- | --- | --- |
+| 2 | no capture loss | empty |
+| 4 | stall loss | `capture-known-loss stall\n` (25 bytes) |
+| 5 | disconnect loss | `capture-known-loss disconnect\n` (30 bytes) |
+
+Every other opcode is refused. A `loss.raw` is classified by its exact contents: empty is no
+loss, the two lines above are stall and disconnect, the line `capture-known-loss\n` written
+before causes existed is an unspecified loss (opcode 4 used to mean a generic loss, so a legacy
+record never reads as a stall), and any other content, or an absent file where a loss is
+flagged, is an unknown cause. The writer re-reads the file after recording and refuses a
+second, inconsistent cause (it poisons); the same cause is idempotent. The stored loss flag
+stays boolean and the public projection is unchanged. The writer durably records the known
+loss before the terminal; if that fails it is poisoned and no terminal follows. The loss is
+private evidence (`capture_known_loss`, `loss.raw`, the gap); a task with a successful result
+and exit 0 remains publicly `completed`. A prompt larger than the agent's stdin pipe, sent
+while the agent floods stdout before it reads, ends as a stall loss once the agent resumes
+reading within the input deadline; an agent that never reads its input poisons the owner,
+which retains.
+
+State root mode: a root created by a run is mode 0700 (before the umask), so it never has
+group or other permission bits. The dispatcher refuses an existing root that is not a
+directory owned by the current user with no group or other permissions, as `invalid_params`
+with exit 1, before the store is opened and before anything changes, and checks the same
+predicate again, against the identity stamped in the invitation, immediately before the launch
+intent. The raw payload writer applies the same predicate (`open_private_root`).
+
+An owner that retains after its writer started writes a private `owner-retained.cause` file
+once, synchronously and best effort, before its retention loop. It is created exclusively with
+mode 0600 under the attempt's private payload directory (no symlinked component; missing
+directories are created 0700 and their parent flushed), holds at most 4096 bytes and ends with
+an `end` line, and is flushed with its parent. Its fields are the owner phase (`start`, `tick`
+or `settle_writer`), the error kind, the OS error number or `-`, and the writer's source tag
+(`raw_capture_prepare`, `claim`, `ready_flush`, `service`, `finish`, or `-`); it never holds a
+prompt, output, environment or path. The writer prints its tag line
+(`harflow-writer-cause: <tag>`) on stderr before it retains; the owner recognises only an exact
+line within the first 4096 bytes of that stream. A failed write is not retried and only prints
+`harflow-owner: retained cause not recorded`; diagnostic lines are one non-blocking write that
+ignores a closed or full pipe. The file is never public.
 
 Caller-policy order of the dispatcher: admission, preflight, then an existing root is opened
 and inventoried, while a missing root gets one more caller observation equal to the admitted

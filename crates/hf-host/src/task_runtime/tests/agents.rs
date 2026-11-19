@@ -21,6 +21,9 @@ pub(super) struct Fake {
     pub(super) gates: PathBuf,
     pub(super) log: PathBuf,
     pub(super) pidfile: PathBuf,
+    /// Every byte the script wrote to stdout and to stderr, in order.
+    pub(super) outlog: PathBuf,
+    pub(super) errlog: PathBuf,
 }
 impl Fake {
     pub(super) fn install(scratch: &Path) -> Self {
@@ -37,6 +40,8 @@ impl Fake {
         Self {
             log: scratch.join("starts.log"),
             pidfile: scratch.join("desc.pid"),
+            outlog: scratch.join("stdout.log"),
+            errlog: scratch.join("stderr.log"),
             bin,
             gates,
         }
@@ -51,6 +56,8 @@ impl Fake {
             ("FAKE_GATES".to_owned(), text(&self.gates)),
             ("FAKE_LOG".to_owned(), text(&self.log)),
             ("FAKE_PIDFILE".to_owned(), text(&self.pidfile)),
+            ("FAKE_OUTLOG".to_owned(), text(&self.outlog)),
+            ("FAKE_ERRLOG".to_owned(), text(&self.errlog)),
         ];
         values.sort();
         values
@@ -58,6 +65,11 @@ impl Fake {
     /// Agent starts, not counting version probes.
     pub(super) fn starts(&self) -> usize {
         std::fs::read_to_string(&self.log).map_or(0, |text| text.lines().count())
+    }
+    /// The bytes the script wrote to stdout and to stderr.
+    pub(super) fn emitted(&self) -> (Vec<u8>, Vec<u8>) {
+        let read = |path: &Path| std::fs::read(path).unwrap_or_default();
+        (read(&self.outlog), read(&self.errlog))
     }
     pub(super) fn descendant_pid(&self) -> Option<u32> {
         std::fs::read_to_string(&self.pidfile)

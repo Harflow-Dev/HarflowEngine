@@ -1,8 +1,10 @@
 //! Original-handle settlement capability. Decoded transport facts cannot construct it.
-use crate::process::{CaptureOrigin, CaptureReader, ReaderStreamStats, RetainedOwnedChild};
+use crate::process::{
+    CaptureOrigin, CaptureReader, LossCause, ReaderStreamStats, RetainedOwnedChild,
+};
 use hf_domain::{
     process::ProcessExit,
-    task_runtime::{SettlementAttestation, WriterOperation},
+    task_runtime::{CaptureLoss, SettlementAttestation, WriterOperation},
 };
 use std::{io, sync::mpsc::TryRecvError};
 pub struct OwnerSettlement {
@@ -19,10 +21,11 @@ impl OwnerSettlement {
     ) -> io::Result<Self> {
         Self::admit(child, reader, origin, progress, source_binding, false)
     }
-    /// A settlement after the reader's queue overflowed. Every `qualify` constraint holds
-    /// except that discarded bytes are allowed and accounted: per stream, bytes read equal
-    /// bytes delivered plus bytes discarded, and the committed ends equal those delivered.
-    /// A requested discard never qualifies.
+    /// A settlement after the reader's queue stalled or its consumer disconnected. Every
+    /// `qualify` constraint holds except that discarded bytes are allowed and accounted: per
+    /// stream, bytes read equal bytes delivered plus bytes discarded, and the committed
+    /// ends equal those delivered. The attestation carries the reader's cause. A requested
+    /// discard never qualifies.
     pub fn qualify_with_loss(
         child: &RetainedOwnedChild,
         reader: &CaptureReader,
@@ -50,13 +53,18 @@ impl OwnerSettlement {
         } else {
             !p.discard && !p.overflowed
         };
+        let capture_loss = attested_loss(loss, p.overflow_cause).ok_or_else(fail)?;
         let stream_ok = |stats: &ReaderStreamStats, committed: u64| {
             let delivered = if loss {
                 stats.enqueued.checked_add(stats.discarded) == Some(stats.read)
             } else {
                 stats.discarded == 0 && stats.read == committed
             };
-            stats.eof && stats.error.is_none() && stats.enqueued == committed && delivered
+            stats.eof
+                && stats.error.is_none()
+                && stats.pending == 0
+                && stats.enqueued == committed
+                && delivered
         };
         if identity != origin.child
             || reader.origin() != origin
@@ -83,7 +91,7 @@ impl OwnerSettlement {
                 stderr_end: err,
                 input_bytes,
                 source_binding,
-                capture_loss: loss,
+                capture_loss,
             },
         })
     }
@@ -92,5 +100,32 @@ impl OwnerSettlement {
             proof: self.proof,
             finished_at,
         }
+    }
+}
+/// The cause a settlement attests: none without a loss, otherwise exactly the reader's.
+fn attested_loss(loss: bool, cause: Option<LossCause>) -> Option<CaptureLoss> {
+    match (loss, cause) {
+        (false, _) => Some(CaptureLoss::None),
+        (true, Some(LossCause::Stall)) => Some(CaptureLoss::Stall),
+        (true, Some(LossCause::Disconnect)) => Some(CaptureLoss::Disconnect),
+        (true, None) => None,
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settlement_maps_stall_and_disconnect() {
+        assert_eq!(attested_loss(false, None), Some(CaptureLoss::None));
+        assert_eq!(
+            attested_loss(true, Some(LossCause::Stall)),
+            Some(CaptureLoss::Stall)
+        );
+        assert_eq!(
+            attested_loss(true, Some(LossCause::Disconnect)),
+            Some(CaptureLoss::Disconnect)
+        );
+        assert_eq!(attested_loss(true, None), None);
     }
 }

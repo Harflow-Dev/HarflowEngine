@@ -55,8 +55,23 @@ pub struct SettlementAttestation {
     pub stderr_end: u64,
     pub input_bytes: u64,
     pub source_binding: crate::ownership::Digest,
-    /// The reader's bounded queue overflowed: bytes were read but never delivered.
-    pub capture_loss: bool,
+    /// Whether capture bytes were read but never delivered, and why.
+    pub capture_loss: CaptureLoss,
+}
+/// Why capture bytes were read but never delivered. The wire carries it as the finish
+/// opcode (2, 4, 5); the durable raw loss file carries it as one fixed line.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaptureLoss {
+    None,
+    /// The queue stayed full for the stall bound.
+    Stall,
+    /// The reader's consumer disconnected.
+    Disconnect,
+}
+impl CaptureLoss {
+    pub fn is_loss(self) -> bool {
+        self != Self::None
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WriterCommand {

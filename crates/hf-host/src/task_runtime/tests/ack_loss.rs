@@ -68,7 +68,10 @@ fn ack_loss_after_t0_requires_positive_no_spawn_proof() {
     let ctx = Ctx::new("t0");
     let seen = Rc::new(RefCell::new(None));
     let capture = seen.clone();
-    let fault = Rc::new(move |_: seams::DispatchPoint, binding: &_| {
+    let fault = Rc::new(move |point: seams::DispatchPoint, binding: &_| {
+        if point != seams::DispatchPoint::AfterT0 {
+            return Ok(());
+        }
         *capture.borrow_mut() = Some(hf_domain::task_lifecycle::LifecycleBinding::clone(binding));
         Err(Error::Io(std::io::Error::other("injected failure")))
     });

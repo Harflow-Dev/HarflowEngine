@@ -43,7 +43,11 @@ mod reader;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod reader_loop;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod reader_queue;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub use reader::*;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub use reader_queue::{ReaderPolicy, STALL_BOUND};
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod storage_io;

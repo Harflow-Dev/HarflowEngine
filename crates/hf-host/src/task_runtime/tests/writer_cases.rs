@@ -5,7 +5,7 @@ use super::{
     harness::{Ctx, Probe, Seed, WriterConfig},
     serial_case,
 };
-use hf_domain::process::ProcessExit;
+use hf_domain::{process::ProcessExit, task_runtime::CaptureLoss};
 use hf_storage::WalMaintenance;
 use std::{
     sync::{
@@ -67,7 +67,11 @@ fn malformed_agent_output_marks_failed_and_keeps_draining() {
     wait_until("idle maintenance after the fault", || {
         idle.load(Ordering::Acquire) > before
     });
-    assert!(driver.finish(ProcessExit::Code(0), false).terminal);
+    assert!(
+        driver
+            .finish(ProcessExit::Code(0), CaptureLoss::None)
+            .terminal
+    );
     assert_eq!(
         driver.wait_finished(),
         ProcessExit::Code(0),
@@ -112,7 +116,7 @@ fn malformed_result_record_publishes_no_result() {
         "no result was published"
     );
     assert!(evidence.observation.observation_gap);
-    driver.finish(ProcessExit::Code(0), false);
+    driver.finish(ProcessExit::Code(0), CaptureLoss::None);
     assert_eq!(status(&seed).as_deref(), Some("failed"));
     assert!(!seed.status_text().unwrap().contains("\"summary\":\""));
     seed.assert_never_accepted();
@@ -137,7 +141,7 @@ fn malformed_after_result_is_batch_independent() {
         for batch in &batches {
             driver.capture(batch);
         }
-        driver.finish(ProcessExit::Code(0), false);
+        driver.finish(ProcessExit::Code(0), CaptureLoss::None);
         let evidence = seed.evidence();
         assert!(
             evidence.observation.result.is_some(),
@@ -173,6 +177,7 @@ fn append_uncertainty_never_becomes_terminal_fact() {
                 *observed.lock().unwrap() = Some(poisoned);
             })),
             stream: None,
+            exchange_delay: None,
         };
         let mut driver = Driver::start(&ctx, &seed, &config);
         driver.spawn_child();
@@ -201,18 +206,49 @@ fn saturation_after_durable_result_completes_with_known_loss() {
     let mut driver = Driver::start(&ctx, &seed, &WriterConfig::default());
     driver.spawn_child();
     driver.capture(&[init_line(), result_line("\"done\"")].concat());
-    assert!(driver.finish(ProcessExit::Code(0), true).terminal);
+    assert!(
+        driver
+            .finish(ProcessExit::Code(0), CaptureLoss::Stall)
+            .terminal
+    );
     let evidence = seed.evidence();
     assert!(evidence.observation.capture_known_loss && evidence.observation.observation_gap);
     assert!(evidence.observation.result.is_some());
     assert_eq!(status(&seed).as_deref(), Some("completed"));
     assert_eq!(
-        std::fs::metadata(driver.raw_file("loss.raw"))
-            .unwrap()
-            .len(),
-        19
+        std::fs::read(driver.raw_file("loss.raw")).unwrap(),
+        b"capture-known-loss stall\n"
     );
     seed.assert_never_accepted();
+}
+
+#[test]
+fn finish_command_to_terminal_ack_for_stall_and_disconnect() {
+    let _serial = serial_case();
+    for (name, cause, line) in [
+        (
+            "loss-stall",
+            CaptureLoss::Stall,
+            &b"capture-known-loss stall\n"[..],
+        ),
+        (
+            "loss-disconnect",
+            CaptureLoss::Disconnect,
+            &b"capture-known-loss disconnect\n"[..],
+        ),
+    ] {
+        let (ctx, seed) = seeded(name);
+        let mut driver = Driver::start(&ctx, &seed, &WriterConfig::default());
+        driver.spawn_child();
+        driver.capture(&[init_line(), result_line("\"done\"")].concat());
+        // Encoded by the driver, decoded by the writer's top-level decoder, then settled.
+        assert!(driver.finish(ProcessExit::Code(0), cause).terminal);
+        assert_eq!(std::fs::read(driver.raw_file("loss.raw")).unwrap(), line);
+        let evidence = seed.evidence();
+        assert!(evidence.observation.capture_known_loss && evidence.observation.observation_gap);
+        assert_eq!(status(&seed).as_deref(), Some("completed"));
+        seed.assert_never_accepted();
+    }
 }
 
 #[test]
@@ -231,7 +267,7 @@ fn known_loss_recording_failure_retains_without_terminal() {
     // The renamed `loss.raw` fails the known-loss append in `RawCapture::validate`.
     let loss = driver.raw_file("loss.raw");
     std::fs::rename(&loss, loss.with_extension("moved")).unwrap();
-    driver.send_finish(ProcessExit::Code(1), true);
+    driver.send_finish(ProcessExit::Code(1), CaptureLoss::Stall);
     wait_until("the writer to retain", || reached.load(Ordering::Acquire));
     assert!(
         driver
@@ -249,7 +285,11 @@ fn zero_exit_without_matched_result_is_failed() {
     let mut driver = Driver::start(&ctx, &seed, &WriterConfig::default());
     driver.spawn_child();
     driver.capture(&init_line());
-    assert!(driver.finish(ProcessExit::Code(0), false).terminal);
+    assert!(
+        driver
+            .finish(ProcessExit::Code(0), CaptureLoss::None)
+            .terminal
+    );
     assert_eq!(status(&seed).as_deref(), Some("failed"));
     let evidence = seed.evidence();
     assert_eq!(evidence.observation.exit, ProcessExit::Code(0));

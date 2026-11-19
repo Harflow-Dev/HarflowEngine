@@ -55,6 +55,14 @@ impl WriterSlot {
             Self::Thread(thread) => thread.try_wait(),
         }
     }
+    /// The writer's source tag from its stderr, within a bounded wait.
+    pub(super) fn collect_stderr(&mut self, budget: std::time::Duration) -> Option<&'static str> {
+        match self {
+            Self::Link(link) => link.collect_stderr(budget),
+            #[cfg(test)]
+            Self::Thread(thread) => thread.collect_stderr(),
+        }
+    }
     pub(super) fn drain_step(&mut self) -> WriterDrain {
         match self {
             Self::Link(link) => link.drain_step(),

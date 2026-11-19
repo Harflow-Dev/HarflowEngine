@@ -1,10 +1,15 @@
 //! Original writer-owned raw source. Uncertain writes poison permanently; never reopen.
+pub mod cause;
 pub(crate) mod files;
+pub mod loss;
+pub use files::{PrivateRoot, PrivateRootError, open_private_root, private_root_error};
 use files::{RawFile, RootPath};
 use hf_application::task_lifecycle::{
     CaptureAdmissionRefused, CaptureProgress, DurableCaptureAdmission, DurableCaptureRequest,
 };
+use hf_domain::task_runtime::CaptureLoss;
 use hf_domain::{process::ProcessIdentity, task_lifecycle::LifecycleBinding};
+pub use loss::{LossFile, classify_loss, classify_loss_file};
 use std::{io, path::Path, time::Instant};
 pub const RAW_CAP: u64 = 64 * 1024 * 1024;
 pub const APPEND_CAP: usize = 16384;
@@ -22,6 +27,8 @@ pub struct RawCapture {
     loss: RawFile,
     synced: CaptureProgress,
     published: CaptureProgress,
+    /// The committed cause of `synced.known_loss`; `None` exactly when no loss is recorded.
+    loss_cause: CaptureLoss,
     poisoned: bool,
 }
 pub struct PreparedRawCapture {
@@ -50,6 +57,7 @@ impl PreparedRawCapture {
             loss: self.loss,
             synced: zero,
             published: zero,
+            loss_cause: CaptureLoss::None,
             poisoned: false,
         }
     }
@@ -158,21 +166,35 @@ impl RawCapture {
         self.poisoned = false;
         self.view(deadline)
     }
-    /// Durably records that capture bytes were read but never delivered. The writer calls it
-    /// when a settlement reports a reader queue overflow, before the terminal is published;
-    /// a failure poisons the capture and no terminal follows. It never gates drainage.
-    pub fn record_known_loss(&mut self, deadline: Instant) -> io::Result<SyncedCaptureView> {
+    /// Durably records that capture bytes were read but never delivered, and why. The writer
+    /// calls it when a settlement reports a loss, before the terminal is published; a failure
+    /// poisons the capture and no terminal follows. It never gates drainage. The same cause
+    /// is idempotent; a different cause after one was committed is refused and poisons.
+    pub fn record_known_loss(
+        &mut self,
+        cause: CaptureLoss,
+        deadline: Instant,
+    ) -> io::Result<SyncedCaptureView> {
         if self.poisoned {
+            return Err(refused());
+        }
+        if !cause.is_loss() || (self.synced.known_loss && self.loss_cause != cause) {
+            self.poisoned = true;
             return Err(refused());
         }
         if !self.synced.known_loss {
             self.poisoned = true;
             self.validate(deadline)?;
-            self.loss.append(0, b"capture-known-loss\n", deadline)?;
+            let line = loss::loss_line(cause);
+            self.loss.append(0, line, deadline)?;
+            if classify_loss(&self.loss.read_prefix(line.len())?) != loss::expected_file(cause) {
+                return Err(refused());
+            }
             self.hold.validate(&self.binding)?;
             self.root.validate()?;
             timely(deadline)?;
             self.synced.known_loss = true;
+            self.loss_cause = cause;
             self.poisoned = false;
         }
         self.view(deadline)
@@ -216,8 +238,15 @@ impl RawCapture {
         self.root.validate()?;
         self.stdout.validate(self.synced.stdout_end)?;
         self.stderr.validate(self.synced.stderr_end)?;
-        self.loss
-            .validate(if self.synced.known_loss { 19 } else { 0 })?;
+        let length = loss::loss_line(self.loss_cause).len();
+        self.loss.validate(length as u64)?;
+        // An equal-length overwrite keeps identity, mode and length: re-read the descriptor.
+        if length > 0
+            && classify_loss(&self.loss.read_prefix(length)?)
+                != loss::expected_file(self.loss_cause)
+        {
+            return Err(refused());
+        }
         timely(deadline)
     }
 }

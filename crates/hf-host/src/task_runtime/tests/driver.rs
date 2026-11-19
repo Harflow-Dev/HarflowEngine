@@ -5,6 +5,7 @@ use crate::task_runtime::{Error, IntentSender, io};
 use hf_domain::{
     ownership::{Digest, OwnerClaim},
     process::{ProcessExit, ProcessIdentity},
+    task_runtime::CaptureLoss,
     task_runtime::{
         SettlementAttestation, WriterAcknowledgement, WriterCommand, WriterEnvelope,
         WriterOperation,
@@ -161,7 +162,7 @@ impl Driver {
             bytes: bytes.to_vec(),
         });
     }
-    fn finish_operation(&self, exit: ProcessExit, loss: bool) -> WriterOperation {
+    fn finish_operation(&self, exit: ProcessExit, loss: CaptureLoss) -> WriterOperation {
         WriterOperation::Finish {
             proof: SettlementAttestation {
                 child: self.identity.clone().expect("spawned"),
@@ -175,11 +176,11 @@ impl Driver {
             finished_at: crate::task_runtime::timestamp().unwrap(),
         }
     }
-    pub(super) fn finish(&mut self, exit: ProcessExit, loss: bool) -> WriterAcknowledgement {
+    pub(super) fn finish(&mut self, exit: ProcessExit, loss: CaptureLoss) -> WriterAcknowledgement {
         let operation = self.finish_operation(exit, loss);
         self.command(operation)
     }
-    pub(super) fn send_finish(&mut self, exit: ProcessExit, loss: bool) {
+    pub(super) fn send_finish(&mut self, exit: ProcessExit, loss: CaptureLoss) {
         let operation = self.finish_operation(exit, loss);
         self.send(operation);
     }

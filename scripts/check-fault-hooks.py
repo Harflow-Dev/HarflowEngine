@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Guard: no test seam is reachable from a non-test build of hf-host."""
+"""Guard: no test seam is reachable from a non-test build of hf-host, and the reader policy
+constructors that weaken capture backpressure are used only where they are allowed."""
 import re
 import subprocess
 import sys
@@ -167,6 +168,82 @@ def source_check(read=lambda p: p.read_text() if p.exists() else None, roots=ROO
     return problems
 
 
+POLICY_DIRS = ("crates/hf-host/src", "crates/hf-host/tests", "crates/hf-platform/src", "crates/hf-platform/tests")
+READER_MODULE = (
+    "crates/hf-platform/src/process/reader.rs",
+    "crates/hf-platform/src/process/reader_loop.rs",
+    "crates/hf-platform/src/process/reader_queue.rs",
+)
+READER_LOOP = "crates/hf-platform/src/process/reader_loop.rs"
+READER_QUEUE = "crates/hf-platform/src/process/reader_queue.rs"
+HOST_SEAMS = "crates/hf-host/src/task_runtime/seams.rs"
+LITERAL = re.compile(r"ReaderPolicy\s*\{\s*\w+\s*:(?!:)")
+CONSTRUCTOR = re.compile(r"ReaderPolicy\s*::\s*(\w+)")
+ALIAS = re.compile(r"\bReaderPolicy\s+as\s+(\w+)")
+
+
+def policy_files(root=ROOT):
+    return [p for d in POLICY_DIRS for p in sorted((root / d).rglob("*.rs"))]
+
+
+def strip_comments(text):
+    return re.sub(r"//.*", "", text)
+
+
+def enclosing_fn(text, offset):
+    names = re.findall(r"\bfn\s+(\w+)", text[:offset])
+    return names[-1] if names else None
+
+
+SHORT_WRITE = re.compile(r"\bwrite_retained_cause_capped\b")
+SHORT_WRITE_HOME = "crates/hf-platform/src/task_runtime/raw/cause.rs"
+SHORT_WRITE_HOST = "crates/hf-host/src/task_runtime/owner_retain.rs"
+
+
+def policy_check(read, files, root=ROOT):
+    """Token rules for `ReaderPolicy`: `with_stall` and the fixture policy only where tests
+    and the reader module need them, a literal only in the reader module, and nothing but
+    `production()` in non-test host code. The check is textual and conservative."""
+    problems = []
+    for path in files:
+        rel = path.relative_to(root).as_posix() if path.is_absolute() and root in path.parents else path.as_posix()
+        text = read(path)
+        if text is None:
+            continue
+        code = strip_comments(text)
+        host = rel.startswith("crates/hf-host/")
+        in_tests = "/tests/" in rel
+        names = {"ReaderPolicy", *ALIAS.findall(code)}
+        mentions = any(re.search(rf"\b{re.escape(n)}\b", code) for n in names)
+        stall = re.search(r"\bwith_stall\b", code)
+        if stall and not in_tests:
+            allowed = rel == HOST_SEAMS if host else rel in READER_MODULE
+            if not allowed:
+                problems.append(f"{rel}: with_stall outside the reader module, seams and tests")
+        if LITERAL.search(code) and rel != READER_QUEUE:
+            problems.append(f"{rel}: ReaderPolicy literal outside the reader module")
+        if mentions and re.search(r"\bfixture\s*\(", code) and not in_tests and rel not in (READER_LOOP, READER_QUEUE):
+            problems.append(f"{rel}: fixture reader policy outside the fixture reader entry")
+        if host and not in_tests and rel != HOST_SEAMS:
+            for m in re.finditer(r"\b(\w+)\s*::\s*(\w+)", code):
+                if m.group(1) in names and m.group(2) != "production":
+                    problems.append(f"{rel}: host code may only build ReaderPolicy::production()")
+        if SHORT_WRITE.search(code) and not in_tests and rel != SHORT_WRITE_HOME:
+            if rel != SHORT_WRITE_HOST:
+                problems.append(f"{rel}: write_retained_cause_capped outside its module, the host seam and tests")
+            else:
+                lines = text.splitlines()
+                covered = covered_spans(lines)
+                for i, line in enumerate(lines):
+                    if SHORT_WRITE.search(re.sub(r"//.*", "", line)) and i not in covered:
+                        problems.append(f"{rel}:{i + 1}: write_retained_cause_capped outside a cfg(test) item")
+        if rel == READER_LOOP:
+            for m in CONSTRUCTOR.finditer(code):
+                if not (m.group(1) == "fixture" and enclosing_fn(code, m.start()) == "start"):
+                    problems.append(f"{rel}: only the fixture entry may build a policy here ({m.group(0)})")
+    return problems
+
+
 def scan_symbols(listing):
     return [l for l in listing.splitlines() if re.search(r"5seams|\bseams\b|__ZN[0-9a-zA-Z_$.]*seams|[A-Za-z_]seams", l)]
 
@@ -190,7 +267,7 @@ def binary_check(ctl, scaffold, control):
 
 
 if __name__ == "__main__":
-    found = source_check()
+    found = source_check() + policy_check(lambda p: p.read_text() if p.exists() else None, policy_files())
     for line in found:
         print(line)
     sys.exit(1 if found else 0)

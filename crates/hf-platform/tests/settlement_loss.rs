@@ -7,7 +7,10 @@ use hf_domain::{
     process::ProcessExit,
 };
 use hf_platform::{
-    process::{CaptureOrigin, CaptureReader, MacIdentity, RetainedOwnedChild, SpawnSpec},
+    process::{
+        CaptureOrigin, CaptureReader, LossCause, MacIdentity, ReaderPolicy, RetainedOwnedChild,
+        SpawnSpec,
+    },
     task_runtime::settlement::OwnerSettlement,
 };
 use std::{
@@ -55,7 +58,8 @@ fn settle(script: &str, drain: bool) -> Settled {
             revision: 2,
         },
     };
-    let mut reader = child.start_capture_reader(origin.clone(), None).unwrap();
+    let policy = ReaderPolicy::with_stall(Duration::from_millis(100));
+    let mut reader = child.start_capture_reader(origin.clone(), policy).unwrap();
     let input = b"hello\n";
     let mut written = 0;
     while written < input.len() {
@@ -95,6 +99,8 @@ fn overflow_settles_only_through_the_loss_qualification() {
     let s = settle(OVERFLOW, true);
     let progress = s.reader.view().snapshot();
     assert!(progress.overflowed && progress.discard && progress.stdout.discarded > 0);
+    assert_eq!(progress.overflow_cause, Some(LossCause::Stall));
+    assert_eq!((progress.stdout.pending, progress.stderr.pending), (0, 0));
     assert_eq!(
         progress.stdout.read,
         progress.stdout.enqueued + progress.stdout.discarded

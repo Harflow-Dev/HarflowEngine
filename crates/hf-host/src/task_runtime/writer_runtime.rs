@@ -1,11 +1,13 @@
 //! Original writer process: entry, service loop and permanent-discard retention.
-use super::{Error, WriterEntry, io, writer_service::Runtime};
+use super::{Error, WriterEntry, io, writer_cause, writer_service::Runtime};
+use hf_domain::task_runtime::WriterOperation;
 use hf_interfaces::task_runtime::*;
 use std::time::{Duration, Instant};
 /// How the service loop ended.
 pub(super) enum Served {
     Finished,
-    Failed,
+    /// The source tag of the failure, printed before the writer retains.
+    Failed(&'static str),
 }
 pub fn run_writer() -> i32 {
     let entry = match WriterEntry::enter(io::deadline()) {
@@ -19,7 +21,10 @@ pub(super) fn run_entry(entry: WriterEntry) -> i32 {
     match start(entry) {
         Ok(mut runtime) => match serve(&mut runtime) {
             Served::Finished => 0,
-            Served::Failed => retain(&mut runtime),
+            Served::Failed(tag) => {
+                writer_cause::emit(tag);
+                retain(&mut runtime)
+            }
         },
         Err(entry) => retain_entry(*entry),
     }
@@ -27,13 +32,17 @@ pub(super) fn run_entry(entry: WriterEntry) -> i32 {
 /// Claims and flushes the entry, then builds the runtime. A failure returns the entry.
 pub(super) fn start(mut entry: WriterEntry) -> Result<Runtime, Box<WriterEntry>> {
     if entry.claim_and_queue_ready(io::deadline()).is_err() {
+        writer_cause::emit("claim");
         return Err(Box::new(entry));
     }
     loop {
         match entry.flush_ready() {
             Ok(true) => break,
             Ok(false) => std::thread::sleep(Duration::from_millis(1)),
-            Err(_) => return Err(Box::new(entry)),
+            Err(_) => {
+                writer_cause::emit("ready_flush");
+                return Err(Box::new(entry));
+            }
         }
     }
     // Entry ownership must survive all construction failures: initialize in-place below.
@@ -41,6 +50,7 @@ pub(super) fn start(mut entry: WriterEntry) -> Result<Runtime, Box<WriterEntry>>
 }
 pub(super) fn serve(runtime: &mut Runtime) -> Served {
     loop {
+        let mut tag = "service";
         let result = match runtime.entry.channel().receive_step() {
             Ok(hf_platform::task_runtime::channel::Receive::Pending) => {
                 match runtime.entry.writer().maintain_idle(Instant::now()) {
@@ -54,13 +64,18 @@ pub(super) fn serve(runtime: &mut Runtime) -> Served {
             Ok(hf_platform::task_runtime::channel::Receive::Frame(frame)) => {
                 decode_writer_command(io::payload(&frame).unwrap_or(&[]))
                     .map_err(|_| Error::Refused)
-                    .and_then(|command| runtime.command(command))
+                    .and_then(|command| {
+                        if matches!(command.operation, WriterOperation::Finish { .. }) {
+                            tag = "finish";
+                        }
+                        runtime.command(command)
+                    })
             }
             Ok(hf_platform::task_runtime::channel::Receive::Eof) => Err(Error::Refused),
             Err(error) => Err(Error::Io(error)),
         };
         if result.is_err() {
-            return Served::Failed;
+            return Served::Failed(tag);
         }
         if runtime.terminal || runtime.not_started {
             runtime.entry.writer().maintain_final();

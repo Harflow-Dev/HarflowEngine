@@ -75,3 +75,12 @@ fn initialize(
     verify()?;
     Ok(identity)
 }
+
+/// Creates the root directory with no group or other access (mode 0700 before the umask on
+/// unix). The caller treats an existing path as `AlreadyExists`; no parent is created.
+pub(crate) fn create_private_root(root: &Path) -> std::io::Result<()> {
+    let mut builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder.create(root)
+}

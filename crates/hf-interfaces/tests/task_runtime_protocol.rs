@@ -7,8 +7,8 @@ use hf_domain::{
     task_lifecycle::LifecycleBinding,
     task_read::TaskId,
     task_runtime::{
-        NotStarted, ProbeAttestation, SettlementAttestation, Started, WriterAcknowledgement,
-        WriterCommand, WriterEnvelope, WriterOperation,
+        CaptureLoss, NotStarted, ProbeAttestation, SettlementAttestation, Started,
+        WriterAcknowledgement, WriterCommand, WriterEnvelope, WriterOperation,
     },
 };
 use hf_interfaces::task_runtime::{
@@ -75,7 +75,7 @@ fn finish_requires_observed_exit_and_digest_source_binding() {
         stderr_end: 9,
         input_bytes: 44,
         source_binding: Digest::new("a".repeat(64)).unwrap(),
-        capture_loss: false,
+        capture_loss: CaptureLoss::None,
     };
     let command = WriterCommand {
         envelope: envelope(),

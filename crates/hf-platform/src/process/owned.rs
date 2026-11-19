@@ -175,14 +175,25 @@ impl RetainedOwnedChild {
         origin: super::CaptureOrigin,
         deadline: Instant,
     ) -> io::Result<super::PrivateFixtureCaptureReader> {
-        self.start_capture_reader(origin, Some(deadline))
+        let (out, err) = self.transfer_capture_pipes(&origin, Some(deadline))?;
+        startup_loss(super::reader_loop::start(origin, out, err, deadline))
     }
     /// Production drainage has no foreground lifetime or cumulative byte cutoff.
     pub fn start_capture_reader(
         &mut self,
         origin: super::CaptureOrigin,
-        deadline: Option<Instant>,
+        policy: super::ReaderPolicy,
     ) -> io::Result<super::PrivateFixtureCaptureReader> {
+        let (out, err) = self.transfer_capture_pipes(&origin, None)?;
+        startup_loss(super::reader_loop::start_production(
+            origin, out, err, policy,
+        ))
+    }
+    fn transfer_capture_pipes(
+        &mut self,
+        origin: &super::CaptureOrigin,
+        deadline: Option<Instant>,
+    ) -> io::Result<(File, File)> {
         if self.registered.as_ref() != Some(&origin.child)
             || self.initialization != SpawnInitialization::Ready
             || self.capture != Capture::default()
@@ -201,13 +212,7 @@ impl RetainedOwnedChild {
             .take()
             .ok_or_else(|| io::Error::other("stderr absent"))?;
         self.capture_transferred = true;
-        let result = match deadline {
-            Some(end) => super::reader_loop::start(origin, out, err, end),
-            None => super::reader_loop::start_production(origin, out, err),
-        };
-        result.map_err(|error| {
-            io::Error::other(format!("private capture startup pipe loss: {error}"))
-        })
+        Ok((out, err))
     }
     /// Exit-only observation after independent pipe ownership transfer.
     pub fn wait_exit_until(
@@ -395,3 +400,9 @@ fn check_spawn_deadline(deadline: Instant) -> io::Result<()> {
 
 #[path = "owned/transport.rs"]
 mod transport;
+
+fn startup_loss(
+    result: io::Result<super::PrivateFixtureCaptureReader>,
+) -> io::Result<super::PrivateFixtureCaptureReader> {
+    result.map_err(|error| io::Error::other(format!("private capture startup pipe loss: {error}")))
+}

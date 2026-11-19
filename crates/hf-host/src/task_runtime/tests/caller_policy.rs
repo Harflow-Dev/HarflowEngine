@@ -35,7 +35,10 @@ fn init_empty(ctx: &Ctx) {
 fn t0_counter() -> (Rc<Cell<usize>>, Rc<seams::DispatchHook>) {
     let count = Rc::new(Cell::new(0));
     let seen = count.clone();
-    let hook = Rc::new(move |_: seams::DispatchPoint, _: &_| {
+    let hook = Rc::new(move |point: seams::DispatchPoint, _: &_| {
+        if point != seams::DispatchPoint::AfterT0 {
+            return Ok(());
+        }
         seen.set(seen.get() + 1);
         Err(Error::Io(std::io::Error::other("injected failure")))
     });

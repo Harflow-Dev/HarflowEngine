@@ -18,9 +18,13 @@ pub(super) struct Runtime {
 impl Runtime {
     pub(super) fn new(mut entry: WriterEntry) -> Result<Self, Box<(Error, WriterEntry)>> {
         let initialized = Self::initialize(&mut entry);
+        // The first tag line wins: a prepare refusal has already named itself.
         let (intent, prepared, stream) = match initialized {
             Ok(value) => value,
-            Err(error) => return Err(Box::new((error, entry))),
+            Err(error) => {
+                super::writer_cause::emit("service");
+                return Err(Box::new((error, entry)));
+            }
         };
         let mut runtime = Self {
             entry,
@@ -33,6 +37,7 @@ impl Runtime {
             not_started: false,
         };
         if let Err(error) = runtime.ack() {
+            super::writer_cause::emit("service");
             return Err(Box::new((error, runtime.entry)));
         }
         Ok(runtime)
@@ -65,7 +70,8 @@ impl Runtime {
             Box::new(entry.hold().clone()),
             v.binding.clone(),
             io::deadline(),
-        )?;
+        )
+        .inspect_err(|_| super::writer_cause::emit("raw_capture_prepare"))?;
         let stream = Stream::new(&v)?;
         Ok((intent, prepared, stream))
     }
@@ -98,6 +104,10 @@ impl Runtime {
         io::send(self.entry.channel(), io::frame(bytes), io::deadline())
     }
     pub(super) fn command(&mut self, command: WriterCommand) -> Result<(), Error> {
+        #[cfg(test)]
+        if let Some(delay) = super::seams::exchange_delay() {
+            std::thread::sleep(delay);
+        }
         if command.envelope != self.envelope()? || self.terminal {
             return Err(Error::Refused);
         }

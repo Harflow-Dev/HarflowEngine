@@ -27,9 +27,33 @@ def gate(name):
     return link
 
 
+def put(data, fd=1):
+    """Writes every byte unbuffered and appends it to the test's log of what was emitted."""
+    view = memoryview(data)
+    while view:
+        view = view[os.write(fd, view):]
+    log = os.environ.get("FAKE_OUTLOG" if fd == 1 else "FAKE_ERRLOG")
+    if log:
+        with open(log, "ab") as handle:
+            handle.write(data)
+
+
 def emit(value):
-    sys.stdout.buffer.write(json.dumps(value).encode() + b"\n")
-    sys.stdout.buffer.flush()
+    put(json.dumps(value).encode() + b"\n")
+
+
+def pad_line(sid, index, size):
+    message = {"id": "b%d" % index, "content": [{"type": "text", "text": "y" * size}]}
+    return json.dumps({"type": "assistant", "session_id": sid, "message": message}).encode() + b"\n"
+
+
+def padded(sid, total, size):
+    """Whole lines of `size` characters, at least `total` bytes."""
+    data, index = b"", 0
+    while len(data) < total:
+        data += pad_line(sid, 1000 + index, size)
+        index += 1
+    return data
 
 
 def session():
@@ -68,24 +92,32 @@ def run(steps, sid):
         elif name == "init":
             emit({"type": "system", "subtype": "init", "session_id": sid, "tools": [{"name": "Read"}]})
         elif name == "text":
-            sys.stdout.buffer.write(text_line(sid, 0))
-            sys.stdout.buffer.flush()
+            put(text_line(sid, 0))
         elif name == "lines":
-            sys.stdout.buffer.write(b"".join(text_line(sid, i) for i in range(int(arg))))
-            sys.stdout.buffer.flush()
+            put(b"".join(text_line(sid, i) for i in range(int(arg))))
+        elif name == "burst":
+            for i in range(int(arg)):
+                put(pad_line(sid, i, 1500))
+        elif name in ("mib", "flood"):
+            total = int(arg) * (1 << 20) if name == "mib" else int(arg)
+            data = padded(sid, total, 4000)
+            for offset in range(0, len(data), 65536):
+                put(data[offset : offset + 65536])
+        elif name == "noread":
+            import time
+
+            while True:
+                time.sleep(1)
         elif name == "result":
             emit(result(sid, False))
         elif name == "result_fail":
             emit(result(sid, True))
         elif name == "garbage":
-            sys.stdout.buffer.write(b"this is not json\n")
-            sys.stdout.buffer.flush()
+            put(b"this is not json\n")
         elif name == "partial":
-            sys.stdout.buffer.write(b'{"type":"resu')
-            sys.stdout.buffer.flush()
+            put(b'{"type":"resu')
         elif name == "stderr":
-            sys.stderr.write("e" * int(arg))
-            sys.stderr.flush()
+            put(b"e" * int(arg), 2)
         elif name == "gate":
             gate(arg)
         elif name == "eofwait":

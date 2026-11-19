@@ -133,7 +133,7 @@ pub fn decode_writer_command(bytes: &[u8]) -> Result<WriterCommand, InvalidInten
                 bytes: r.take(n)?.to_vec(),
             }
         }
-        opcode @ (2 | 4) => decode_finish(&mut r, opcode)?,
+        opcode @ (2 | 4 | 5) => decode_finish(&mut r, opcode)?,
         _ => return Err(InvalidIntent),
     };
     let v = WriterCommand {

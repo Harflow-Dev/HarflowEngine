@@ -1,5 +1,5 @@
 //! Original writer-child custody with bounded bootstrap/ready exchange.
-use super::{Error, HeldRoot, OwnerEntry};
+use super::{Error, HeldRoot, OwnerEntry, writer_cause::TagParser};
 use hf_application::process::IdentityPort;
 use hf_domain::{
     ownership::OwnerClaim,
@@ -10,7 +10,11 @@ use hf_platform::{
     process::{MacIdentity, RetainedOwnedChild},
     task_runtime::channel::{Channel, DiscardStep, Receive},
 };
-use std::{fs::File, io::Read, time::Instant};
+use std::{
+    fs::File,
+    io::Read,
+    time::{Duration, Instant},
+};
 
 /// Independent observations of one storage-free discard tick, never settlement proof.
 pub struct WriterDrain {
@@ -33,6 +37,7 @@ pub struct WriterLink {
     channel: Option<Channel>,
     stderr: Option<File>,
     stderr_seen: u64,
+    cause: TagParser,
     ready: Option<WriterReady>,
     fault: Option<Error>,
 }
@@ -52,6 +57,7 @@ impl WriterLink {
             channel: None,
             stderr: None,
             stderr_seen: 0,
+            cause: TagParser::default(),
             ready: None,
             fault: None,
         };
@@ -171,26 +177,7 @@ impl WriterLink {
         }
     }
     fn stderr_step(&mut self) -> StderrDrain {
-        let mut bytes = [0; 4096];
-        let Some(error) = &mut self.stderr else {
-            return StderrDrain::Unavailable;
-        };
-        match error.read(&mut bytes) {
-            Ok(0) => StderrDrain::Eof,
-            Ok(count) => {
-                self.stderr_seen = self.stderr_seen.saturating_add(count as u64);
-                StderrDrain::Bytes(count)
-            }
-            Err(error)
-                if matches!(
-                    error.kind(),
-                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::Interrupted
-                ) =>
-            {
-                StderrDrain::Pending
-            }
-            Err(error) => StderrDrain::Error(error),
-        }
+        pump_stderr(&mut self.stderr, &mut self.stderr_seen, &mut self.cause)
     }
     /// Permanently abandons protocol mutation, then attempts one original stdout read
     /// and one original stderr read, each at most 4096 bytes. One error never suppresses
@@ -203,6 +190,20 @@ impl WriterLink {
         let stdout = self.channel.as_mut().map(Channel::discard_step);
         let stderr = self.stderr_step();
         WriterDrain { stdout, stderr }
+    }
+    /// Bounded final read of the writer's stderr before the owner retains: continues the
+    /// incremental tag parser for up to `budget` or until end of file, the diagnostic
+    /// bound or the tag, and returns the source tag the parser has recognised so far.
+    pub fn collect_stderr(&mut self, budget: Duration) -> Option<&'static str> {
+        let end = Instant::now() + budget;
+        while self.cause.tag().is_none() && self.cause.remaining() > 0 && Instant::now() < end {
+            match self.stderr_step() {
+                StderrDrain::Bytes(_) => {}
+                StderrDrain::Pending => std::thread::sleep(Duration::from_millis(5)),
+                _ => break,
+            }
+        }
+        self.cause.tag()
     }
     /// Positively committed historical claim observation; no live/cleanup inference.
     pub fn ready_observation(&self) -> Option<&WriterReady> {
@@ -225,5 +226,79 @@ impl WriterLink {
             return Err(Error::Poisoned);
         }
         self.channel.as_mut().ok_or(Error::Refused)
+    }
+}
+/// One non-blocking read of at most 4096 bytes of the writer's stderr. Every byte read
+/// feeds the tag parser, including reads made while a protocol step is failing.
+pub(super) fn pump_stderr(
+    stderr: &mut Option<File>,
+    seen: &mut u64,
+    cause: &mut TagParser,
+) -> StderrDrain {
+    let mut bytes = [0; 4096];
+    let Some(error) = stderr else {
+        return StderrDrain::Unavailable;
+    };
+    match error.read(&mut bytes) {
+        Ok(0) => StderrDrain::Eof,
+        Ok(count) => {
+            *seen = seen.saturating_add(count as u64);
+            cause.feed(&bytes[..count]);
+            StderrDrain::Bytes(count)
+        }
+        Err(error)
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::Interrupted
+            ) =>
+        {
+            StderrDrain::Pending
+        }
+        Err(error) => StderrDrain::Error(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use super::*;
+    use std::{
+        io::Write,
+        os::{fd::OwnedFd, unix::net::UnixStream},
+    };
+
+    fn stderr_pair() -> (UnixStream, Option<File>) {
+        let (writer, reader) = UnixStream::pair().unwrap();
+        reader.set_nonblocking(true).unwrap();
+        (writer, Some(File::from(OwnedFd::from(reader))))
+    }
+
+    #[test]
+    fn every_stderr_read_feeds_the_tag_parser_even_when_split() {
+        let (mut writer, mut stderr) = stderr_pair();
+        let (mut seen, mut parser) = (0, TagParser::default());
+        writer.write_all(b"harflow-writer-cause: ready_").unwrap();
+        assert!(matches!(
+            pump_stderr(&mut stderr, &mut seen, &mut parser),
+            StderrDrain::Bytes(_)
+        ));
+        assert_eq!(parser.tag(), None);
+        writer.write_all(b"flush\n").unwrap();
+        pump_stderr(&mut stderr, &mut seen, &mut parser);
+        assert_eq!(parser.tag(), Some("ready_flush"));
+        assert_eq!(seen, 34);
+        assert!(matches!(
+            pump_stderr(&mut stderr, &mut seen, &mut parser),
+            StderrDrain::Pending
+        ));
+        drop(writer);
+        assert!(matches!(
+            pump_stderr(&mut stderr, &mut seen, &mut parser),
+            StderrDrain::Eof
+        ));
+        assert!(matches!(
+            pump_stderr(&mut None, &mut seen, &mut parser),
+            StderrDrain::Unavailable
+        ));
     }
 }
