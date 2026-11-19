@@ -152,6 +152,7 @@ fn run_refuses_a_symlinked_root_with_the_canonical_path_message() {
     let _serial = serial_case();
     require_clean_environment();
     let ctx = Ctx::new("link-root");
+    let _hooks = dispatcher_hooks(&ctx, None);
     let real = ctx.dir.join("real");
     std::fs::create_dir(&real).unwrap();
     chmod(&real, 0o700);

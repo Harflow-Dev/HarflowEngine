@@ -56,7 +56,9 @@ class TildeTests(ArtifactCase):
         that home is the target; it is read for its status only."""
         import pwd  # POSIX only; the module must still import on Windows CI
 
-        home = pwd.getpwnam(ME).pw_dir
+        account = pwd.getpwuid(os.getuid())
+        home = account.pw_dir
+        user = account.pw_name
         name = next((n for n in sorted(os.listdir(home))
                      if os.path.isfile(os.path.join(home, n)) and not os.path.islink(os.path.join(home, n))
                      and n.startswith(".") and n not in (".claude.json",) and not n.startswith((".claude", ".codex", ".vibe", ".git", ".config", ".harflow"))), None)
@@ -65,10 +67,10 @@ class TildeTests(ArtifactCase):
         self.sql("UPDATE task_facts SET repo_path=? WHERE id=?", (home, A))
         self.move_to(os.path.join(home, name), "x2")
         self.assertEqual(self.states(env={"CODEX_HOME": "~/nowhere-at-all"})["x2"], "available")
-        for variable, value in (("CODEX_HOME", f"~{ME}/{name}"), ("VIBE_HOME", f"~{ME}/{name}")):
+        for variable, value in (("CODEX_HOME", f"~{user}/{name}"), ("VIBE_HOME", f"~{user}/{name}")):
             with self.subTest(variable=variable):
                 self.assertEqual(self.states(env={variable: value})["x2"], "unavailable")
-        self.assertEqual(self.states(env={"CODEX_HOME": f"~{ME}/{name}x"})["x2"], "available", "a different name")
+        self.assertEqual(self.states(env={"CODEX_HOME": f"~{user}/{name}x"})["x2"], "available", "a different name")
 
     def test_a_tilde_only_expands_at_the_start(self):
         self.assertEqual(self.states(env={"CODEX_HOME": "/~/x"})["x2"], "available")
